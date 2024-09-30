@@ -84,7 +84,7 @@ nav.top-nav ul li a {
     background-position: center;
     width: 100%; /* Full width of the grid cell */
     padding-bottom: 15%; /* Maintain 4:3 aspect ratio */
-    border: 2px solid #333;
+    border: 1px solid #333;
     border-radius: 8px;
     text-decoration: none;
     color: inherit;
