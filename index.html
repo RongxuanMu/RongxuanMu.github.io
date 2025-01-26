@@ -7,8 +7,18 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="Resources/Rongxuan.jpeg" type="image/x-icon">
+     <script>
+        // Simple password protection
+        function checkPassword() {
+            var password = prompt("Please enter the password to access this page:");
+            if (password !== "yourPassword") {
+                alert("Incorrect password. Access denied.");
+                window.location.href = "index.html"; // Redirect to home or another page
+            }
+        }
+    </script>
 </head>
-<body>
+<body onload="checkPassword()">
     <!-- Top Navigation Bar -->
     <nav class="top-nav">
         <ul>
