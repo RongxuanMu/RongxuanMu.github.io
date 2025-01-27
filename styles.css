@@ -48,13 +48,14 @@ nav.top-nav ul li a {
 }
 
 .avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
+    width:300px;
+    height: 300px;
+    border-radius: 0;
     margin-right: 20px;
 }
 
 .about-description {
+    text-align: justify;
     max-width: 800px;
     margin: 0 auto;
 }
@@ -77,14 +78,23 @@ nav.top-nav ul li a {
     grid-template-columns: repeat(3, 1fr); /* 3 projects per line */
     gap: 40px; /* Increased gap between projects */
 }
-
+.project video {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+}
 .project {
     position: relative;
     background-size: cover;
     background-position: center;
     width: 100%; /* Full width of the grid cell */
     padding-bottom: 15%; /* Maintain 4:3 aspect ratio */
-    border: 1px solid #333;
+    border: 1px solid #ffffff;
     border-radius: 8px;
     text-decoration: none;
     color: inherit;
@@ -94,12 +104,30 @@ nav.top-nav ul li a {
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease; /* Added box-shadow transition */
     min-height: 250px; /* Ensure a minimum height for the project grid items */
-}
-
-/* Set the aspect ratio */
-.project {
     aspect-ratio: 4 / 3; /* Set the aspect ratio to 4:3 */
 }
+
+
+.project::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.3)); /* Gradient overlay */
+    pointer-events:none; /* Ensure the overlay doesn't interfere with text interaction */
+    z-index: 1; /* Ensure the overlay is below the text */
+    /* transition: opacity 0.3s ease;  Smooth transition for the overlay */
+    opacity: 1; /* Fully visible by default */
+}
+
+.project:hover::before {
+    opacity: 0; /* Hide the overlay on hover */
+}
+
+
+
 
 /* Hover Effect */
 .project:hover {
@@ -111,7 +139,7 @@ nav.top-nav ul li a {
 .project h3 {
     font-size: 1.5rem;
     margin: 0;
-    color: white; /* Title color */
+    color: rgb(255, 255, 255); /* Title color */
     text-align: center;
     position: absolute; /* Positioning for titles */
     bottom: 40px; /* Positioning for titles */
@@ -131,6 +159,8 @@ nav.top-nav ul li a {
     right: 0;
     z-index: 1; /* Ensures text is on top */
 }
+
+
 
 
 /* Contact Section */
