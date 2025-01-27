@@ -160,8 +160,86 @@ nav.top-nav ul li a {
     z-index: 1; /* Ensures text is on top */
 }
 
+/* Publications Section */
+#publications {
+    padding: 60px 20px;
+    text-align: left; /* Align text to the left for better readability */
+    max-width: 800px; /* Limit the width for a more focused layout */
+    margin: 0 auto; /* Center the section within the page */
+}
+
+#publications h2 {
+    text-align: center; /* Center the heading */
+    font-size: 2rem; /* Increase font size for the heading */
+    margin-bottom: 20px; /* Add space below the heading */
+}
+
+#publications p {
+    text-align: center; /* Center the introductory paragraph */
+    font-size: 1.2rem; /* Slightly larger font for the paragraph */
+    margin-bottom: 40px; /* Add space below the paragraph */
+}
+
+#publications ul {
+    list-style-type: none; /* Remove default list styling */
+    padding: 0; /* Remove default padding */
+}
+
+#publications li {
+    margin-bottom: 20px; /* Add space between list items */
+    padding: 10px; /* Add padding for better spacing */
+    border-bottom: 1px solid #ccc; /* Add a subtle border between items */
+}
+
+#publications li:last-child {
+    border-bottom: none; /* Remove border from the last item */
+}
+
+#publications strong {
+    font-weight: bold; /* Ensure author names are bold */
+}
+
+#publications em {
+    font-style: italic; /* Ensure publication sources are italicized */
+}
+
+/* Awards Section */
+#awards {
+    padding: 60px 20px;
+    text-align: center;/* Align text to the left for better readability */
+    max-width: 800px; /* Limit the width for a more focused layout */
+    margin: 0 auto; /* Center the section within the page */
+   
+}
+
+#awards h2 {
+    text-align: center; /* Center the heading */
+    font-size: 2.5rem; /* Larger font size for the heading */
+    margin-bottom: 20px; /* Add space below the heading */
+    color: #333; /* Darker color for the heading */
+}
+
+#awards p {
+    text-align: center; /* Center the introductory paragraph */
+    font-size: 1.2rem; /* Slightly larger font for the paragraph */
+    margin-bottom: 40px; /* Add space below the paragraph */
+    color: #666; /* Softer color for the introductory text */
+}
+
+#awards ul {
+    list-style-type: none; /* Remove default list styling */
+    padding: 0; /* Remove default padding */
+}
+
+#awards li:last-child {
+    border-bottom: none; /* Remove border from the last item */
+}
 
 
+#awards strong {
+    font-weight: bold; /* Ensure award names are bold */
+    color: #000; /* Ensure award names stand out */
+}
 
 /* Contact Section */
 #contact {

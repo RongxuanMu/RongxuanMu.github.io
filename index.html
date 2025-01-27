@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rongxuan Portfolio</title>
+    <title>Rongxuan's Portfolio</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="Resources/Rongxuan.jpeg" type="image/x-icon">
@@ -16,6 +16,10 @@
                 window.location.href = "index.html"; // Redirect to home or another page
             }
         }
+
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
     </script>
 </head>
 <body >
@@ -24,7 +28,9 @@
         <ul>
             <li><a href="#about">About</a></li>
             <li><a href="#projects">Works</a></li>
-            <li><a href="#contact">Social Media</a></li>
+            <li><a href="#publications">Publications</a></li>
+            <li><a href="#awards">Awards</a></li>
+            <li><a href="#contact">Contact</a></li>
             <li><a href="path/to/your/CV.pdf" target="_blank">CV</a></li>
         </ul>
     </nav>
@@ -45,16 +51,16 @@
 
     <!-- Works Section with Clickable Projects -->
     <section id="projects">
-        <h2>My Works</h2>
+        <h2>Selected Works</h2>
         <div class="project-grid">
             <a href="project1.html" class="project" style="background-image: url('Resources/picoGirl.png');">
                 <div class="overlay">
-                    <h3>Works in PICO</h3>
+                    <h3>Works for PICO</h3>
                     <p>2022-2025</p>
                 </div>
             </a>
             <a href="project2.html" class="project">
-                <video autoplay loop muted playsinline style="width: auto; height: 120%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); object-fit: cover;">
+                <video autoplay loop muted playsinline style="width: auto; height: 120%;  object-fit: cover;">
                     <source src="Resources/Structuralism.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
@@ -68,27 +74,82 @@
                     <h3>Project 3</h3>
                     <p>Brief description of Project 3 goes here.</p>
                 </div>
-            </a>
-            <a href="project5.html" class="project" style="background-image: url('Resources/Changan.jpg');">
+            </a> <a href="project5.html" class="project">
+                <video autoplay loop muted playsinline style="width: auto; height: 100%;  object-fit: cover;">
+                    <source src="Resources/OpenBrushforPICO.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+    
                 <div class="overlay">
-                    <h3>Project 4</h3>
+                    <h3>OpenBrush for PICO</h3>
+                    <p>Key features porting</p>
+                </div>
+            </a>
+            <a href="project4.html" class="project" style="background-image: url('Resources/Changan.jpg');">
+                <div class="overlay">
+                    <h3>Mechanical Nomadism</h3>>
                     <p>Brief description of Project 4 goes here.</p>
                 </div>
             </a>
-            <a href="project5.html" class="project" style="background-image: url('Resources/Changan.jpg');">
-                <div class="overlay">
-                    <h3>Project 5</h3>
-                    <p>Brief description of Project 5 goes here.</p>
-                </div>
-            </a>
+           
             <a href="project3.html" class="project" style="background-image: url('Resources/Changan.jpg');">
                 <div class="overlay">
                     <h3>Project 6</h3>
                     <p>Brief description of Project 6 goes here.</p>
                 </div>
             </a>
+            <a href="project3.html" class="project" style="background-image: url('Resources/Changan.jpg');">
+                <div class="overlay">
+                    <h3>Projects Before PICO</h3>
+                    <p>Dummy explorations :D </p>
+                </div>
+            </a>
             <!-- Add more projects as needed -->
         </div>
+    </section>
+
+    <!-- Publications Section -->
+    <section id="publications">
+        <h2>Publications</h2>
+        <ul>
+            <li>
+                <strong>Mu, R.</strong>, Nie, Y., Cao, K., You, R., Wei, Y., & Tong, X. (2023). 
+                <em>Pilgrimage to Pureland: Art, Perception and the Wutai Mural VR Reconstruction</em>. 
+                <span>International Journal of Human–Computer Interaction</span>, 
+                <span>40</span>(<span>8</span>), 2002–2018. 
+                <a href="https://doi.org/10.1080/10447318.2023.2271665" target="_blank">https://doi.org/10.1080/10447318.2023.2271665</a>
+            </li>
+            <li>
+                <strong>Mu, R.</strong>, Nie, Y., Cao, K., You, R., Wei, Y., & Tong, X. (2023). 
+                <em>Pilgrimage to Pureland: Art, Perception and the Wutai Mural VR Reconstruction</em>. 
+                <span>International Journal of Human–Computer Interaction</span>, 
+                <span>40</span>(<span>8</span>), 2002–2018. 
+                <a href="https://doi.org/10.1080/10447318.2023.2271665" target="_blank">https://doi.org/10.1080/10447318.2023.2271665</a>
+            </li>
+            
+        </ul>
+    </section>
+
+    <!-- Awards Section -->
+    <section id="awards">
+        <h2>Awards</h2>
+        <ul>
+            <li>
+                <strong>2024 Rokid Spatial Joy XR Competition</strong> - Bronze Prize, Best Practice of RTE - Structuralism
+            </li>
+            <li>
+                <strong>2024 H1 PICO Star Team</strong> - Star Team Contributor - PICO OS Multi-tasking Team
+            </li>
+            <li>
+                <strong>2023 Rokid Developer Competition</strong> - Best Pracitce of Unity - Muzuo XR
+            </li>
+            <li>
+                <strong>2023 PICO Dev Jam</strong> - Silver Medalist - Muzuo XR
+            </li>
+            <li>
+                <strong>2023 Bytedance Staff Tech Jam</strong> -  Silver Medalist, Best Business Potential - Interior XR
+            </li>
+        </ul>
     </section>
 
     <!-- Contact Section with Social Media Links -->
@@ -99,12 +160,13 @@
             <a href="https://github.com/Rongxuan2024" target="_blank"><i class="fab fa-github"></i></a>
             <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
             <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+            <a href="mailto:murongxuan1998@qq.com"><i class="fas fa-envelope"></i></a>
         </div>
     </section>
 
     <!-- Footer -->
     <footer>
-        <p>&copy; 2024 Rongxuan. All rights reserved. murongxuan1998@qq.com</p>
+        <p>&copy; 2024 Rongxuan. All rights reserved. </p>
     </footer>
 </body>
 </html>
