@@ -6,6 +6,19 @@ body {
     color: #333;
     line-height: 1.6;
 }
+h1 {
+    text-align: center; /* Center the heading */
+    font-size: 32px; /* Larger font size for the heading */
+    margin-bottom: 20px; /* Add space below the heading */
+    color: #333; /* Darker color for the heading */
+}
+
+h2 {
+    text-align: center; /* Center the heading */
+    font-size: 32px; /* Larger font size for the heading */
+    margin-bottom: 40px; /* Add space below the heading */
+    color: #333; /* Darker color for the heading */
+}
 
 nav.top-nav {
     background-color: #fff;
@@ -68,10 +81,7 @@ nav.top-nav ul li a {
     margin: 0 auto; /* Center the container */
 }
 
-#projects h2 {
-    text-align: center;
-    margin-bottom: 40px;
-}
+
 
 .project-grid {
     display: grid;
@@ -168,11 +178,6 @@ nav.top-nav ul li a {
     margin: 0 auto; /* Center the section within the page */
 }
 
-#publications h2 {
-    text-align: center; /* Center the heading */
-    font-size: 2rem; /* Increase font size for the heading */
-    margin-bottom: 20px; /* Add space below the heading */
-}
 
 #publications p {
     text-align: center; /* Center the introductory paragraph */
@@ -212,12 +217,7 @@ nav.top-nav ul li a {
    
 }
 
-#awards h2 {
-    text-align: center; /* Center the heading */
-    font-size: 2.5rem; /* Larger font size for the heading */
-    margin-bottom: 20px; /* Add space below the heading */
-    color: #333; /* Darker color for the heading */
-}
+
 
 #awards p {
     text-align: center; /* Center the introductory paragraph */
