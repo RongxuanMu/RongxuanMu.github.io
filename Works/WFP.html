@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Works and Contributions at PICO</title>
+    <link rel="stylesheet" href="../project-styles.css">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="../Resources/Rongxuan.jpeg" type="image/x-icon">
+
+</head>
+
+<body>
+    <header>
+        <div class="image-container">
+            <img src="../Resources/PICO.png" alt="PICO" style="width:100%;">
+            <div class="overlay-text">Works at PICO</div>
+        </div>
+    </header>
+    <!-- Navigation Bar -->
+    <nav class="top-nav">
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#hci-framework">HCI Framework</a></li>
+            <li><a href="#os-cases">OS Cases</a></li>
+            <li><a href="#XR-HCI-research">XR HCI Research</a></li>
+            <li><a href="#gameplay">Gameplay</a></li>
+            <li><a href="#key-contributions">Key Contributions</a></li>
+            <li><a href="../index.html">← Home </a></li>
+
+        </ul>
+    </nav>
+
+
+    <main>
+        <!-- Home / Overview Section -->
+        <section id="overview">
+            <h2>Overview</h2>
+
+            <p>
+                🏢As a leading XR company, <strong>PICO</strong> specializes in <strong>XR hardware and immersive
+                    interaction technologies</strong>, driving innovation in spatial computing and user experience.
+            </p>
+            <p>
+                🛠️During my time at <strong>PICO</strong>, I contributed to the <strong>definition and innovation of XR
+                    interaction frameworks</strong>, focusing on <strong>interaction standardization, novel input
+                    methods, and immersive gameplay experience design</strong>. My work spanned <strong>technical
+                    research, hardware-software exploration, and system architecture development</strong>, helping to
+                enhance <strong>user interactions and interaction efficiency in XR environments</strong>.
+            </p>
+            <p>
+                🔒All the content presented here has either been <strong>publicly released</strong>, is
+                <strong>non-confidential</strong>, or has undergone <strong>proper de-identification</strong> to
+                ensure compliance with information security and confidentiality standards.
+            </p>
+
+        </section>
+        <!-- HCI Framework Section -->
+        <section id="hci-framework">
+            <h2>HCI Framework</h2>
+            
+           
+            <p>
+                The <strong>XR Interaction Framework</strong> provides a structured approach to defining interaction
+                paradigms across various XR platforms.
+                It integrates <span class="highlight">interaction devices, event systems, solvers, and interactor
+                    logic</span> to create seamless and intuitive
+                user experiences in <strong>VR, AR, and MR</strong> environments.
+            </p>
+            <p>
+                This framework references industry-standard toolkits:
+            </p>
+            <ul>
+                <li> <strong>XRI</strong> (XR Interaction Toolkit) – Unity’s modular framework for handling
+                    interactions.</li>
+                <li> <strong>MRTK</strong> (Mixed Reality Toolkit) – Optimized for HoloLens and cross-platform MR
+                    development.</li>
+                <li> <strong>AndroidXR</strong> – Google’s XR framework integrating hand-tracking, eye-tracking, and
+                    controllers.</li>
+                <li> <strong>VisionOS</strong> – Apple’s spatial computing framework for <em>visionOS
+                        applications</em>.</li>
+            </ul>
+            <p>⚠️ <em>The diagrams presented here are <strong>abridged representations</strong> of my formal work and
+                    have been <strong>de-identified</strong> for confidentiality purposes.</em></p>
+
+            <h3>XR Interaction Framework Components</h3>
+            <img src="../Resources/XRInteractionFramework.png" alt="HCI Framework">
+
+            <h4>Interactive Devices</h4>
+            <ul>
+                <li><strong>Hardware Devices:</strong> Controllers, Mouse, Touchpad, Game Controllers, Wearables (Rings,
+                    Wristbands).</li>
+
+                <li><strong>Wetware Devices:</strong> Hands ✋, Eyes 👀, Head 🧑‍🦱, Mouth 🗣️ as biological input
+                    interfaces.</li>
+            </ul>
+
+            <h4>Interactors</h4>
+            <ul>
+                <li>👉 <strong>Direct Interactors:</strong> Pinch, Poke interactions.</li>
+
+                <li>🎯 <strong>Indirect Interactors:</strong> Raycasting-based (Hand Ray, Controller Ray, Gaze Ray).
+                </li>
+                <li>🎤 <strong>Functional Interactors:</strong> Teleport, Socket, Speech Input.</li>
+            </ul>
+
+            <h4>Interaction Solvers</h4>
+            <ul>
+                <li>🔄 <strong>Transforming:</strong> Position, Rotation, Scale.</li>
+
+                <li>🔍 <strong>Smoothing & Filtering:</strong> Enhancing precision.</li>
+                <li>🤖 <strong>Dynamic Control:</strong> Adaptive interaction systems.</li>
+            </ul>
+
+            <h4>Interaction Events</h4>
+            <ul>
+                <li>🎈 <strong>Primary Basic Events:</strong> HoverEntered, SelectEntered, SelectCanceled.</li>
+
+                <li>🎛️ <strong>Secondary Complex Events:</strong> Tap/Click, Long Press, Drag.</li>
+                <li>🎡 <strong>Tertiary Events:</strong> Scale, Rotate, Gesture-based interactions.</li>
+            </ul>
+
+            <h3>Workflow of XR Interaction Process</h3>
+            <img src="../Resources/WorkFlowOfXRInteraction.png" alt="HCI Framework">
+
+
+            <h4>1️⃣ User Inputs & Sensors</h4>
+            <p>Interactive devices (hardware or wetware) collect user input via controllers, gestures, eye-tracking, or
+                voice commands.</p>
+
+
+            <h4>2️⃣ Interactor Processing</h4>
+            <p>The system determines whether input is direct, indirect, or functional and triggers corresponding events
+                (Raycasting, Gesture Tracking).</p>
+
+
+            <h4>3️⃣ Interaction Solvers & Object Manipulation</h4>
+            <p>Events are processed through solvers like <span class="highlight">Transforming, Smoothing</span>, and the
+                system applies dynamic responses.</p>
+
+
+            <h4>4️⃣ System Response & Feedback</h4>
+            <ul>
+                <li>🎨 <strong>Visual Feedback:</strong> UI responses, highlights.</li>
+
+                <li>🎮 <strong>Haptic Feedback:</strong> Vibration, force feedback.</li>
+                <li>🔊 <strong>Auditory Feedback:</strong> Sound cues, voice prompts.</li>
+            </ul>
+
+            <h4>5️⃣ Final Execution & Loopback</h4>
+            <p>The system updates interaction states and ensures real-time tracking for smooth user interaction.</p>
+
+
+            <h3>Conclusion</h3>
+            <p>
+                This XR Interaction Framework and workflow provide a standardized, modular approach for designing
+
+                intuitive
+                and efficient user interactions in XR environments.
+                By referencing <span class="highlight">XRI, MRTK, AndroidXR, and VisionOS</span>, this system ensures
+                compatibility across multiple XR platforms.
+            </p>
+            <p>⚠️ <strong>Confidentiality Notice:</strong> The content and diagrams shown here are <strong>de-identified</strong> representations of my work.</p>
+        </section>
+
+        <!-- OS Cases Section -->
+        <section id="os-cases">
+            <h2>OS Cases</h2>
+            <p>Details about OS Cases...</p>
+        </section>
+        <!-- XR HCI Research Section -->
+        <section id="XR-HCI-research">
+            <h2>XR HCI Research</h2>
+            <p>Details about XR HCI Research...</p>
+        </section>
+        <!-- Game Play Section -->
+        <section id="gameplay">
+            <h2>Game Play</h2>
+
+            <p>Details about Game Play...</p>
+        </section>
+        <!-- Key Contributions Section -->
+        <section id="key-contributions">
+            <h2>Key Contributions</h2>
+            <!-- Content -->
+        </section>
+        <section id="gallery">
+            <h2>Gallery</h2>
+            <img src="project1-image1.jpg" alt="Project 1 Image 1">
+            <img src="project1-image2.jpg" alt="Project 1 Image 2">
+        </section>
+        <section id="videos">
+            <h2>Project Videos</h2>
+            <video controls>
+                <source src="project1-video1.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <video controls>
+                <source src="project1-video2.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </section>
+        <section id="embedded-media">
+            <h2>Embedded Media</h2>
+
+
+            <!-- Bilibili Embed -->
+            <iframe
+                src="https://player.bilibili.com/player.html?isOutside=true&aid=947638004&bvid=BV14W4y1V7zJ&cid=962281470&p=1&autoplay=0"
+                width="800" height="450" scrolling="no" border="0" frameborder="no" framespacing="0"
+                allowfullscreen="true"></iframe>
+
+            </iframe>
+
+            <!-- YouTube Embed -->
+            <iframe src="https://www.youtube.com/embed/9BjQFpqQ2Eo?si=Yw-8fY5h9FENllG9" width="800" height="450"
+                title="YouTube video player"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
+            </iframe>
+
+            <!-- Sketchfab Embed -->
+            <div class="sketchfab-embed-wrapper">
+                <iframe src="https://sketchfab.com/models/0b52b208d78f4cd6b38312a1c1a4180e/embed" width="800"
+                    height="450" title="Fantasy Castle" allow="autoplay; fullscreen; xr-spatial-tracking"
+                    allowfullscreen style="border: 0;">
+                </iframe>
+                <p style="font-size: 13px; font-weight: normal; margin: 5px; color: #4A4A4A;">
+                    <a href="https://sketchfab.com/3d-models/fantasy-castle-0b52b208d78f4cd6b38312a1c1a4180e?utm_medium=embed&utm_campaign=share-popup&utm_content=0b52b208d78f4cd6b38312a1c1a4180e"
+                        target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;">
+                        Fantasy Castle
+                    </a> by
+                    <a href="https://sketchfab.com/giimann?utm_medium=embed&utm_campaign=share-popup&utm_content=0b52b208d78f4cd6b38312a1c1a4180e"
+                        target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;">
+                        Giimann
+                    </a> on
+                    <a href="https://sketchfab.com?utm_medium=embed&utm_campaign=share-popup&utm_content=0b52b208d78f4cd6b38312a1c1a4180e"
+                        target="_blank" rel="nofollow" style="font-weight: bold; color: #1CAAD9;">
+                        Sketchfab
+                    </a>
+                </p>
+            </div>
+        </section>
+
+        <!-- Contact Section with Social Media Links -->
+        <section id="contact">
+           
+            <div class="social-media">
+                <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="https://github.com/Rongxuan2024" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
+                <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+                <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
+                <a href="mailto:murongxuan1998@qq.com"><i class="fas fa-envelope"></i></a>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 Rongxuan. All rights reserved.</p>
+    </footer>
+
+</body>
+
+</html>

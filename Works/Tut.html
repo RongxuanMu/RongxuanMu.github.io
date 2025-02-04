@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XR Tutorials and Blogs</title>
-    <link rel="stylesheet" href="project-styles.css">
+    <link rel="stylesheet" href="../project-styles.css">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="../Resources/Rongxuan.jpeg" type="image/x-icon">
 </head>
 <body>
     <nav class="top-nav">
         <ul>
-            
             <li><a href="#unity">Unity</a></li>
             <li><a href="#pico">PICO</a></li>
             <li><a href="#apple-vision-pro">Apple Vision Pro</a></li>
             <li><a href="#career-path">Career Path</a></li>
-            <li>   </li>
-            <li><a href="index.html">Home</a></li>
+            <li><a href="../index.html">← Home </a></li>
         </ul>
     </nav>
 
@@ -34,6 +35,7 @@
         </section>
         <section id="pico">
             <h2>PICO</h2>
+            <p>PICO is a Chinese company that makes VR headsets. It is a subsidiary of ByteDance, the company that owns TikTok.</p>
             <article>
                 <h3>Developing for PICO Headsets</h3>
                 <p>Learn how to create applications for PICO devices...</p>
@@ -44,7 +46,7 @@
                         framespacing="0" 
                         allowfullscreen="true"
                         width="800" 
-                        height="500"></iframe>
+                        height="450"></iframe>
             </article>
 
             <!-- Add more PICO articles here -->
@@ -60,7 +62,7 @@
                         frameborder="no" 
                         framespacing="0" 
                         allowfullscreen="true"
-                        width="800" height="500"></iframe>
+                        width="800" height="450"></iframe>
             </article>
             <!-- Add more Apple Vision Pro articles here -->
         </section>
@@ -72,9 +74,29 @@
             </article>
             <!-- Add more Career Path articles here -->
         </section>
+
+        <!-- Contact Section with Social Media Links -->
+    <section id="contact">
+        <!-- <h2>🗨️Contact</h2> -->
+        <div class="social-media">
+            <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i class="fab fa-linkedin"></i></a>
+            <a href="https://github.com/Rongxuan2024" target="_blank"><i class="fab fa-github"></i></a>
+            <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
+            <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+            <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
+            <a href="mailto:murongxuan1998@qq.com"><i class="fas fa-envelope"></i></a>
+        </div>
+    </section>
     </main>
     <footer>
         <p>&copy; 2025 Rongxuan Mu. All rights reserved.</p>
     </footer>
+    <script>
+        // Ensure the page starts at the top when loaded
+        window.addEventListener('load', function() {
+            // Reset the scroll position to the top of the page
+            window.scrollTo(0, 0);
+        });
+    </script>
 </body>
 </html>
