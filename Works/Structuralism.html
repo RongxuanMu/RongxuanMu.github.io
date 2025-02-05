@@ -4,91 +4,120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Muzuo XR - Rongxuan Portfolio</title>
+    <title>STRUCTURALism - Rongxuan Portfolio</title>
     <link rel="stylesheet" href="../project-styles.css">
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="../Resources/Rongxuan.jpeg" type="image/x-icon">
+    
 </head>
 
 <body>
-    <!-- Navigation Bar -->
+    <!-- Sticky Navigation Bar -->
     <nav class="top-nav">
         <ul>
-            <li><a href="../index.html">← Home </a></li>
+            
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#technologies">Technologies</a></li>
+            <li><a href="#challenges">Challenges</a></li>
+            <li><a href="#gallery">Gallery</a></li>
+            <li><a href="#videos">Videos</a></li>
+            <li><a href="#embedded-media">Media</a></li>
+            <li><a href="../index.html">← Home</a></li>
         </ul>
     </nav>
 
+    <!-- Header with Cover Image -->
     <header>
-        <h1>Muzuo "木作" XR</h1>
+        <div class="image-container">
+            <img src="../Resources/StructuralismCover.png" alt="Structuralism XR Game">
+        </div>
     </header>
+
     <main>
+        <!-- Overview Section -->
         <section id="overview">
-            <h2>Overview</h2>
-            <p>Provide a detailed overview of Project 1 here.</p>
+            <h2>📖 Overview</h2>
+            <p>
+                <strong>STRUCTURALism</strong> is an innovative XR game 🕶️ that explores interactive spatial construction
+                inspired by constructivist architecture 🏗️. The game allows players to manipulate and connect modular
+                elements in a VR environment, emphasizing physics-driven interactions 🎯 and creative problem-solving.
+            </p>
         </section>
+
+        <!-- Technologies Used -->
         <section id="technologies">
-            <h2>Technologies Used</h2>
+            <h2>🛠️ Technologies Used</h2>
             <ul>
-                <li>Technology 1</li>
-                <li>Technology 2</li>
-                <li>Technology 3</li>
+                <li><strong>Unity & XR Toolkit 🎮</strong> – Game development and interaction mechanics</li>
+                <li><strong>NeRF & LiDAR 📡</strong> – 3D model reconstruction for traditional Chinese architecture</li>
+                <li><strong>Physics-based Interaction ⚙️</strong> – Real-time physics-driven ball connections</li>
+                <li><strong>Hand Gesture Recognition ✋</strong> – Intuitive control through natural gestures</li>
+                <li><strong>OpenXR 🌍</strong> – Cross-platform XR compatibility</li>
             </ul>
         </section>
+
+        <!-- Challenges and Solutions -->
         <section id="challenges">
-            <h2>Challenges and Solutions</h2>
-            <p>Discuss any challenges faced during the project and how they were overcome.</p>
+            <h2>⚡ Challenges and Solutions</h2>
+            <ul>
+                <li><strong>🔴 Challenge: Precise Physics Simulation</strong> – Ensuring realistic connection and movement of modular elements.</li>
+                <li>✅ <strong>Solution:</strong> Utilized Unity’s physics engine with custom constraints and damping adjustments.</li>
+
+                <li><strong>🔴 Challenge: Gesture Recognition Accuracy</strong> – Distinguishing intended hand movements from noise.</li>
+                <li>✅ <strong>Solution:</strong> Implemented machine learning-based gesture classification for improved accuracy.</li>
+
+                <li><strong>🔴 Challenge: Performance Optimization</strong> – Maintaining smooth frame rates in XR environments.</li>
+                <li>✅ <strong>Solution:</strong> Optimized rendering pipelines, reduced draw calls, and utilized GPU instancing.</li>
+            </ul>
         </section>
+
+        <!-- Gallery -->
         <section id="gallery">
-            <h2>Gallery</h2>
-            <img src="project1-image1.jpg" alt="Project 1 Image 1">
-            <img src="project1-image2.jpg" alt="Project 1 Image 2">
+            <h2>🖼️ Gallery</h2>
+            <img src="../Resources/Structuralism1.jpg" alt="Game Screenshot 1">
+            <img src="../Resources/Structuralism2.jpg" alt="Game Screenshot 2">
         </section>
+
+        <!-- Project Videos -->
         <section id="videos">
-            <h2>Project Videos</h2>
+            <h2>🎥 Project Videos</h2>
             <video controls>
-                <source src="project1-video1.mp4" type="video/mp4">
-                Your browser does not support the video tag.
+                <source src="../Resources/Structuralism-Gameplay.mp4" type="video/mp4">
             </video>
             <video controls>
-                <source src="project1-video2.mp4" type="video/mp4">
-                Your browser does not support the video tag.
+                <source src="../Resources/Structuralism-Demo.mp4" type="video/mp4">
             </video>
         </section>
+
+        <!-- Embedded Media (YouTube) -->
         <section id="embedded-media">
-            <h2>Embedded Media</h2>
-            <!-- YouTube Embed -->
-            <iframe width="800" height="500" src="https://www.youtube.com/embed/uapFZuwucoc?si=VwunVda4YI8Z7iHD"
-                title="Muzuo XR on Apple Vision Pro" frameborder="0"
-                allow="accelerometer;  clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+            <h2>🌍 Embedded Media</h2>
+            <iframe width="800" height="450" src="https://www.youtube.com/embed/9BjQFpqQ2Eo?si=MXvH9An7nfRDvDcW"
+                title="STRUCTURALism XR Game" frameborder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin" allowfullscreen>
+            </iframe>
+        </section>
 
-            <!-- Contact Section with Social Media Links -->
-            <section id="contact">
-                <!-- <h2>🗨️Contact</h2> -->
-                <div class="social-media">
-                    <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i
-                            class="fab fa-linkedin"></i></a>
-                    <a href="https://github.com/Rongxuan2024" target="_blank"><i class="fab fa-github"></i></a>
-                    <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
-                    <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
-                    <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
-                    <a href="mailto:murongxuan1998@qq.com"><i class="fas fa-envelope"></i></a>
-                </div>
-            </section>
-
-
+        <!-- Contact & Social Media -->
+        <section id="contact">
+            <div class="social-media">
+                <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="https://github.com/Rongxuan2024" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
+                <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+                <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
+                <a href="mailto:murongxuan1998@qq.com"><i class="fas fa-envelope"></i></a>
+            </div>
+        </section>
     </main>
+
+    <!-- Footer -->
     <footer>
         <p>&copy; 2024 Rongxuan. All rights reserved.</p>
     </footer>
-    <script>
-        // Ensure the page starts at the top when loaded
-        window.addEventListener('load', function () {
-            // Reset the scroll position to the top of the page
-            window.scrollTo(0, 0);
-        });
-    </script>
+
 </body>
 
 </html>

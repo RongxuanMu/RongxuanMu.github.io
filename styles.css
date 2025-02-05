@@ -27,12 +27,18 @@ nav.top-nav {
     top: 20px;
     left: 20px;
     height:auto; /* Full height to span the entire page vertically */
-    width: 200px; /* Set a fixed width for the vertical nav */
+    width: auto; /* Set a fixed width for the vertical nav */
     z-index: 1000; /* Ensure it stays on top of other elements */
     display: flex;
     flex-direction: column; /* Stack items vertically */
     padding: 20px 0; /* Padding for spacing */
+    background-color: rgba(255, 255, 255, 0.6);
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1); /* Optional: Shadow for depth */
+   
+    
 }
+
 
 nav.top-nav ul {
     list-style: none;
@@ -46,10 +52,12 @@ nav.top-nav ul {
 
 nav.top-nav ul li {
     margin: 0;
+    text-align:center;
 }
 
 nav.top-nav ul li a {
     text-decoration: none;
+    text-align:center;
     color: #333;
     font-weight: bold;
     transition: color 0.3s ease;
@@ -254,16 +262,18 @@ nav.top-nav ul li a:hover {
     display: flex;
     flex-direction: column; /* Stack links vertically */
     gap: 10px; /* Space between links */
-    background-color: rgba(255, 255, 255, 0.8); /* Optional: Background for better visibility */
+    background-color: rgba(255, 255, 255, 0.6); /* Optional: Background for better visibility */
     padding: 10px; /* Optional: Padding around the links */
     border-radius: 8px; /* Optional: Rounded corners */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Shadow for depth */
     z-index:1000;
+    align-items: center;
 }
+
 
 .social-media a {
     text-decoration: none;
-    color: #333;
+    color: #000000;
     font-size: 1.2rem; /* Adjust size as needed */
     transition: color 0.3s ease;
 }
