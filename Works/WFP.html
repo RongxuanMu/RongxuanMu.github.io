@@ -23,7 +23,7 @@
     <nav class="top-nav">
         <ul>
             <li><a href="#overview">Overview</a></li>
-            <li><a href="#xri-framework">XR Interaction Framework</a></li>
+            <li><a href="#xri-framework">Interaction Framework</a></li>
             <li><a href="#os-cases">OS Cases</a></li>
             <li><a href="#XR+AI-HCI-research">XR+AI HCI Research</a></li>
             <li><a href="#gameplay">Gameplay & Prototypes</a></li>
@@ -60,7 +60,7 @@
         </section>
         <!-- HCI Framework Section -->
         <section id="xri-framework">
-            <h2>XR Interaction Framework</h2>
+            <h2>Interaction Framework</h2>
 
 
             <p>
@@ -83,8 +83,9 @@
                 <li> <strong>VisionOS</strong> – Apple's spatial computing framework for <em>visionOS
                         applications</em>.</li>
             </ul>
-            <p>⚠️ <em>The diagrams presented here are <strong>abridged representations</strong> of my formal work and
-                    have been <strong>de-identified</strong> for confidentiality purposes.</em></p>
+            <p>
+                <strong>Since November 2023, I have been the owner of this project and a key contributor to the
+                    prototypes.</strong></p>
 
             <h3>XR Interaction Framework Components</h3>
             <img src="../Resources/XRInteractionFramework.png" alt="HCI Framework">
@@ -100,12 +101,48 @@
 
             <h4>Interactors</h4>
             <ul>
-                <li>👉 <strong>Direct Interactors:</strong> Pinch, Poke interactions.</li>
+                <li>👉 <strong>Direct Interactors:</strong> Pinch, Poke interactions etc.</li>
 
-                <li>🎯 <strong>Indirect Interactors:</strong> Raycasting-based (Hand Ray, Controller Ray, Gaze Ray).
+                <li>🎯 <strong>Indirect Interactors:</strong> Raycasting-based (Hand Ray, Controller Ray, Gaze Ray)，
+                    etc.
                 </li>
-                <li>🎤 <strong>Functional Interactors:</strong> Teleport, Socket, Speech Input.</li>
+                <li>🎤 <strong>Functional Interactors:</strong> Teleport, Socket, Speech Input, etc.</li>
             </ul>
+            <!--video clips-->
+
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <div style="text-align: center;">
+                    <video width="auto" height="200" autoplay muted loop style="border: 2px solid grey;">
+                        <source src="../Resources/GazePinch.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+
+                    <p style="font-style: italic; color: grey; font-size: smaller;">
+                        General Gaze-pinch interaction with 3D objects.
+                    </p>
+                </div>
+                <div style="text-align: center;">
+                    <video width="200" height="200" autoplay muted loop style="border: 2px solid grey;">
+                        <source src="../Resources/GazePinch2DVisulized.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Visulization of gaze-pinch 2D
+                        interactions.
+                    </p>
+                </div>
+
+
+                <div style="text-align: center;">
+                    <video width="200" height="200" autoplay muted loop style="border: 2px solid grey;">
+                        <source src="../Resources/GazePinch2D.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Detailed Optimization of gaze-pinch
+                        gestures.
+                    </p>
+                </div>
+            </div>
+
 
             <h4>Interaction Solvers</h4>
             <ul>
@@ -163,9 +200,12 @@
                 and efficient user interactions in XR environments.
                 By referencing <span class="highlight">XRI, MRTK, AndroidXR, and VisionOS</span>, this system ensures
                 compatibility across multiple XR platforms.
-            </p>
-            <p>⚠️ <strong>Confidentiality Notice:</strong> The content and diagrams shown here are
-                <strong>de-identified</strong> representations of my work.
+                <br>
+                <br>
+
+
+                <strong>Since November 2023, I have been the owner of this project and a key contributor to the
+                    prototypes.</strong>
             </p>
         </section>
 
@@ -180,23 +220,25 @@
                 transitions between different interaction modes. Additionally, I developed a fuzzy-gaze-like strategy
                 for eye-tracking 👀 to enhance precision and responsiveness in user interactions.
             </p>
-            <!--video clips--> 
-            <div style="display: flex; justify-content: center; gap: 60px;">
+            <!--video clips-->
+            <div style="display: flex; justify-content: center; gap: 40px;">
                 <div style="text-align: center;">
-                    <video width="300" height="300" autoplay muted loop style="border: 1px solid black;">
+                    <video width="380" height="380" autoplay muted loop style="border: 2px solid grey;">
                         <source src="../Resources/DirectInteractionVideo.mp4" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                    <p style="font-style: italic; color: grey; font-size: smaller;">Prototype of optimized direct interactions.
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Prototype of optimized direct
+                        interactions.
                     </p>
                 </div>
 
                 <div style="text-align: center;">
-                    <video width="300" height="300" autoplay muted loop style="border: 1px solid black;">
+                    <video width="380" height="380" autoplay muted loop style="border: 2px solid grey;">
                         <source src="../Resources/FuzzyStrategyDiagram.mp4" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                    <p style="font-style: italic; color: grey; font-size: smaller;">Mechanism of the weighted-scoring fuzzy strategy.
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Mechanism of the weighted-scoring
+                        fuzzy strategy.
                     </p>
                 </div>
             </div>
@@ -211,25 +253,27 @@
                 to improve
                 interaction precision and efficiency.
             </p>
-            
-            <!--video clips--> 
-            <div style="display: flex; justify-content: center; gap: 60px;">
+
+            <!--video clips-->
+            <div style="display: flex; justify-content: center; gap: 40px;">
                 <div style="text-align: center;">
-                    <video width="300" height="300" autoplay muted loop style="border: 1px solid black;">
+                    <video width="380" height="380" autoplay muted loop style="border: 2px solid grey;">
                         <source src="../Resources/SaftyCollision.mp4" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                    <p style="font-style: italic; color: grey; font-size: smaller;">Mechanism of the safety collision detection.
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Mechanism of the safety collision
+                        detection.
                     </p>
 
                 </div>
 
                 <div style="text-align: center;">
-                    <video width="300" height="300" autoplay muted loop style="border: 1px solid black;">
+                    <video width="380" height="380" autoplay muted loop style="border: 2px solid grey;">
                         <source src="../Resources/SaftyArea.mp4" type="video/mp4">
                         Your browser does not support the video tag.
                     </video>
-                    <p style="font-style: italic; color: grey; font-size: smaller;">Prototpe of embodied safty in MR environments.
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Prototpe of embodied safty in MR
+                        environments.
                     </p>
                 </div>
             </div>
@@ -272,6 +316,28 @@
                 of various input devices, such as controllers, hand-tracking systems, and eye-tracking technologies 👀.
                 This research aims to expand the possibilities of user interaction in XR environments 🌟.
             </p>
+            <!--video clips-->
+            <div style="display: flex; justify-content: center; gap: 40px;">
+                <div style="text-align: center;">
+                    <video width="380" height="380" autoplay muted loop style="border: 2px solid grey;">
+                        <source src="../Resources/AugmentedSurfaceKeyboard.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Augmented interaction with Touchpad.
+                    </p>
+                </div>
+
+                <div style="text-align: center;">
+                    <video width="380" height="380" autoplay muted loop style="border: 2px solid grey;">
+                        <source src="../Resources/Ring.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Ring interaction prototype.
+                       
+                    </p>
+                </div>
+            </div>
 
 
         </section>
@@ -281,12 +347,27 @@
 
             <p>
                 Before I came to the department of <strong>HCI</strong>, I worked as a <strong>technical
-                    designer</strong> in the department of <strong>Tech and Art</strong>, working on some innovative
+                    designer</strong> in the department of <strong>Tech and Art</strong>（Mar 2022 - Jun 2023）, working on some innovative
                 gameplay for demonstrating the <strong>MR feature</strong> of the headset.
             </p>
             <p>
                 My gameplay contributions lie in two specific projects:
             </p>
+            <h3>MR Multi-Player Shooting Game</h3>
+            <p>
+                This project is a mixed reality multi-player shooting game with rich property features.
+            </p>
+            <div style="text-align: center;">
+               
+                    <video width="800" height="auto" autoplay muted loop >
+                        <source src="../Resources/MRshooting.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Recording of the MR shooting game.
+                    </p>
+               
+            </div>
 
             <h3>2022 Chinese New Year Mixed-Reality Showcase</h3>
             <iframe
@@ -313,20 +394,26 @@
                     referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                 <p style="text-align: center; font-style: italic; color: grey; font-size: smaller;">YouTube video of the
                     real-time effect recording of the 2022 Chinese New Year showcase.</p>
+
             </div>
-            <h3>MR Multi-Player Shooting Game</h3>
+
+            <h3>Other Gameplay Prototypes</h3>
             <p>
-                This project is a mixed reality multi-player shooting game with rich property features.
+                I also worked on some other gameplay prototypes, including <strong>interactive Boids</strong> and some <strong>spatial swags</strong>.
             </p>
             <div style="text-align: center;">
-                <iframe width="800" height="450" src="https://www.youtube.com/embed/BySqcemzbB0?si=lx_LLTzg7NM_NwJG"
-                    title="YouTube video player" frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-                <p style="text-align: center; font-style: italic; color: grey; font-size: smaller;">YouTube video of the
-                    MR Multi-Player Shooting Game.</p>
+                <video width="800" height="auto" autoplay muted loop >
+                    <source src="../Resources/SpatialSwags.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
+            
+            
+
+
         </section>
+
+       
 
 
 
