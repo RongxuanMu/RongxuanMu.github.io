@@ -126,7 +126,7 @@ nav.top-nav ul li a:hover {
     background-position: center;
     width: 100%; /* Full width of the grid cell */
     padding-bottom: 15%; /* Maintain 4:3 aspect ratio */
-    border: 1px solid #ffffff;
+    border: none;
     border-radius: 8px;
     text-decoration: none;
     color: inherit;
