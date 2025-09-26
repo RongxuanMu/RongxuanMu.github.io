@@ -322,3 +322,200 @@ footer {
         grid-template-columns: 1fr; /* 1 project per line on very small screens */
     }
 }
+
+/* Dark Mode Styles */
+.dark-mode {
+    background-color: #1a1a1a !important;
+    color: #e0e0e0 !important;
+}
+
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6 {
+    color: #ffffff !important;
+}
+
+.dark-mode nav.top-nav {
+    background-color: rgba(26, 26, 26, 0.8) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-mode nav.top-nav ul li a {
+    color: #e0e0e0 !important;
+}
+
+.dark-mode nav.top-nav ul li a:hover {
+    color: #4a9eff !important;
+}
+
+.dark-mode #projects {
+    background-color: #1a1a1a !important;
+}
+
+.dark-mode #publications {
+    background-color: #1a1a1a !important;
+}
+
+.dark-mode #publications li {
+    border-bottom: 1px solid #444 !important;
+}
+
+.dark-mode #awards {
+    background-color: #1a1a1a !important;
+}
+
+.dark-mode #awards strong {
+    color: #ffffff !important;
+}
+
+.dark-mode .social-media {
+    background-color: rgba(26, 26, 26, 0.8) !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-mode .social-media a {
+    color: #e0e0e0 !important;
+}
+
+.dark-mode .social-media a:hover {
+    color: #4a9eff !important;
+}
+
+.dark-mode footer {
+    background-color: #1a1a1a !important;
+    border-top: 1px solid #444 !important;
+    color: #e0e0e0 !important;
+}
+
+/* Dark Mode Toggle Button */
+#darkModeToggle {
+    background: none;
+    border: 2px solid #333;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #333;
+    font-size: 16px;
+}
+
+#darkModeToggle:hover {
+    border-color: dodgerBlue;
+    color: dodgerBlue;
+    transform: scale(1.1);
+}
+
+.dark-mode #darkModeToggle {
+    border-color: #e0e0e0;
+    color: #e0e0e0;
+}
+
+.dark-mode #darkModeToggle:hover {
+    border-color: #4a9eff;
+    color: #4a9eff;
+}
+
+/* Dark Mode Button Positioning - Top Right Corner */
+.dark-mode-toggle-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#darkModeToggle {
+    background: none;
+    border: 2px solid #333;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #333;
+    font-size: 16px;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#darkModeToggle:hover {
+    border-color: dodgerBlue;
+    color: dodgerBlue;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode #darkModeToggle {
+    border-color: #e0e0e0;
+    color: #e0e0e0;
+    background-color: rgba(26, 26, 26, 0.8);
+}
+
+.dark-mode #darkModeToggle:hover {
+    border-color: #4a9eff;
+    color: #4a9eff;
+    background-color: rgba(26, 26, 26, 0.9);
+}
+
+/* Remove old dark mode button styles from nav */
+nav.top-nav #darkModeToggle {
+    position: static;
+    margin: 0;
+}
+
+/* Updated Dark Mode Button - Smaller and No Outline */
+.dark-mode-toggle-container #darkModeToggle {
+    background: none;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #333;
+    font-size: 14px;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode-toggle-container #darkModeToggle:hover {
+    color: dodgerBlue;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .dark-mode-toggle-container #darkModeToggle {
+    color: #e0e0e0;
+    background-color: rgba(26, 26, 26, 0.8);
+}
+
+.dark-mode .dark-mode-toggle-container #darkModeToggle:hover {
+    color: #4a9eff;
+    background-color: rgba(26, 26, 26, 0.9);
+}
+
+
+
+
+
+
+
+
+
