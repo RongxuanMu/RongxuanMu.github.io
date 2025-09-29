@@ -363,6 +363,10 @@ footer {
     border-bottom: 1px solid #444 !important;
 }
 
+.dark-mode #publications li:last-child {
+    border-bottom: none !important;
+}
+
 .dark-mode #awards {
     background-color: #1a1a1a !important;
 }
