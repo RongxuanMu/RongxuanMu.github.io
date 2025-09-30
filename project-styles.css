@@ -198,8 +198,8 @@ img {
 }
 
 #darkModeToggle:hover {
-    border-color: dodgerBlue;
-    color: dodgerBlue;
+    border-color: #6aa7e8;
+    color: #6aa7e8;
     transform: scale(1.1);
 }
 
@@ -209,8 +209,8 @@ img {
 }
 
 .dark-mode #darkModeToggle:hover {
-    border-color: #4a9eff;
-    color: #4a9eff;
+    border-color: #7fb1f0;
+    color: #7fb1f0;
 }
 
 /* Work in Progress section dark mode */
@@ -257,8 +257,8 @@ img {
 }
 
 #darkModeToggle:hover {
-    border-color: dodgerBlue;
-    color: dodgerBlue;
+    border-color: #6aa7e8;
+    color: #6aa7e8;
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -270,8 +270,8 @@ img {
 }
 
 .dark-mode #darkModeToggle:hover {
-    border-color: #4a9eff;
-    color: #4a9eff;
+    border-color: #7fb1f0;
+    color: #7fb1f0;
     background-color: rgba(26, 26, 26, 0.9);
 }
 
@@ -301,7 +301,7 @@ nav.top-nav #darkModeToggle {
 }
 
 .dark-mode-toggle-container #darkModeToggle:hover {
-    color: dodgerBlue;
+    color: #6aa7e8;
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -312,8 +312,25 @@ nav.top-nav #darkModeToggle {
 }
 
 .dark-mode .dark-mode-toggle-container #darkModeToggle:hover {
-    color: #4a9eff;
+    color: #7fb1f0;
     background-color: rgba(26, 26, 26, 0.9);
+}
+
+/* Base link colors on project pages */
+a {
+    color: #3f7fcc;
+}
+
+a:hover {
+    color: #2f6fbf;
+}
+
+.dark-mode a {
+    color: #7fb1f0;
+}
+
+.dark-mode a:hover {
+    color: #6aa7e8;
 }
 
 
