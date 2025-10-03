@@ -11,7 +11,42 @@
     <link rel="icon" href="../Resources/Rongxuan.jpeg" type="image/x-icon">
     <script src="../darkmode.js"></script>
 </head>
+<script>
+    // Lazy load videos to prevent loading errors
+    document.addEventListener('DOMContentLoaded', function() {
+        // Only set the src when the video is close to viewport
+        const videos = document.querySelectorAll('video');
+        videos.forEach(video => {
+            const sources = video.querySelectorAll('source');
+            sources.forEach(source => {
+                const dataSrc = source.getAttribute('src');
+                source.setAttribute('data-src', dataSrc);
+                source.removeAttribute('src');
+            });
+        });
 
+        // Intersection Observer to load videos when they come into view
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const video = entry.target;
+                    const sources = video.querySelectorAll('source');
+                    sources.forEach(source => {
+                        const dataSrc = source.getAttribute('data-src');
+                        source.setAttribute('src', dataSrc);
+                    });
+                    video.load();
+                    observer.unobserve(video);
+                }
+            });
+        }, {rootMargin: '100px'});
+
+        // Observe all videos
+        videos.forEach(video => {
+            observer.observe(video);
+        });
+    });
+</script>
 <body>
     <!-- Sticky Navigation Bar -->
     <nav class="top-nav">

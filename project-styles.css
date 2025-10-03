@@ -320,7 +320,7 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 .dark-mode nav.top-nav ul li a:hover {
-    color: #9bc4f5 !important; /* Lighter blue for better readability in dark mode */
+    color: #1e88e5 !important; /* Unified blue hover color */
 }
 
 .dark-mode .social-media {
@@ -333,7 +333,7 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 .dark-mode .social-media a:hover {
-    color: #9bc4f5 !important; /* Lighter blue for better readability in dark mode */
+    color: #1e88e5 !important; /* Unified blue hover color */
 }
 
 .dark-mode footer {
@@ -359,8 +359,8 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 #darkModeToggle:hover {
-    border-color: #2c5aa0;
-    color: #2c5aa0;
+    border-color: #1e88e5;
+color: #1e88e5;
     transform: scale(1.1);
 }
 
@@ -370,8 +370,8 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 .dark-mode #darkModeToggle:hover {
-    border-color: #9bc4f5;
-    color: #9bc4f5;
+    border-color: #1e88e5;
+    color: #1e88e5;
 }
 
 /* Work in Progress section dark mode */
@@ -418,8 +418,8 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 #darkModeToggle:hover {
-    border-color: #2c5aa0;
-    color: #2c5aa0;
+    border-color: #1e88e5;
+    color: #1e88e5;
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -462,7 +462,7 @@ nav.top-nav #darkModeToggle {
 }
 
 .dark-mode-toggle-container #darkModeToggle:hover {
-    color: #2c5aa0;
+    color: #1e88e5;
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -473,31 +473,31 @@ nav.top-nav #darkModeToggle {
 }
 
 .dark-mode .dark-mode-toggle-container #darkModeToggle:hover {
-    color: #9bc4f5;
+    color: #1e88e5;
     background-color: rgba(26, 26, 26, 0.9);
 }
 
 /* Highlight text for important content on project pages */
 .highlight-text {
-    color: #2c5aa0; /* Muted blue for better readability in light mode */
+    color: #1e88e5; /* Brighter blue for better visibility in light mode */
 }
 
 .dark-mode .highlight-text {
-    color: #7fb1f0; /* Light blue for dark mode */
+    color: #a0d0ff; /* Brighter blue for dark mode */
 }
 
 /* Info text styling on project pages */
 .info-text {
-    color: #2c5aa0; /* Muted blue for better readability in light mode */
+    color: #1e88e5; /* Brighter blue for better visibility in light mode */
 }
 
 .dark-mode .info-text {
-    color: #7fb1f0; /* Light blue for dark mode */
+    color: #a0d0ff; /* Brighter blue for dark mode */
 }
 
 /* Base link colors on project pages */
 a {
-    color: #2c5aa0; /* Muted blue for better readability in light mode */
+    color: #1e88e5; /* Brighter blue for better visibility in light mode */
 }
 
 a:hover {
@@ -505,11 +505,11 @@ a:hover {
 }
 
 .dark-mode a {
-    color: #7fb1f0; /* Light blue for dark mode */
+    color: #a0d0ff; /* Brighter blue for dark mode */
 }
 
 .dark-mode a:hover {
-    color: #9bc4f5; /* Lighter blue on hover in dark mode */
+    color: #1e88e5; /* Unified blue hover color */
 }
 
 
@@ -517,3 +517,4 @@ a:hover {
 
 
 
+}
