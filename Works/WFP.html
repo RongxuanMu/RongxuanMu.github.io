@@ -406,7 +406,14 @@
                 <iframe width="800" height="450" src="https://www.youtube.com/embed/qhRl-X95-y4?si=BNjNf8wWtkO17T4W"
                     title="YouTube video player" frameborder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                    referrerpolicy="strict-origin-when-cross-origin" allowfullscreen
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                </iframe>
+                <div class="video-fallback" style="display: none; width: 800px; height: 450px; background: #f0f0f0; border: 2px dashed #ccc; margin: 0 auto; text-align: center; padding: 50px; box-sizing: border-box;">
+                    <p style="color: #666; font-size: 18px; margin: 0;">Video temporarily unavailable</p>
+                    <p style="color: #999; font-size: 14px; margin: 10px 0 0 0;">The YouTube video may have been moved or made private</p>
+                    <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank" style="color: #2c5aa0; text-decoration: none; margin-top: 10px;">Visit YouTube Channel</a>
+                </div>
                 <p style="text-align: center; font-style: italic; color: grey; font-size: smaller;">YouTube video of the
                     real-time effect recording of the 2022 Chinese New Year showcase.</p>
 
