@@ -146,6 +146,41 @@ img {
     margin: 0;
 }
 
+/* Simple image rows to place multiple images on the same line */
+
+.image-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.image-row > * {
+    flex: 1 1 0;
+}
+
+/* Enforce a tidy, consistent presentation */
+.image-row img {
+    width: 100%;
+    height: 320px; /* equal height for images in the same row */
+    object-fit: cover; /* clip to fill without distortion */
+    display: block;
+}
+
+/* Variant: keep full image visible (no cropping) while matching row height */
+.image-row--contain img {
+    object-fit: contain;
+    background-color: #f5f5f5; /* subtle letterbox background */
+}
+
+@media (max-width: 768px) {
+    .image-row {
+        flex-direction: column;
+    }
+    .image-row img {
+        height: auto; /* let images size naturally when stacked */
+    }
+}
+
 /* Specific styling for white-backgrounded diagram images in WFP pages */
 .dark-mode img[src*="XRInteractionFramework.png"],
 .dark-mode img[src*="WorkFlowOfXRInteraction.png"] {
