@@ -16,7 +16,7 @@
         <ul>
             <li><a href="#overview">Overview</a></li>
             <li><a href="#features">Key Features</a></li>
-            <li><a href="#video">Demo</a></li>
+            <li><a href="#repositories">Repositories</a></li>
             <li><a href="../index.html">← Home</a></li>
         </ul>
     </nav>
@@ -27,6 +27,16 @@
             <i class="fas fa-moon"></i>
         </button>
     </div>
+
+    <!-- Header with Demo Video -->
+    <header>
+        <div class="image-container">
+            <video autoplay muted loop playsinline style="width: 100%; height: 33.33%; object-fit: cover; aspect-ratio: 3/1;">
+                <source src="../Resources/OpenBrushforPICO.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </header>
 
     <main>
         <!-- Overview Section -->
@@ -46,17 +56,38 @@
                 <li>Controller input remapping for PICO devices</li>
                 <li>Performance tuning for stable framerate</li>
                 <li>Shader/material tweaks for PICO rendering pipeline</li>
-                <li>UI adjustments for standalone HMD ergonomics</li>
+                <li>PICO passthrough support for mixed reality painting</li>
             </ul>
         </section>
 
-        <!-- Demo Video Section -->
-        <section id="video">
-            <h2>Demo</h2>
-            <video controls playsinline preload="metadata" style="width: 100%; height: auto; border-radius: 8px;">
-                <source src="../Resources/OpenBrushforPICO.mp4" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
+        <!-- Repositories Section -->
+        <section id="repositories">
+            <h2>Repositories</h2>
+            <p>
+                This project is based on the open-source <strong>OpenBrush</strong> project with custom adaptations for PICO devices.
+            </p>
+            <div class="store-cards">
+                <a class="store-card" href="https://github.com/RongxuanMu/open-brush" target="_blank" rel="noopener noreferrer" aria-label="View my OpenBrush fork on GitHub">
+                    <div class="store-card__icon">
+                        <i class="fab fa-github"></i>
+                    </div>
+                    <div class="store-card__content">
+                        <div class="store-card__eyebrow">My Fork</div>
+                        <div class="store-card__title">RongxuanMu/open-brush</div>
+                        <div class="store-card__meta">PICO adaptations</div>
+                    </div>
+                </a>
+                <a class="store-card" href="https://github.com/icosa-foundation/open-brush" target="_blank" rel="noopener noreferrer" aria-label="View official OpenBrush repository on GitHub">
+                    <div class="store-card__icon">
+                        <i class="fab fa-github"></i>
+                    </div>
+                    <div class="store-card__content">
+                        <div class="store-card__eyebrow">Official</div>
+                        <div class="store-card__title">icosa-foundation/open-brush</div>
+                        <div class="store-card__meta">Original project</div>
+                    </div>
+                </a>
+            </div>
         </section>
 
         <!-- Contact & Social Media -->
