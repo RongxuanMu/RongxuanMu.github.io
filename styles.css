@@ -18,6 +18,8 @@ h2 {
     font-size: 32px; /* Larger font size for the heading */
     margin-bottom: 40px; /* Add space below the heading */
     color: #333; /* Darker color for the heading */
+    border-bottom: 1px solid #e0e0e0; /* Light, thin dividing line */
+    padding-bottom: 0.5rem;
 }
 
 

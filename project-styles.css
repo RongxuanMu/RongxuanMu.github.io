@@ -37,15 +37,22 @@ section {
 section h2 {
     font-size: 1.8rem;
     color: #333;
-    border-bottom: 2px solid #ccc;
+    border-bottom: 1px solid #e0e0e0;
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
     text-align: left;
 }
+
+/* Remove dividing line when h2 is immediately followed by image/video container */
+section h2:has(+ .image-container),
+section h2:has(+ .image-row) {
+    border-bottom: none;
+    padding-bottom: 0;
+}
 section h3 {
     font-size: 1.5rem;
     color: #333;
-    border-bottom: 1px solid #ccc;
+    border-bottom: 1px solid #e0e0e0;
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
 }
@@ -333,7 +340,14 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 
 .dark-mode section h2 {
     color: #ffffff !important;
-    border-bottom: 2px solid #444 !important;
+    border-bottom: 1px solid #444 !important;
+}
+
+/* Dark mode: Remove dividing line when h2 is immediately followed by image/video container */
+.dark-mode section h2:has(+ .image-container),
+.dark-mode section h2:has(+ .image-row) {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
 }
 
 .dark-mode section h3 {
@@ -545,6 +559,37 @@ a:hover {
 
 .dark-mode a:hover {
     color: #1e88e5; /* Unified blue hover color */
+}
+
+/* Override homepage awards styling for project pages */
+#awards {
+    text-align: left !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#awards p {
+    text-align: left !important;
+    font-size: 1rem !important;
+    margin-bottom: 1rem !important;
+    color: inherit !important;
+}
+
+/* Dark mode overrides for awards section */
+.dark-mode #awards {
+    background-color: transparent !important;
+}
+
+.dark-mode #awards p {
+    text-align: left !important;
+    font-size: 1rem !important;
+    margin-bottom: 1rem !important;
+    color: #e0e0e0 !important;
+}
+
+.dark-mode #awards strong {
+    color: #ffffff !important;
 }
 
 

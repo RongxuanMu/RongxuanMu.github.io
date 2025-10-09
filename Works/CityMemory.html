@@ -36,7 +36,7 @@
     <!-- Header with Hero Image (from original site) -->
     <header>
         <div class="image-container">
-            <img src="../Resources/citymemory-hero.jpg" alt="City Memory hero" style="width: 100%; height: 33.33%; object-fit: cover; aspect-ratio: 3/1;">
+            <img class="no-zoom" src="../Resources/citymemory-hero.jpg" alt="City Memory hero" style="width: 100%; height: 33.33%; object-fit: cover; aspect-ratio: 3/1;">
         </div>
     </header>
 
@@ -65,11 +65,13 @@
                 context around the city wall. These events were then <strong>translated architecturally</strong> to form
                 characteristic nodes along the tour route.
             </p>
-            <p><em>* This part of the 3D modeling work was mainly completed by teammate Shen Shuozhi.</em></p>
             <div class="image-row image-row--contain">
                 <img src="../Resources/citymemory-context.jpg" alt="Context overview">
                 <img src="../Resources/citymemory-models.jpg" alt="3D models and framework">
             </div>
+            <p style="font-size: 0.85rem; color: #888; margin-top: 0.5rem; font-style: italic;">
+                * This part of the 3D modeling work was mainly completed by teammate Shen Shuozhi.
+            </p>
         </section>
 
         <!-- Interaction Architecture Section -->
@@ -115,7 +117,7 @@
         <section id="demo">
             <h2>Demo</h2>
             <div class="image-container">
-                <video controls playsinline style="width: 100%; height: auto; max-height: 70vh; object-fit: contain;">
+                <video autoplay muted loop playsinline style="width:100%; max-width:100%; height:auto; display:block; object-fit:contain;">
                     <source src="../Resources/CityMemoVideoClip.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
@@ -125,15 +127,12 @@
         <!-- Awards Section -->
         <section id="awards">
             <h2>Awards</h2>
-            <div class="image-container">
-                <img src="../Resources/citymemory-award.jpg" alt="Award certificate" style="width:100%; height:auto; object-fit:contain;">
-            </div>
             <p>
                 This work is a winning project of the <strong>UIA-HYP CUP 2020 International Student Competition in Architectural Design</strong>.
             </p>
-            <p>
-                For the original showcase content, see: <a href="https://murongxuan.webflow.io/work/city-memory" target="_blank" rel="noopener noreferrer">City Memory of Xi'an on Webflow</a>.
-            </p>
+            <div class="image-container">
+                <img class="no-zoom" src="../Resources/citymemory-award.jpg" alt="Award certificate" style="width:100%; height:auto; object-fit:contain;">
+            </div>
         </section>
 
         <!-- Contact & Social Media -->
@@ -152,8 +151,58 @@
     <!-- Footer -->
     <footer>
         <p>&copy; 2025 Rongxuan. All rights reserved.</p>
+        <p style="font-size: 0.9rem; color: #666; margin-top: 1rem;">
+            For the original showcase content, see: <a href="https://murongxuan.webflow.io/work/city-memory" target="_blank" rel="noopener noreferrer">City Memory of Xi'an on Webflow</a>.
+        </p>
     </footer>
+
+    <!-- Image Modal (Lightbox) -->
+    <div id="imgModal" class="modal" style="display:none;">
+        <div class="modal-container">
+            <img id="modalImg" class="modal-content" alt="Expanded image" />
+            <span id="modalClose" class="close" aria-label="Close">&times;</span>
+        </div>
+    </div>
 </body>
 </html>
+<script>
+(function() {
+
+  // Image lightbox functionality
+  var modal = document.getElementById('imgModal');
+  var modalImg = document.getElementById('modalImg');
+  var modalClose = document.getElementById('modalClose');
+  
+  function openModal(src, alt) {
+    modalImg.src = src;
+    modalImg.alt = alt || '';
+    modal.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function closeModal() {
+    modal.style.display = 'none';
+    modalImg.src = '';
+    document.body.style.overflow = '';
+  }
+  
+  if (modalClose) modalClose.addEventListener('click', closeModal);
+  if (modal) modal.addEventListener('click', function(e) { 
+    if (e.target === modal) closeModal(); 
+  });
+  document.addEventListener('keydown', function(e) { 
+    if (e.key === 'Escape') closeModal(); 
+  });
+
+  // Add click handlers to all images except those with .no-zoom class
+  var images = document.querySelectorAll('main img:not(.no-zoom)');
+  images.forEach(function(img) {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', function() {
+      openModal(img.src, img.alt);
+    });
+  });
+})();
+</script>
 
 
