@@ -561,36 +561,7 @@ a:hover {
     color: #1e88e5; /* Unified blue hover color */
 }
 
-/* Override homepage awards styling for project pages */
-#awards {
-    text-align: left !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
 
-#awards p {
-    text-align: left !important;
-    font-size: 1rem !important;
-    margin-bottom: 1rem !important;
-    color: inherit !important;
-}
-
-/* Dark mode overrides for awards section */
-.dark-mode #awards {
-    background-color: transparent !important;
-}
-
-.dark-mode #awards p {
-    text-align: left !important;
-    font-size: 1rem !important;
-    margin-bottom: 1rem !important;
-    color: #e0e0e0 !important;
-}
-
-.dark-mode #awards strong {
-    color: #ffffff !important;
-}
 
 
 
