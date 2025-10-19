@@ -128,12 +128,18 @@ section ul {
     background: rgba(255,255,255,0.8);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     width: 100%;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
 }
 
 .store-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.08);
     border-color: #dcdcdc;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+}
+
+.store-card:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
 
 .store-card__icon {
@@ -599,6 +605,64 @@ a:hover {
 .dark-mode a:hover {
     color: #1e88e5; /* Unified blue hover color */
 }
+
+/* Navigation links cursor styling */
+nav.top-nav ul li a {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+nav.top-nav ul li a:hover {
+    cursor: pointer;
+}
+
+/* Social media links cursor styling */
+.social-media a {
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.social-media a:hover {
+    cursor: pointer;
+}
+
+/* Text links cursor styling */
+a {
+    cursor: pointer;
+}
+
+a:hover {
+    cursor: pointer;
+}
+
+/* Specific styling for blue text links */
+a[style*="color: #007bff"] {
+    cursor: pointer;
+    transition: color 0.3s ease, text-decoration 0.3s ease;
+}
+
+a[style*="color: #007bff"]:hover {
+    cursor: pointer;
+    color: #0056b3 !important;
+    text-decoration: underline !important;
+}
+
+/* Playlist button link styling */
+a[href*="bilibili.com/391939640/lists/3555538"] {
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+    transition: transform 0.2s ease;
+}
+
+a[href*="bilibili.com/391939640/lists/3555538"]:hover {
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+    transform: translateY(-2px);
+}
+
+a[href*="bilibili.com/391939640/lists/3555538"]:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
+}
+
+
 
 
 
