@@ -249,7 +249,7 @@ nav.top-nav ul li a:hover {
 .avatar-tile-wrapper:hover .device-tooltip {
     opacity: 1;
     visibility: visible;
-    bottom: -80px;
+    bottom: -60px;
     pointer-events: none;
 }
 
@@ -281,6 +281,8 @@ nav.top-nav ul li a:hover {
     object-fit: cover;
     transform: translate(-50%, -50%);
     z-index: 0;
+    cursor: inherit;
+    pointer-events: none;
 }
 .project {
     position: relative;
@@ -341,6 +343,8 @@ nav.top-nav ul li a:hover {
     left: 0;
     right: 0;
     z-index: 1; /* Ensures text is on top */
+    cursor: inherit;
+    pointer-events: none;
 }
 
 .project p {
@@ -353,6 +357,8 @@ nav.top-nav ul li a:hover {
     left: 0;
     right: 0;
     z-index: 1; /* Ensures text is on top */
+    cursor: inherit;
+    pointer-events: none;
 }
 
 /* Publications Section */
@@ -391,6 +397,7 @@ nav.top-nav ul li a:hover {
 #publications em {
     font-style: italic; /* Ensure publication sources are italicized */
 }
+
 
 /* Awards Section */
 #awards {
@@ -443,16 +450,12 @@ nav.top-nav ul li a:hover {
     color: #000000;
     font-size: 1.2rem; /* Adjust size as needed */
     transition: color 0.3s ease;
-    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
 }
 
 .social-media a:hover {
     color: #1e88e5; /* Brighter blue for better visibility */
 }
 
-.social-media a:active {
-    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
-}
 
 .image-container {
     position: relative;
@@ -611,6 +614,7 @@ footer {
     border-bottom: none !important;
 }
 
+
 .dark-mode #awards {
     background-color: #1a1a1a !important;
 }
@@ -679,9 +683,6 @@ footer {
     font-size: 16px;
 }
 
-#darkModeToggle:active {
-    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
-}
 
 #darkModeToggle:hover {
     border-color: #1e88e5;
