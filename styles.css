@@ -1,10 +1,61 @@
 /* General Styles */
-body {
+* {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* Global active state for all elements */
+*:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, auto;
+}
+
+/* Dragging state for all elements */
+*:active:focus,
+*:active:focus-visible,
+*:active:focus-within {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, auto;
+}
+
+/* Override drag cursors for links and images */
+a[draggable="true"],
+img[draggable="true"],
+a:active,
+img:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, auto !important;
+}
+
+/* Prevent default drag behavior and use custom cursor */
+a, img {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+/* Ensure all interactive elements use PinchCursor */
+button, input, select, textarea, [role="button"], [tabindex] {
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+}
+
+button:active, input:active, select:active, textarea:active, [role="button"]:active, [tabindex]:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
+}
+
+html, body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
     color: #333;
     line-height: 1.6;
+    cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
 }
 h1 {
     text-align: center; /* Center the heading */
@@ -86,6 +137,11 @@ nav.top-nav ul li a {
     padding: 10px 20px; /* Padding for clickable area */
     width: 100%; /* Full width for the link */
     box-sizing: border-box; /* Include padding in width */
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+}
+
+nav.top-nav ul li a:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
 
 nav.top-nav ul li a:hover {
@@ -111,6 +167,90 @@ nav.top-nav ul li a:hover {
     height: 300px;
     border-radius: 0;
     margin-right: 20px;
+}
+
+/* Avatar Grid Styles */
+.avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    width: 320px;
+    height: 320px;
+    gap: 2px;
+    border-radius: 12px;
+    overflow: visible;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.avatar-tile {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    position: relative;
+    z-index: 1;
+    border: none;
+    border-radius: 0;
+    display: block;
+}
+
+.avatar-tile:hover {
+    transform: scale(2.16) translateZ(50px);
+    z-index: 10;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.85);
+    border: none;
+    border-radius: 0;
+    cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
+}
+
+.avatar-tile:active {
+    cursor: url('Resources/common/PinchedCursor.png') 8 4, grab;
+}
+
+/* Avatar tile wrapper for tooltip positioning */
+.avatar-tile-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+/* Device tooltip styling */
+.device-tooltip {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+    z-index: 20;
+    pointer-events: none;
+}
+
+.device-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid rgba(0, 0, 0, 0.8);
+}
+
+.avatar-tile-wrapper:hover .device-tooltip {
+    opacity: 1;
+    visibility: visible;
+    bottom: -80px;
+    pointer-events: none;
 }
 
 .about-description {
@@ -159,6 +299,11 @@ nav.top-nav ul li a:hover {
     transition: transform 0.3s ease, box-shadow 0.3s ease; /* Added box-shadow transition */
     min-height: 250px; /* Ensure a minimum height for the project grid items */
     aspect-ratio: 4 / 3; /* Set the aspect ratio to 4:3 */
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+}
+
+.project:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
 
 .project::before {
@@ -298,10 +443,15 @@ nav.top-nav ul li a:hover {
     color: #000000;
     font-size: 1.2rem; /* Adjust size as needed */
     transition: color 0.3s ease;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
 }
 
 .social-media a:hover {
     color: #1e88e5; /* Brighter blue for better visibility */
+}
+
+.social-media a:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
 
 .image-container {
@@ -482,6 +632,31 @@ footer {
     color: #1e88e5 !important; /* Unified blue hover color */
 }
 
+/* Dark mode support for avatar grid */
+.dark-mode .avatar-grid {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+
+.dark-mode .avatar-tile {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark-mode .avatar-tile:hover {
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 1);
+    border: none;
+}
+
+/* Dark mode tooltip styling */
+.dark-mode .device-tooltip {
+    background-color: rgba(26, 26, 26, 0.95);
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .device-tooltip::before {
+    border-bottom-color: rgba(26, 26, 26, 0.95);
+}
+
 .dark-mode footer {
     background-color: #1a1a1a !important;
     border-top: 1px solid #444 !important;
@@ -495,13 +670,17 @@ footer {
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
     color: #333;
     font-size: 16px;
+}
+
+#darkModeToggle:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
 
 #darkModeToggle:hover {
@@ -537,7 +716,7 @@ color: #1e88e5;
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -581,7 +760,7 @@ nav.top-nav #darkModeToggle {
     border-radius: 50%;
     width: 32px;
     height: 32px;
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     display: flex;
     align-items: center;
     justify-content: center;

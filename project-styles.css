@@ -1,10 +1,49 @@
-body {
+html, body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
     margin: 0;
     padding: 0;
     color: #333;
     background-color: #ffffff;
+    cursor: url('Resources/common/PointingCursor.png') 1 1, auto;
+}
+
+/* Global active state for all elements */
+*:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, auto;
+}
+
+/* Dragging state for all elements */
+*:active:focus,
+*:active:focus-visible,
+*:active:focus-within {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, auto;
+}
+
+/* Override drag cursors for links and images */
+a[draggable="true"],
+img[draggable="true"],
+a:active,
+img:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, auto !important;
+}
+
+/* Prevent default drag behavior and use custom cursor */
+a, img {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+/* Ensure all interactive elements use PinchCursor */
+button, input, select, textarea, [role="button"], [tabindex] {
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+}
+
+button:active, input:active, select:active, textarea:active, [role="button"]:active, [tabindex]:active {
+    cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
 
 header {
@@ -197,7 +236,7 @@ img {
 /* Clickable diagram images */
 img[src*="XRInteractionFramework.png"],
 img[src*="WorkFlowOfXRInteraction.png"] {
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -239,14 +278,14 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
     width: auto;
     height: auto;
     object-fit: contain;
-    cursor: zoom-in;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, zoom-in;
     border: none;
     outline: none;
     display: block;
 }
 
 .modal-content.zoomed {
-    cursor: zoom-out !important;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, zoom-out !important;
     transform: scale(1.5) !important;
     transform-origin: top left !important;
     width: auto !important;
@@ -260,7 +299,7 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
     color: #fff;
     font-size: 40px;
     font-weight: bold;
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     z-index: 10001;
     transition: color 0.3s ease;
 }
@@ -398,7 +437,7 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -454,7 +493,7 @@ color: #1e88e5;
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -498,7 +537,7 @@ nav.top-nav #darkModeToggle {
     border-radius: 50%;
     width: 32px;
     height: 32px;
-    cursor: pointer;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     display: flex;
     align-items: center;
     justify-content: center;

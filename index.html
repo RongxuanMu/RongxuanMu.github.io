@@ -19,6 +19,44 @@
     </script>
     <script src="darkmode.js?v=1"></script>
     <script>
+        // Prevent text selection and copying
+        document.addEventListener('DOMContentLoaded', function() {
+            // Disable right-click context menu
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                return false;
+            });
+            
+            // Disable keyboard shortcuts for copy, cut, paste, select all
+            document.addEventListener('keydown', function(e) {
+                // Disable Ctrl+A (Select All)
+                if (e.ctrlKey && e.keyCode === 65) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Disable Ctrl+C (Copy)
+                if (e.ctrlKey && e.keyCode === 67) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Disable Ctrl+X (Cut)
+                if (e.ctrlKey && e.keyCode === 88) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Disable Ctrl+V (Paste)
+                if (e.ctrlKey && e.keyCode === 86) {
+                    e.preventDefault();
+                    return false;
+                }
+                // Disable F12 (Developer Tools)
+                if (e.keyCode === 123) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+        
         // Lazy load videos to prevent loading errors
         document.addEventListener('DOMContentLoaded', function() {
             // Add loading="lazy" to all videos
@@ -79,7 +117,117 @@
     <!-- Combined Name, Avatar, and About Section -->
     <section id="about">
         <div class="avatar-container">
-            <img class="avatar" src="Resources/common/avatar.png" alt="Your Avatar">
+            <div class="avatar-grid">
+                <!-- Row 1 -->
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar01_Ray-Ban.png" alt="Ray-Ban">
+                    <div class="device-tooltip">Ray-Ban Meta</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar02_FovPrototype.png" alt="FOV Prototype">
+                    <div class="device-tooltip">A FOV Test Prototype</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar03_Rayneo.png" alt="Rayneo">
+                    <div class="device-tooltip">Rayneo Glasses</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avartar04_StarV.png" alt="StarV">
+                    <div class="device-tooltip">Star V</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar05_Rokid.png" alt="Rokid">
+                    <div class="device-tooltip">Rokid</div>
+                </div>
+                
+                <!-- Row 2 -->
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar06_AppleVisionPro.png" alt="Apple Vision Pro">
+                    <div class="device-tooltip">Apple Vision Pro</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar06_Hololens.png" alt="HoloLens">
+                    <div class="device-tooltip">Hololens</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar08_MagicLeap1.png" alt="Magic Leap 1">
+                    <div class="device-tooltip">MagicLeap 1</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar09_IMMO.png" alt="IMMO">
+                    <div class="device-tooltip">IMMO</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar10_Rokid6Dof.png" alt="Rokid 6DoF">
+                    <div class="device-tooltip">Rokid 6Dof</div>
+                </div>
+                
+                <!-- Row 3 (Center row with PICO 4 Pro at center) -->
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar12_MagicLeap2.png" alt="Magic Leap 2">
+                    <div class="device-tooltip">MagicLeap 2</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar13_Quest2.png" alt="Quest 2">
+                    <div class="device-tooltip">Quest 2, My First VR Headset</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar11_PICO4Pro.png" alt="PICO 4 Pro">
+                    <div class="device-tooltip">PICO 4 Pro, My Favorite</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar14_RokidAR.png" alt="Rokid AR">
+                    <div class="device-tooltip">Rokid AR</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar15_RokidGlasses.png" alt="Rokid Glasses">
+                    <div class="device-tooltip">Rokid Glasses</div>
+                </div>
+                
+                <!-- Row 4 -->
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Avatar16_RayneoX.png" alt="Rayneo X">
+                    <div class="device-tooltip">Rayneo X</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Quest 3.png" alt="Quest 3">
+                    <div class="device-tooltip">Quest 3</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Quest Pro.png" alt="Quest Pro">
+                    <div class="device-tooltip">Quest Pro</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Ray-Ban Meta Display.png" alt="Ray-Ban Meta Display">
+                    <div class="device-tooltip">Ray-Ban Meta Display</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Rayneo X3 Pro.png" alt="Rayneo X3 Pro">
+                    <div class="device-tooltip">Rayneo X3 Pro</div>
+                </div>
+                
+                <!-- Row 5 -->
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Vive Focus Vision.png" alt="Vive Focus Vision">
+                    <div class="device-tooltip">Vive Focus Vision</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Vivo Vision.png" alt="Vivo Vision">
+                    <div class="device-tooltip">Vivo Vision</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/YVR PlayForDreams.png" alt="YVR PlayForDreams">
+                    <div class="device-tooltip">YVR PlayForDreams</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/PICO G2.png" alt="PICO G2">
+                    <div class="device-tooltip">PICO G2</div>
+                </div>
+                <div class="avatar-tile-wrapper">
+                    <img class="avatar-tile" src="Resources/Avatars/Even Reality.png" alt="Even Reality">
+                    <div class="device-tooltip">Even Reality</div>
+                </div>
+            </div>
         </div>
         <div>
             <h1>👷‍♂️Rongxuan Mu👨‍💻
