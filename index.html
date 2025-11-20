@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="Resources/common/Rongxuan.jpeg" type="image/x-icon">
+    <!-- Preload critical above-the-fold avatar images -->
+    <link rel="preload" as="image" href="Resources/Avatars/compressed/Avatar01_Ray-Ban_compressed.jpg" fetchpriority="high">
+    <link rel="preload" as="image" href="Resources/Avatars/compressed/Avatar02_FovPrototype_compressed.jpg" fetchpriority="high">
+    <link rel="preload" as="image" href="Resources/Avatars/compressed/Avatar03_Rayneo_compressed.jpg" fetchpriority="high">
     <script>
         // Simple password protection
         function checkPassword() {
@@ -120,111 +124,111 @@
             <div class="avatar-grid">
                 <!-- Row 1 -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar01_Ray-Ban_compressed.jpg" alt="Ray-Ban">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar01_Ray-Ban_compressed.jpg" alt="Ray-Ban" width="64" height="64" fetchpriority="high" decoding="async">
                     <div class="device-tooltip">Ray-Ban Meta</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar02_FovPrototype_compressed.jpg" alt="FOV Prototype">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar02_FovPrototype_compressed.jpg" alt="FOV Prototype" width="64" height="64" fetchpriority="high" decoding="async">
                     <div class="device-tooltip">A FOV Test Prototype</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar03_Rayneo_compressed.jpg" alt="Rayneo">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar03_Rayneo_compressed.jpg" alt="Rayneo" width="64" height="64" fetchpriority="high" decoding="async">
                     <div class="device-tooltip">Rayneo Glasses</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avartar04_StarV_compressed.jpg" alt="StarV">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avartar04_StarV_compressed.jpg" alt="StarV" width="64" height="64" fetchpriority="high" decoding="async">
                     <div class="device-tooltip">Star V</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar05_Rokid_compressed.jpg" alt="Rokid">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar05_Rokid_compressed.jpg" alt="Rokid" width="64" height="64" fetchpriority="high" decoding="async">
                     <div class="device-tooltip">Rokid</div>
                 </div>
                 
                 <!-- Row 2 -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar06_AppleVisionPro_compressed.jpg" alt="Apple Vision Pro">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar06_AppleVisionPro_compressed.jpg" alt="Apple Vision Pro" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Apple Vision Pro</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar06_Hololens_compressed.jpg" alt="HoloLens">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar06_Hololens_compressed.jpg" alt="HoloLens" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Hololens</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar08_MagicLeap1_compressed.jpg" alt="Magic Leap 1">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar08_MagicLeap1_compressed.jpg" alt="Magic Leap 1" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">MagicLeap 1</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar09_IMMO_compressed.jpg" alt="IMMO">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar09_IMMO_compressed.jpg" alt="IMMO" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">IMMO</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar10_Rokid6Dof_compressed.jpg" alt="Rokid 6DoF">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar10_Rokid6Dof_compressed.jpg" alt="Rokid 6DoF" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Rokid 6Dof</div>
                 </div>
                 
                 <!-- Row 3 (Center row with PICO 4 Pro at center) -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar12_MagicLeap2_compressed.jpg" alt="Magic Leap 2">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar12_MagicLeap2_compressed.jpg" alt="Magic Leap 2" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">MagicLeap 2</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar13_Quest2_compressed.jpg" alt="Quest 2">
-                    <div class="device-tooltip">Quest 2</div>
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar13_Quest2_compressed.jpg" alt="Quest 2" width="64" height="64" loading="lazy" decoding="async">
+                    <div class="device-tooltip">Quest 2, My First VR Headset</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar11_PICO4Pro_compressed.jpg" alt="PICO 4 Pro">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar11_PICO4Pro_compressed.jpg" alt="PICO 4 Pro" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">PICO 4 Pro, My Favorite</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar14_RokidAR_compressed.jpg" alt="Rokid AR">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar14_RokidAR_compressed.jpg" alt="Rokid AR" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Rokid AR</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar15_RokidGlasses_compressed.jpg" alt="Rokid Glasses">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar15_RokidGlasses_compressed.jpg" alt="Rokid Glasses" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Rokid Glasses</div>
                 </div>
                 
                 <!-- Row 4 -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar16_RayneoX_compressed.jpg" alt="Rayneo X">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar16_RayneoX_compressed.jpg" alt="Rayneo X" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Rayneo X</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Quest 3_compressed.jpg" alt="Quest 3">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Quest 3_compressed.jpg" alt="Quest 3" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Quest 3</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Quest Pro_compressed.jpg" alt="Quest Pro">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Quest Pro_compressed.jpg" alt="Quest Pro" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Quest Pro</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Ray-Ban Meta Display_compressed.jpg" alt="Ray-Ban Meta Display">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Ray-Ban Meta Display_compressed.jpg" alt="Ray-Ban Meta Display" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Ray-Ban Meta Display</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Rayneo X3 Pro_compressed.jpg" alt="Rayneo X3 Pro">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Rayneo X3 Pro_compressed.jpg" alt="Rayneo X3 Pro" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Rayneo X3 Pro</div>
                 </div>
                 
                 <!-- Row 5 -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Vive Focus Vision_compressed.jpg" alt="Vive Focus Vision">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Vive Focus Vision_compressed.jpg" alt="Vive Focus Vision" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Vive Focus Vision</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Vivo Vision_compressed.jpg" alt="Vivo Vision">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Vivo Vision_compressed.jpg" alt="Vivo Vision" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Vivo Vision</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/YVR PlayForDreams_compressed.jpg" alt="YVR PlayForDreams">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/YVR PlayForDreams_compressed.jpg" alt="YVR PlayForDreams" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">YVR PlayForDreams</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/PICO G2_compressed.jpg" alt="PICO G2">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/PICO G2_compressed.jpg" alt="PICO G2" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">PICO G2</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Even Reality_compressed.jpg" alt="Even Reality">
+                    <img class="avatar-tile" src="Resources/Avatars/compressed/Even Reality_compressed.jpg" alt="Even Reality" width="64" height="64" loading="lazy" decoding="async">
                     <div class="device-tooltip">Even Reality</div>
                 </div>
             </div>
