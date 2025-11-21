@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fuzzy Gaze Zone Visualizer</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Load OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        /* Custom scrollbar for the controls panel */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #4b5563;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background-color: #1f2937;
+        }
+    </style>
+</head>
+<body class="overflow-hidden">
+
+    <div id="app" class="flex h-screen w-full bg-neutral-900 text-white font-sans overflow-hidden">
+        
+        <!-- Viewport Container -->
+        <div id="viewport" class="relative flex-grow h-full">
+            <!-- HUD -->
+            <div class="absolute top-4 left-4 bg-black/70 p-3 rounded-lg backdrop-blur-sm border border-neutral-800 select-none pointer-events-none z-20">
+                <h2 class="text-base font-bold text-green-400 flex items-center gap-2">
+                    👁️ Gaze Zone Visualizer
+                </h2>
+                <div class="text-[10px] text-gray-400 mt-2 space-y-1">
+                    <div class="flex items-center gap-2"><div class="w-3 h-3 bg-white/50 rounded-full"></div> Colored zones show selection boundaries</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-0.5 bg-purple-500"></div> Zone boundaries (Mesh)</div>
+                    <div class="flex items-center gap-2"><div class="w-3 h-0.5 bg-green-500"></div> Current Gaze Ray</div>
+                </div>
+            </div>
+            
+            <div id="toggles-panel" class="absolute bottom-4 left-4 pointer-events-auto bg-neutral-800 p-3 rounded border border-neutral-700 flex flex-col gap-2 z-20">
+                <!-- Toggles will be inserted here by JS -->
+            </div>
+        </div>
+
+        <!-- Sidebar / Controls Panel -->
+        <div id="sidebar" class="w-96 bg-neutral-800 border-l border-neutral-700 flex flex-col h-full shadow-xl z-10">
+            <div class="p-3 border-b border-neutral-700 bg-neutral-800 flex justify-between items-center">
+                <h3 class="font-bold text-sm flex items-center gap-2">⚙️ Parameters</h3>
+                <div id="object-count" class="text-[10px] text-gray-500"></div>
+            </div>
+            
+            <div id="controls-container" class="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
+                <!-- Controls sections will be inserted here by JS -->
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Globals ---
+        let scene, camera, renderer, controls;
+        let eyeGroup, coneMesh, highlightMesh, gazeField, gazeFieldBoundary;
+        const objectMeshes = {};
+        let debugLines = [];
+        
+        // Helper pool for vector calculations
+        const vec3Pool = {
+            eye: new THREE.Vector3(),
+            objPos: new THREE.Vector3(),
+            eyeToCenter: new THREE.Vector3(),
+            projPoint: new THREE.Vector3(),
+            lineToCenter: new THREE.Vector3(),
+            hitPoint: new THREE.Vector3(),
+            surfacePoint: new THREE.Vector3(),
+            eyeToSurface: new THREE.Vector3(),
+            testGazeDir: new THREE.Vector3(),
+            testPoint: new THREE.Vector3()
+        };
+
+        // Gaze field calculation cache
+        let initialFieldPositions = null;
+        const gridDims = { nx: 0, ny: 0, nz: 0, step: 0 };
+        let dotTexture;
+        
+        // --- STATE ---
+        const state = {
+            params: {
+                coneAngle: 5,
+                coneLength: 25,
+                weightCenter: 0.6,
+                weightBoundary: 0.4,
+                biasMin: 0.5,
+                biasMax: 2.0,
+                eyeX: 0,
+                eyeY: 2,
+                eyeZ: 15,
+                gazePitch: 0,
+                gazeYaw: 0,
+                gridDensity: 8,
+            },
+            objects: [
+                { id: 1, x: -2, y: 1, z: 0, size: 1.2, renderQueue: 0, color: [1, 0.2, 0.2] },
+                { id: 2, x: 0, y: 0, z: 5, size: 0.8, renderQueue: 10, color: [0.2, 1, 0.2] },
+                { id: 3, x: 2, y: 2, z: 2, size: 1.0, renderQueue: 5, color: [0.2, 0.5, 1] },
+                { id: 4, x: -1.5, y: -1, z: 3, size: 0.9, renderQueue: 8, color: [1, 0.8, 0.2] },
+            ],
+            selection: null,
+            showBoundaries: true,
+            showDebugLines: true,
+            showZoneBoundaryLines: false // Default to false as requested
+        };
+
+        // --- Helper Functions ---
+
+        const toRad = (deg) => (deg * Math.PI) / 180;
+
+        /**
+         * Creates a soft, radial gradient texture for the gaze field dots.
+         */
+        const createSoftDotTexture = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            
+            const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+            gradient.addColorStop(0.4, 'rgba(255, 255, 255, 0.5)');
+            gradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 32, 32);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.magFilter = THREE.LinearFilter;
+            texture.minFilter = THREE.LinearFilter;
+            return texture;
+        };
+        
+        /**
+         * Core fuzzy gaze scoring logic.
+         */
+        const calculateScore = (gazeOrigin, gazeDir, obj, params, maxRQ, pool) => {
+            const { objPos, eyeToCenter, projPoint, lineToCenter, hitPoint, surfacePoint, eyeToSurface } = pool;
+            
+            objPos.set(obj.x, obj.y, obj.z);
+            eyeToCenter.subVectors(objPos, gazeOrigin);
+            
+            // Center Angle
+            const centerAngleRad = gazeDir.angleTo(eyeToCenter);
+            const centerAngleDeg = THREE.MathUtils.radToDeg(centerAngleRad);
+
+            // Boundary Logic
+            const projScalar = eyeToCenter.dot(gazeDir);
+            projPoint.copy(gazeOrigin).addScaledVector(gazeDir, projScalar);
+            lineToCenter.subVectors(objPos, projPoint);
+            const distLineToCenter = lineToCenter.length();
+            const isIntersecting = distLineToCenter <= obj.size;
+            
+            let boundaryAngleDeg = 0;
+            let hitPointToUse = new THREE.Vector3();
+
+            if (isIntersecting) {
+                boundaryAngleDeg = 0;
+                if (projScalar > 0) {
+                    const offset = Math.sqrt(Math.max(0, obj.size**2 - distLineToCenter**2));
+                    hitPointToUse.copy(projPoint).addScaledVector(gazeDir, -offset);
+                } else {
+                    hitPointToUse.copy(objPos); 
+                }
+            } else {
+                surfacePoint.copy(objPos).addScaledVector(lineToCenter.normalize(), -obj.size);
+                hitPointToUse.copy(surfacePoint);
+                
+                eyeToSurface.subVectors(surfacePoint, gazeOrigin);
+                boundaryAngleDeg = THREE.MathUtils.radToDeg(gazeDir.angleTo(eyeToSurface));
+            }
+
+            if (centerAngleDeg > params.coneAngle && boundaryAngleDeg > params.coneAngle) return null;
+
+            const t = (obj.renderQueue) / (maxRQ || 1); 
+            const bias = params.biasMax - t * (params.biasMax - params.biasMin);
+
+            const rawScore = (centerAngleDeg * params.weightCenter) + (boundaryAngleDeg * params.weightBoundary);
+            const finalScore = rawScore * bias;
+
+            return {
+                id: obj.id,
+                finalScore,
+                centerAngle: centerAngleDeg,
+                boundaryAngle: boundaryAngleDeg,
+                bias: bias,
+                hitPoint: hitPointToUse.clone(),
+                objPos: objPos.clone()
+            };
+        };
+
+        // --- Three.js Setup ---
+
+        const initThreeJS = () => {
+            const viewport = document.getElementById('viewport');
+            const width = viewport.clientWidth;
+            const height = viewport.clientHeight;
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111111);
+
+            // Grid
+            const gridHelper = new THREE.GridHelper(50, 50, 0x444444, 0x222222);
+            scene.add(gridHelper);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+            camera.position.set(15, 10, 25); 
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            viewport.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+
+            // Eye Rig (Group)
+            eyeGroup = new THREE.Group();
+            scene.add(eyeGroup);
+
+            // Eye Sphere
+            const eyeGeo = new THREE.SphereGeometry(0.5, 16, 16);
+            const eyeMat = new THREE.MeshStandardMaterial({ color: 0x00aaff });
+            eyeGroup.add(new THREE.Mesh(eyeGeo, eyeMat));
+
+            // Gaze Ray
+            const gazeMat = new THREE.LineBasicMaterial({ color: 0x00ff00, linewidth: 2 });
+            const gazeGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -100)]);
+            eyeGroup.add(new THREE.Line(gazeGeo, gazeMat));
+
+            // Cone Hull
+            const coneGeo = new THREE.ConeGeometry(1, 1, 32, 1, true);
+            coneGeo.translate(0, -0.5, 0);
+            coneGeo.rotateX(Math.PI / 2); 
+            const coneMat = new THREE.MeshBasicMaterial({ 
+                color: 0x00ffff, 
+                transparent: true, 
+                opacity: 0.05, 
+                side: THREE.DoubleSide,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            coneMesh = new THREE.Mesh(coneGeo, coneMat);
+            eyeGroup.add(coneMesh);
+
+            // Highlight Mesh (Outline)
+            highlightMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshBasicMaterial({ 
+                color: 0x00ff00, 
+                side: THREE.BackSide,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending
+            }));
+            highlightMesh.visible = false; 
+            scene.add(highlightMesh);
+            
+            // Gaze Field Boundary Lines Mesh
+            const boundaryMat = new THREE.LineBasicMaterial({ 
+                color: 0x7700ff, // Transparent purple
+                linewidth: 1, 
+                transparent: true,
+                opacity: 0.5 
+            });
+            gazeFieldBoundary = new THREE.LineSegments(new THREE.BufferGeometry(), boundaryMat);
+            scene.add(gazeFieldBoundary);
+
+            // Dot Texture
+            dotTexture = createSoftDotTexture();
+
+            // Resize handler
+            window.addEventListener('resize', () => {
+                const w = viewport.clientWidth;
+                const h = viewport.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+        };
+
+        // --- Gaze Field Mesh Generation ---
+
+        const generateGazeField = () => {
+            // Cleanup old field
+            if (gazeField) {
+                gazeField.geometry.dispose();
+                gazeField.material.dispose();
+                scene.remove(gazeField);
+            }
+            if (gazeFieldBoundary) {
+                gazeFieldBoundary.geometry.dispose();
+            }
+
+            // Map density (1-10) to step (0.8 - 0.1)
+            const step = 0.8 - (state.params.gridDensity - 1) * (0.7 / 9);
+            
+            const points = [];
+            const xMin = -5, xMax = 5;
+            const yMin = -4, yMax = 5;
+            const zMin = -2, zMax = 8;
+            
+            let nx = 0, ny = 0, nz = 0;
+            let temp_y_count = 0;
+            
+            for(let x = xMin; x <= xMax; x += step) {
+                nx++;
+                temp_y_count = 0;
+                for(let y = yMin; y <= yMax; y += step) {
+                    temp_y_count++;
+                    nz = 0;
+                    for(let z = zMin; z <= zMax; z += step) {
+                        nz++;
+                        points.push(x, y, z);
+                    }
+                }
+                if (ny === 0) ny = temp_y_count;
+            }
+
+            gridDims.nx = nx;
+            gridDims.ny = ny;
+            gridDims.nz = nz;
+            gridDims.step = step;
+            
+            initialFieldPositions = new Float32Array(points);
+
+            const particles = new THREE.BufferGeometry();
+            const positionArr = new Float32Array(points);
+            const colorArr = new Float32Array(points.length); 
+            
+            particles.setAttribute('position', new THREE.BufferAttribute(positionArr, 3));
+            particles.setAttribute('color', new THREE.BufferAttribute(colorArr, 3));
+
+            const particleMat = new THREE.PointsMaterial({
+                size: step * 2.0, 
+                map: dotTexture,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.3, 
+                sizeAttenuation: true,
+                depthWrite: false, 
+                blending: THREE.NormalBlending 
+            });
+            
+            gazeField = new THREE.Points(particles, particleMat);
+            scene.add(gazeField);
+        };
+
+        // --- Main Scene Update Loop (Logic) ---
+        const updateScene = () => {
+            const params = state.params;
+            const gazeOrigin = vec3Pool.eye.set(params.eyeX, params.eyeY, params.eyeZ);
+            const gazeRot = new THREE.Euler(toRad(params.gazePitch), toRad(params.gazeYaw), 0);
+            
+            // 1. Update Eye & Hull
+            eyeGroup.position.copy(gazeOrigin);
+            eyeGroup.rotation.copy(gazeRot);
+            
+            const dist = params.coneLength;
+            const radius = Math.tan(toRad(params.coneAngle)) * dist;
+            coneMesh.scale.set(radius, radius, dist);
+
+            // 2. Sync Objects
+            const currentObjectIds = state.objects.map(o => o.id);
+            Object.keys(objectMeshes).forEach(id => {
+                if (!currentObjectIds.includes(parseInt(id))) {
+                    scene.remove(objectMeshes[id]);
+                    objectMeshes[id].geometry.dispose();
+                    objectMeshes[id].material.dispose();
+                    delete objectMeshes[id];
+                }
+            });
+
+            state.objects.forEach(obj => {
+                let mesh = objectMeshes[obj.id];
+                if (!mesh) {
+                    const geo = new THREE.SphereGeometry(1, 32, 32);
+                    const mat = new THREE.MeshStandardMaterial();
+                    mesh = new THREE.Mesh(geo, mat);
+                    mesh.userData = { id: obj.id };
+                    scene.add(mesh);
+                    objectMeshes[obj.id] = mesh;
+                }
+                
+                mesh.position.set(obj.x, obj.y, obj.z);
+                mesh.scale.set(obj.size, obj.size, obj.size);
+                
+                const col = new THREE.Color(obj.color[0], obj.color[1], obj.color[2]);
+                mesh.material.color.set(col).multiplyScalar(0.5); 
+                mesh.material.emissive.setHex(0x000000);
+            });
+
+            // 3. Calculate MAIN Gaze Result
+            const mainGazeDir = new THREE.Vector3(0, 0, -1).applyEuler(gazeRot).normalize();
+            const maxRQ = Math.max(...state.objects.map(o => o.renderQueue), 10);
+            
+            let candidates = state.objects
+                                .map(obj => calculateScore(gazeOrigin, mainGazeDir, obj, params, maxRQ, vec3Pool))
+                                .filter(c => c !== null)
+                                .sort((a, b) => a.finalScore - b.finalScore);
+            
+            // 4. Highlighting (Winner & Outline)
+            let winnerId = null;
+            if (candidates.length > 0) {
+                const winner = candidates[0];
+                winnerId = winner.id;
+                const mesh = objectMeshes[winner.id];
+                if (mesh) {
+                    mesh.material.emissive.setHex(0x444444); 
+                    mesh.material.color.setHex(0xffffff);
+                }
+            }
+            state.selection = winnerId;
+            
+            state.objects.filter(o => o.id !== winnerId).forEach(obj => {
+                const mesh = objectMeshes[obj.id];
+                if (mesh) {
+                    const col = new THREE.Color(obj.color[0], obj.color[1], obj.color[2]);
+                    mesh.material.color.set(col).multiplyScalar(0.5); 
+                    mesh.material.emissive.setHex(0x000000);
+                }
+            });
+
+            if (highlightMesh) {
+                if (winnerId !== null) {
+                    const winnerObj = state.objects.find(o => o.id === winnerId);
+                    if (winnerObj) {
+                        highlightMesh.position.set(winnerObj.x, winnerObj.y, winnerObj.z);
+                        highlightMesh.scale.setScalar(winnerObj.size * 1.15);
+                        highlightMesh.visible = true;
+                    }
+                } else {
+                    highlightMesh.visible = false;
+                }
+            }
+
+            // 5. Debug Lines
+            debugLines.forEach(l => scene.remove(l));
+            debugLines = [];
+
+            if (candidates.length > 0 && state.showDebugLines) { 
+                const winner = candidates[0];
+                const lineMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.8 });
+                
+                const centerLine = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints([gazeOrigin, winner.objPos]), 
+                    lineMat.clone().setValues({ color: 0xffff00, opacity: 0.5 })
+                );
+                scene.add(centerLine);
+                debugLines.push(centerLine);
+
+                const boundLine = new THREE.Line(
+                    new THREE.BufferGeometry().setFromPoints([gazeOrigin, winner.hitPoint]), 
+                    lineMat.clone().setValues({ color: 0xff0000, opacity: 0.8 })
+                );
+                scene.add(boundLine);
+                debugLines.push(boundLine);
+            }
+
+            // 6. Gaze Field Visualization & Boundary Generation
+            const shouldCalculateField = state.showBoundaries || state.showZoneBoundaryLines;
+            
+            if (gazeField && gazeFieldBoundary && initialFieldPositions && shouldCalculateField) {
+                const positions = gazeField.geometry.attributes.position.array;
+                const colors = gazeField.geometry.attributes.color.array;
+                const initialPos = initialFieldPositions;
+                const count = positions.length / 3;
+                
+                const { nx, ny, nz } = gridDims;
+                
+                const { testGazeDir, testPoint } = vec3Pool;
+                const pointOwnership = new Array(count).fill(0);
+
+                
+                for (let i = 0; i < count; i++) {
+                    const idx = i * 3;
+                    
+                    testPoint.set(initialPos[idx], initialPos[idx+1], initialPos[idx+2]);
+                    testGazeDir.subVectors(testPoint, gazeOrigin).normalize();
+
+                    let bestScore = Infinity;
+                    let bestObj = null;
+
+                    for (let o of state.objects) {
+                        const res = calculateScore(gazeOrigin, testGazeDir, o, params, maxRQ, vec3Pool);
+                        if (res && res.finalScore < bestScore) {
+                            bestScore = res.finalScore;
+                            bestObj = o;
+                        }
+                    }
+
+                    if (bestObj) {
+                        pointOwnership[i] = bestObj.id;
+                        
+                        // Dot visibility and coloring
+                        if (state.showBoundaries) {
+                            positions[idx] = initialPos[idx];
+                            positions[idx+1] = initialPos[idx+1];
+                            positions[idx+2] = initialPos[idx+2];
+
+                            colors[idx] = bestObj.color[0];
+                            colors[idx+1] = bestObj.color[1];
+                            colors[idx+2] = bestObj.color[2];
+                        } else {
+                            positions[idx] = 99999;
+                            positions[idx+1] = 99999;
+                            positions[idx+2] = 99999;
+                        }
+                    } else {
+                        positions[idx] = 99999;
+                        positions[idx+1] = 99999;
+                        positions[idx+2] = 99999;
+                        pointOwnership[i] = 0;
+                    }
+                }
+                
+                gazeField.visible = state.showBoundaries;
+                gazeField.geometry.attributes.position.needsUpdate = true;
+                gazeField.geometry.attributes.color.needsUpdate = true;
+                
+                // Zone Boundary Line Generation
+                const boundaryLines = [];
+                
+                if (state.showZoneBoundaryLines) {
+                    const indexZ = 1;
+                    const indexY = nz;
+                    const indexX = ny * nz;
+
+                    for (let i = 0; i < count; i++) {
+                        const owner = pointOwnership[i];
+                        if (owner === 0) continue; 
+
+                        const currentPosIndex = i * 3;
+                        const p1x = initialPos[currentPosIndex];
+                        const p1y = initialPos[currentPosIndex + 1];
+                        const p1z = initialPos[currentPosIndex + 2];
+                        
+                        // Check Z neighbor (i+1)
+                        if (i % nz !== nz - 1) { 
+                            const neighborOwner = pointOwnership[i + indexZ];
+                            if (neighborOwner !== 0 && neighborOwner !== owner) {
+                                const p2x = initialPos[currentPosIndex + indexZ * 3];
+                                const p2y = initialPos[currentPosIndex + indexZ * 3 + 1];
+                                const p2z = initialPos[currentPosIndex + indexZ * 3 + 2];
+                                boundaryLines.push(p1x, p1y, p1z, p2x, p2y, p2z);
+                            }
+                        }
+
+                        // Check Y neighbor (i + NZ)
+                        if (Math.floor(i / nz) % ny !== ny - 1) { 
+                            const neighborOwner = pointOwnership[i + indexY];
+                            if (neighborOwner !== 0 && neighborOwner !== owner) {
+                                const p2x = initialPos[currentPosIndex + indexY * 3];
+                                const p2y = initialPos[currentPosIndex + indexY * 3 + 1];
+                                const p2z = initialPos[currentPosIndex + indexY * 3 + 2];
+                                boundaryLines.push(p1x, p1y, p1z, p2x, p2y, p2z);
+                            }
+                        }
+                        
+                        // Check X neighbor (i + NY*NZ)
+                        if (Math.floor(i / indexX) !== nx - 1) { 
+                            const neighborOwner = pointOwnership[i + indexX];
+                            if (neighborOwner !== 0 && neighborOwner !== owner) {
+                                const p2x = initialPos[currentPosIndex + indexX * 3];
+                                const p2y = initialPos[currentPosIndex + indexX * 3 + 1];
+                                const p2z = initialPos[currentPosIndex + indexX * 3 + 2];
+                                boundaryLines.push(p1x, p1y, p1z, p2x, p2y, p2z);
+                            }
+                        }
+                    }
+                }
+                
+                // Update Boundary Mesh
+                gazeFieldBoundary.geometry.dispose();
+                gazeFieldBoundary.geometry = new THREE.BufferGeometry().setAttribute(
+                    'position', 
+                    new THREE.Float32BufferAttribute(boundaryLines, 3)
+                );
+                gazeFieldBoundary.visible = state.showZoneBoundaryLines;
+            } else if (gazeFieldBoundary) {
+                 gazeFieldBoundary.visible = state.showZoneBoundaryLines;
+            }
+
+            // 7. Update UI Results
+            updateResultsUI(candidates);
+            updateObjectControls(winnerId);
+            document.getElementById('object-count').textContent = `${state.objects.length} Objects`;
+
+        };
+        
+        // --- Animation Loop ---
+
+        const animate = () => {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) {
+                updateScene();
+                renderer.render(scene, camera);
+            }
+        };
+
+        // --- UI Logic ---
+
+        const updateParam = (key, value) => {
+            state.params[key] = value;
+            if (key === 'gridDensity') {
+                generateGazeField();
+            }
+        };
+
+        const updateObject = (id, field, value) => {
+            const index = state.objects.findIndex(o => o.id === id);
+            if (index !== -1) {
+                state.objects[index][field] = value;
+                renderObjectControls();
+            }
+        };
+
+        const addObject = () => {
+            const newId = Math.max(...state.objects.map(o => o.id), 0) + 1;
+            state.objects.push({
+                id: newId,
+                x: Math.random() * 4 - 2,
+                y: Math.random() * 4 - 2,
+                z: Math.random() * 4 + 2,
+                size: 1,
+                renderQueue: Math.floor(Math.random() * 11),
+                color: [Math.random(), Math.random(), Math.random()]
+            });
+            renderObjectControls();
+        };
+
+        const removeObject = (id) => {
+            state.objects = state.objects.filter(o => o.id !== id);
+            renderObjectControls();
+        };
+
+        const createControlHtml = (label, key, value, min, max, step = 0.1, type = 'params') => {
+            const id = `${key}-${type}`;
+            const isInteger = step === 1;
+
+            return `
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-400 mb-0.5" for="${id}">
+                        ${label}: <span class="font-mono text-white text-sm">${isInteger ? value.toFixed(0) : value.toFixed(2)}</span>
+                    </label>
+                    <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${value}"
+                        class="w-full h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        oninput="document.querySelector('label[for=\\'${id}\\'] span').textContent = parseFloat(this.value).toFixed(${isInteger ? 0 : 2})"
+                    >
+                </div>
+            `;
+        };
+
+        const setupStaticControls = () => {
+            const container = document.getElementById('controls-container');
+            
+            // Eye Controls
+            const eyeHtml = `
+                <section class="space-y-2">
+                    <div class="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
+                        📷 Eye Transform
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1 bg-neutral-900/50 p-2 rounded border border-neutral-700">
+                        ${createControlHtml("X", "eyeX", state.params.eyeX, -10, 10)}
+                        ${createControlHtml("Y", "eyeY", state.params.eyeY, 0, 10)}
+                        ${createControlHtml("Pitch", "gazePitch", state.params.gazePitch, -90, 90)}
+                        ${createControlHtml("Yaw", "gazeYaw", state.params.gazeYaw, -90, 90)}
+                    </div>
+                </section>`;
+
+            // Scoring Controls
+            const scoringHtml = `
+                <section class="space-y-2">
+                    <div class="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider">
+                        🎯 Scoring Parameters
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1 bg-neutral-900/50 p-2 rounded border border-neutral-700">
+                        ${createControlHtml("Cone Angle (deg)", "coneAngle", state.params.coneAngle, 1, 30)}
+                        ${createControlHtml("Cone Length", "coneLength", state.params.coneLength, 5, 30, 0.5)}
+                        ${createControlHtml("Center Weight", "weightCenter", state.params.weightCenter, 0, 1, 0.05)}
+                        ${createControlHtml("Boundary Weight", "weightBoundary", state.params.weightBoundary, 0, 1, 0.05)}
+                        ${createControlHtml("Bias Min (RQ: High)", "biasMin", state.params.biasMin, 0.1, 3, 0.1)}
+                        ${createControlHtml("Bias Max (RQ: Low)", "biasMax", state.params.biasMax, 0.1, 3, 0.1)}
+                    </div>
+                </section>`;
+
+            // Objects Header & Container
+            const objectsHtml = `
+                <section id="objects-section" class="space-y-2">
+                    <div class="flex items-center gap-2 text-xs font-bold text-yellow-400 uppercase tracking-wider">
+                        📦 Objects (<span id="object-count-header">${state.objects.length}</span>)
+                        <button id="add-object-btn" class="ml-auto text-xs px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 transition">
+                            + Add Object
+                        </button>
+                    </div>
+                    <div id="objects-list" class="space-y-3">
+                        <!-- Object controls generated here -->
+                    </div>
+                </section>`;
+            
+            // Results Container
+            const resultsHtml = `
+            <section class="space-y-2 pt-4 border-t border-neutral-700">
+                <div class="text-xs font-bold text-green-400 uppercase tracking-wider">
+                    🏆 Selection Results
+                </div>
+                <div id="results-list">
+                    <!-- Results dynamically updated here -->
+                </div>
+            </section>`;
+
+
+            container.innerHTML = eyeHtml + scoringHtml + objectsHtml + resultsHtml;
+
+            // Attach listeners for static parameter controls
+            const paramKeys = ['eyeX', 'eyeY', 'gazePitch', 'gazeYaw', 'coneAngle', 'coneLength', 'weightCenter', 'weightBoundary', 'biasMin', 'biasMax'];
+            paramKeys.forEach(key => {
+                const input = document.getElementById(`${key}-params`);
+                if (input) {
+                    input.addEventListener('input', (e) => updateParam(key, parseFloat(e.target.value)));
+                }
+            });
+
+            // Attach listener for Add Object button
+            document.getElementById('add-object-btn').addEventListener('click', addObject);
+
+            renderObjectControls();
+            setupToggles();
+        };
+
+        const renderObjectControls = () => {
+            const objectsList = document.getElementById('objects-list');
+            const objectCountHeader = document.getElementById('object-count-header');
+            if (!objectsList || !objectCountHeader) return;
+
+            objectCountHeader.textContent = state.objects.length;
+
+            objectsList.innerHTML = state.objects.map(obj => {
+                const isWinner = state.selection === obj.id;
+                const colorStyle = `rgb(${obj.color.map(c => Math.round(c * 255)).join(',')})`;
+                
+                const control = (label, field, min, max, step, colorClass = 'bg-neutral-600 accent-blue-500') => {
+                    const id = `obj-${obj.id}-${field}`;
+                    const value = obj[field];
+                    const isInteger = step === 1;
+
+                    return `
+                        <div class="flex flex-col">
+                            <label class="text-xs text-gray-400 mb-0.5" for="${id}">
+                                ${label}: <span class="font-mono text-white text-sm">${isInteger ? value.toFixed(0) : value.toFixed(2)}</span>
+                            </label>
+                            <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${value}"
+                                class="w-full h-1 rounded-lg appearance-none cursor-pointer ${colorClass}"
+                                oninput="document.querySelector('label[for=\\'${id}\\'] span').textContent = parseFloat(this.value).toFixed(${isInteger ? 0 : 2})"
+                                onchange="window.updateObject(${obj.id}, '${field}', parseFloat(this.value))"
+                            >
+                        </div>
+                    `;
+                };
+
+                return `
+                    <div id="object-control-${obj.id}" class="p-3 rounded border ${isWinner ? 'border-green-500 bg-green-900/20' : 'border-neutral-700 bg-neutral-900/50'} space-y-2">
+                        <div class="flex justify-between items-center pb-2 border-b border-neutral-700">
+                            <h4 class="text-sm font-bold flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full" style="background-color: ${colorStyle}"></span>
+                                Object #${obj.id} ${isWinner ? '<span class="text-[10px] px-2 py-0.5 bg-green-500 text-black rounded-full font-extrabold">WINNER</span>' : ''}
+                            </h4>
+                            <button onclick="window.removeObject(${obj.id})" class="text-red-400 hover:text-red-500 text-xs transition">
+                                Remove
+                            </button>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-1">
+                            ${control("X Position", "x", -10, 10, 0.1)}
+                            ${control("Y Position", "y", -10, 10, 0.1)}
+                            ${control("Z Position", "z", -10, 10, 0.1)}
+                            ${control("Size", "size", 0.1, 3, 0.1)}
+                            ${control("Render Queue", "renderQueue", 0, 10, 1)}
+                            
+                            <!-- Color sliders -->
+                            ${createColorControlHtml(obj, 0, 'Color R', 'bg-red-600 accent-red-500')}
+                            ${createColorControlHtml(obj, 1, 'Color G', 'bg-green-600 accent-green-500')}
+                            ${createColorControlHtml(obj, 2, 'Color B', 'bg-blue-600 accent-blue-500')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+        };
+
+        const updateObjectControls = (winnerId) => {
+            state.objects.forEach(obj => {
+                const controlDiv = document.getElementById(`object-control-${obj.id}`);
+                if (controlDiv) {
+                    const isWinner = obj.id === winnerId;
+                    controlDiv.className = `p-3 rounded border ${isWinner ? 'border-green-500 bg-green-900/20' : 'border-neutral-700 bg-neutral-900/50'} space-y-2`;
+                    
+                    const winnerSpan = controlDiv.querySelector('h4 span:last-of-type');
+                    if (isWinner && (!winnerSpan || winnerSpan.textContent !== 'WINNER')) {
+                        controlDiv.querySelector('h4').innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: rgb(${obj.color.map(c => Math.round(c * 255)).join(',')})"></span> Object #${obj.id} <span class="text-[10px] px-2 py-0.5 bg-green-500 text-black rounded-full font-extrabold">WINNER</span>`;
+                    } else if (!isWinner && winnerSpan && winnerSpan.textContent === 'WINNER') {
+                         controlDiv.querySelector('h4').innerHTML = `<span class="w-2 h-2 rounded-full" style="background-color: rgb(${obj.color.map(c => Math.round(c * 255)).join(',')})"></span> Object #${obj.id}`;
+                    }
+                }
+            });
+        };
+
+        const createColorControlHtml = (obj, index, label, colorClass) => {
+            const id = `obj-color-${obj.id}-${index}`;
+            const value = obj.color[index];
+            return `
+                <div class="flex flex-col">
+                    <label class="text-xs text-gray-400 mb-0.5" for="${id}">${label}</label>
+                    <input type="range" id="${id}" min="0" max="1" step="0.01" value="${value}"
+                        class="w-full h-1 rounded-lg appearance-none cursor-pointer ${colorClass}"
+                        onchange="window.updateObjectColor(${obj.id}, ${index}, parseFloat(this.value))"
+                    >
+                </div>
+            `;
+        };
+
+        // Attach global functions for UI interaction
+        window.updateObject = updateObject;
+        window.removeObject = removeObject;
+        window.updateObjectColor = (id, index, value) => {
+            const obj = state.objects.find(o => o.id === id);
+            if (obj) {
+                obj.color[index] = value;
+                renderObjectControls();
+            }
+        };
+
+        const updateResultsUI = (candidates) => {
+            const resultsList = document.getElementById('results-list');
+            if (!resultsList) return;
+
+            if (candidates.length === 0) {
+                resultsList.innerHTML = `<div class="text-xs text-gray-400 p-2 bg-neutral-900/50 rounded border border-neutral-700">No objects currently in the gaze selection zone.</div>`;
+                return;
+            }
+
+            resultsList.innerHTML = `
+                <div class="space-y-1 text-sm bg-neutral-900/50 p-2 rounded border border-neutral-700">
+                    ${candidates.map((r, index) => `
+                        <div class="p-2 rounded flex flex-col ${index === 0 ? 'bg-green-700/50 border border-green-500' : 'bg-neutral-700/50'}">
+                            <div class="font-bold flex justify-between items-center text-xs">
+                                <span>Object ID: ${r.id} ${index === 0 ? ' (WINNER)' : ''}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] ${index === 0 ? 'bg-green-500 text-black' : 'bg-neutral-600'}">Score: ${r.finalScore.toFixed(2)}</span>
+                            </div>
+                            <div class="text-[10px] text-gray-400 mt-1 space-y-0.5">
+                                <p>Center Angle: ${r.centerAngle.toFixed(2)}°</p>
+                                <p>Boundary Angle: ${r.boundaryAngle.toFixed(2)}°</p>
+                                <p>Bias (RQ): ${r.bias.toFixed(2)}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        };
+        
+        const setupToggles = () => {
+            const panel = document.getElementById('toggles-panel');
+            
+            const renderToggles = () => {
+                panel.innerHTML = `
+                    <!-- Toggle for Debug Lines -->
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="toggle-debug-lines" ${state.showDebugLines ? 'checked' : ''} />
+                        <span class="text-xs font-bold text-gray-300">Show Debug Lines (Center & Hit)</span>
+                    </label>
+                    
+                    <!-- Toggle for Zone Boundaries (Lines) -->
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="toggle-zone-boundaries" ${state.showZoneBoundaryLines ? 'checked' : ''} />
+                        <span class="text-xs font-bold text-gray-300">Show Zone Boundaries (Mesh)</span>
+                    </label>
+                    
+                    <!-- Toggle for Gaze Field -->
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="toggle-gaze-field" ${state.showBoundaries ? 'checked' : ''} />
+                        <span class="text-xs font-bold text-gray-300">Show Zones (Gaze Field Dots)</span>
+                    </label>
+                    
+                    <div id="density-control" class="flex flex-col gap-1 ${state.showBoundaries ? '' : 'hidden'}">
+                        <div class="flex justify-between text-[10px] text-gray-400">
+                            <span>Field Density</span>
+                            <span id="density-value">${state.params.gridDensity}</span>
+                        </div>
+                        <input 
+                            type="range" min="1" max="10" step="1" id="density-range"
+                            value="${state.params.gridDensity}"
+                            class="w-32 h-1 bg-neutral-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        />
+                    </div>
+                `;
+                
+                // Attach listeners
+                document.getElementById('toggle-debug-lines').addEventListener('change', (e) => {
+                    state.showDebugLines = e.target.checked;
+                });
+                
+                document.getElementById('toggle-zone-boundaries').addEventListener('change', (e) => {
+                    state.showZoneBoundaryLines = e.target.checked;
+                });
+                
+                const fieldToggle = document.getElementById('toggle-gaze-field');
+                fieldToggle.addEventListener('change', (e) => {
+                    state.showBoundaries = e.target.checked;
+                    document.getElementById('density-control').classList.toggle('hidden', !e.target.checked);
+                });
+
+                const densityRange = document.getElementById('density-range');
+                const densityValueSpan = document.getElementById('density-value');
+                densityRange.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    densityValueSpan.textContent = value;
+                    state.params.gridDensity = value;
+                });
+                densityRange.addEventListener('change', () => {
+                    // Re-generate field mesh on change event
+                    generateGazeField();
+                });
+            };
+            
+            renderToggles();
+        };
+
+
+        // --- Initialization ---
+        window.onload = () => {
+            initThreeJS();
+            generateGazeField();
+            setupStaticControls(); 
+            animate(); 
+        };
+    </script>
+</body>
+</html>
