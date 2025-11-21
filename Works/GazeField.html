@@ -631,7 +631,7 @@
             const index = state.objects.findIndex(o => o.id === id);
             if (index !== -1) {
                 state.objects[index][field] = value;
-                renderObjectControls();
+                // Scene will update automatically via animation loop - no need to re-render controls
             }
         };
 
@@ -771,8 +771,7 @@
                             </label>
                             <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${value}"
                                 class="w-full h-1 rounded-lg appearance-none cursor-pointer ${colorClass}"
-                                oninput="document.querySelector('label[for=\\'${id}\\'] span').textContent = parseFloat(this.value).toFixed(${isInteger ? 0 : 2})"
-                                onchange="window.updateObject(${obj.id}, '${field}', parseFloat(this.value))"
+                                oninput="document.querySelector('label[for=\\'${id}\\'] span').textContent = parseFloat(this.value).toFixed(${isInteger ? 0 : 2}); window.updateObject(${obj.id}, '${field}', parseFloat(this.value))"
                             >
                         </div>
                     `;
@@ -833,7 +832,7 @@
                     <label class="text-xs text-gray-400 mb-0.5" for="${id}">${label}</label>
                     <input type="range" id="${id}" min="0" max="1" step="0.01" value="${value}"
                         class="w-full h-1 rounded-lg appearance-none cursor-pointer ${colorClass}"
-                        onchange="window.updateObjectColor(${obj.id}, ${index}, parseFloat(this.value))"
+                        oninput="window.updateObjectColor(${obj.id}, ${index}, parseFloat(this.value))"
                     >
                 </div>
             `;
@@ -846,7 +845,16 @@
             const obj = state.objects.find(o => o.id === id);
             if (obj) {
                 obj.color[index] = value;
-                renderObjectControls();
+                // Update color dot in real-time
+                const controlDiv = document.getElementById(`object-control-${id}`);
+                if (controlDiv) {
+                    const colorDot = controlDiv.querySelector('h4 span:first-of-type');
+                    if (colorDot) {
+                        const colorStyle = `rgb(${obj.color.map(c => Math.round(c * 255)).join(',')})`;
+                        colorDot.style.backgroundColor = colorStyle;
+                    }
+                }
+                // Scene will update automatically via animation loop
             }
         };
 
