@@ -1,17 +1,17 @@
-// Apply dark mode ASAP before paint (default to dark if no saved preference)
+// Apply dark mode ASAP before paint (default to bright if no saved preference)
 (function preApplyDarkMode() {
     try {
-        // One-time migration: force default to dark the first time after this update
+        // One-time migration: reset default to bright the first time after this update
         const versionKey = 'darkModeVersion';
-        const currentVersion = '1';
+        const currentVersion = '2';
         const savedPreference = localStorage.getItem('darkMode');
         if (localStorage.getItem(versionKey) !== currentVersion) {
-            localStorage.setItem('darkMode', 'true');
+            localStorage.setItem('darkMode', 'false');
             localStorage.setItem(versionKey, currentVersion);
         }
 
         const effectivePref = localStorage.getItem('darkMode');
-        const shouldUseDark = effectivePref === null ? true : effectivePref === 'true';
+        const shouldUseDark = effectivePref === null ? false : effectivePref === 'true';
         if (shouldUseDark) {
             document.documentElement.classList.add('dark-mode');
             // If body already exists, ensure it matches
@@ -29,7 +29,7 @@
 class DarkMode {
     constructor() {
         const savedPreference = localStorage.getItem('darkMode');
-        this.isDarkMode = savedPreference === null ? true : savedPreference === 'true';
+        this.isDarkMode = savedPreference === null ? false : savedPreference === 'true';
         this.init();
     }
 
