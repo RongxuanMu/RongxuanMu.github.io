@@ -3,21 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 语音数学可视化系统</title>
+    <title>Geometria AI - 语音数学可视化</title>
     <!-- 引入数学解析与3D渲染库 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
-    <!-- 使用 jsDelivr 提供的稳定轨道控制脚本 -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
         :root {
+            --bg: #05070a;
+            --sidebar: rgba(10, 12, 18, 0.85);
+            --card: rgba(20, 25, 35, 0.6);
+            --text: #f1f5f9;
+            --text-muted: #64748b;
             --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --bg: #0f172a;
-            --panel-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            --primary-hover: #818cf8;
             --accent: #10b981;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
+        [data-theme='light'] {
+            --bg: #f8fafc;
+            --sidebar: rgba(255, 255, 255, 0.9);
+            --card: rgba(241, 245, 249, 0.8);
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --accent: #059669;
+            --border: rgba(0, 0, 0, 0.08);
         }
 
         body, html {
@@ -25,109 +38,116 @@
             padding: 0;
             height: 100%;
             width: 100%;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
             background-color: var(--bg);
-            color: var(--text-main);
+            color: var(--text);
             overflow: hidden;
+            transition: background-color 0.5s ease;
         }
 
-        #app {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-        }
+        #app { display: flex; height: 100vh; width: 100vw; }
 
-        /* 左侧控制面板 */
+        /* 侧边栏 */
         #sidebar {
             width: 320px;
             min-width: 320px;
-            background: var(--panel-bg);
-            border-right: 1px solid #334155;
+            background: var(--sidebar);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            padding: 24px;
+            padding: 32px;
             z-index: 100;
-            box-shadow: 10px 0 15px -3px rgba(0, 0, 0, 0.2);
             overflow-y: auto;
             box-sizing: border-box;
         }
 
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
         .logo {
             font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 24px;
+            font-weight: 800;
             color: var(--primary);
             display: flex;
             align-items: center;
             gap: 10px;
+            letter-spacing: -0.04em;
         }
 
-        /* 方程展示 */
-        .equation-card {
-            background: rgba(15, 23, 42, 0.8);
-            padding: 20px;
-            border-radius: 16px;
-            margin-bottom: 24px;
-            border: 1px solid rgba(99, 102, 241, 0.3);
-            min-height: 80px;
+        .theme-toggle {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.4rem;
-            font-family: "Cambria Math", "Times New Roman", serif;
+            transition: all 0.3s ease;
+        }
+        .theme-toggle:hover { background: var(--primary); color: white; }
+
+        .equation-card {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 18px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-family: "Cambria Math", serif;
             color: var(--accent);
-            word-break: break-all;
             text-align: center;
+            word-break: break-all;
+            line-height: 1.4;
         }
 
-        /* 输入组 */
         .input-group {
             position: relative;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
 
         input[type="text"] {
             width: 100%;
-            padding: 14px 45px 14px 14px;
-            background: #0f172a;
-            border: 1px solid #334155;
-            border-radius: 10px;
-            color: white;
+            padding: 14px 44px 14px 16px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
             box-sizing: border-box;
-            transition: all 0.2s;
-        }
-
-        input[type="text"]:focus {
+            font-size: 0.9rem;
             outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+            transition: border-color 0.2s;
         }
+        input[type="text"]:focus { border-color: var(--primary); }
 
         .mic-btn {
             position: absolute;
-            right: 10px;
+            right: 12px;
             top: 50%;
             transform: translateY(-50%);
             background: none;
             border: none;
             color: var(--text-muted);
             cursor: pointer;
-            padding: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s;
         }
-
-        .mic-btn.active {
-            color: #ef4444;
-            animation: pulse 1.5s infinite;
-        }
+        .mic-btn.active { color: #ef4444; animation: pulse 1.5s infinite; }
 
         @keyframes pulse {
-            0% { transform: translateY(-50%) scale(1); opacity: 1; }
-            50% { transform: translateY(-50%) scale(1.2); opacity: 0.7; }
-            100% { transform: translateY(-50%) scale(1); opacity: 1; }
+            0% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.2); }
+            100% { transform: translateY(-50%) scale(1); }
         }
 
         .main-btn {
@@ -136,48 +156,45 @@
             background: var(--primary);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 600;
             cursor: pointer;
             margin-bottom: 24px;
-            transition: all 0.2s;
+            transition: 0.3s;
         }
-
         .main-btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
 
-        /* 快捷按钮 */
         .quick-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: 1fr 1fr;
             gap: 8px;
             margin-bottom: 24px;
         }
 
         .quick-btn {
             padding: 10px;
-            background: #334155;
-            border: none;
+            background: var(--card);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            color: var(--text-main);
-            font-size: 0.8rem;
+            color: var(--text);
+            font-size: 0.7rem;
             cursor: pointer;
-            transition: background 0.2s;
+            transition: 0.2s;
         }
+        .quick-btn:hover { background: var(--primary); color: white; }
 
-        .quick-btn:hover { background: #475569; }
-
-        /* 参数调节 */
         .params-section h3 {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin-bottom: 16px;
+            letter-spacing: 0.15em;
+            margin-bottom: 12px;
+            font-weight: 700;
         }
 
         .slider-item {
-            margin-bottom: 16px;
-            background: rgba(15, 23, 42, 0.4);
+            margin-bottom: 12px;
+            background: var(--card);
             padding: 12px;
             border-radius: 10px;
         }
@@ -185,21 +202,22 @@
         .slider-header {
             display: flex;
             justify-content: space-between;
-            font-size: 0.85rem;
-            margin-bottom: 8px;
+            font-size: 0.75rem;
+            margin-bottom: 6px;
+            color: var(--text-muted);
         }
 
         input[type="range"] {
             width: 100%;
             accent-color: var(--primary);
             cursor: pointer;
+            height: 4px;
         }
 
-        /* 渲染区 */
         #render-container {
             flex: 1;
             position: relative;
-            background: #000;
+            background: var(--bg);
         }
 
         .toast {
@@ -210,468 +228,357 @@
             background: #ef4444;
             color: white;
             padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 0.9rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
             display: none;
             z-index: 1000;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
         }
-
-        .view-controls {
-            position: absolute;
-            bottom: 24px;
-            right: 24px;
-            display: flex;
-            gap: 12px;
-        }
-
-        .control-bubble {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            padding: 10px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            cursor: pointer;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 44px;
-            height: 44px;
-            transition: all 0.2s;
-        }
-
-        .control-bubble:hover { background: rgba(71, 85, 105, 0.9); transform: scale(1.1); }
-
-        .color-picker {
-            position: absolute;
-            top: 24px;
-            right: 24px;
-            display: flex;
-            gap: 10px;
-            background: rgba(30, 41, 59, 0.5);
-            padding: 8px;
-            border-radius: 20px;
-            backdrop-filter: blur(8px);
-        }
-
-        .dot {
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: transform 0.2s;
-        }
-
-        .dot:hover { transform: scale(1.2); }
-        .dot.active { border-color: white; }
     </style>
 </head>
 <body>
 
 <div id="app">
     <aside id="sidebar">
-        <div class="logo">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-            MathVisual AI
-        </div>
-
-        <div class="equation-card" id="equation-view">z = x² + y²</div>
-
-        <div class="input-group">
-            <input type="text" id="func-input" placeholder="输入公式或说出模型名称">
-            <button class="mic-btn" id="mic-btn" title="语音输入">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+        <div class="header">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                Geometria AI
+            </div>
+            <button class="theme-toggle" id="theme-toggle" title="切换模式">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
             </button>
         </div>
 
-        <button class="main-btn" id="render-btn">立即生成图像</button>
+        <div class="equation-card" id="equation-view">z = a·x² - b·y²</div>
+
+        <div class="input-group">
+            <input type="text" id="func-input" placeholder="输入公式、术语或语音描述">
+            <button class="mic-btn" id="mic-btn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
+            </button>
+        </div>
+
+        <button class="main-btn" id="render-btn">开始渲染</button>
 
         <div class="quick-grid">
             <button class="quick-btn" onclick="applyPreset('y = k*x + b')">一次函数</button>
+            <button class="quick-btn" onclick="applyPreset('y = a*x^2 + b*x')">二次曲线</button>
+            <button class="quick-btn" onclick="applyPreset('y = a*sin(k*x)')">三角函数</button>
             <button class="quick-btn" onclick="applyPreset('y = a/x')">反比例函数</button>
-            <button class="quick-btn" onclick="applyPreset('y = a*sin(x)')">三角函数</button>
-            <button class="quick-btn" onclick="applyPreset('z = x^2 - y^2')">马鞍面</button>
-            <button class="quick-btn" onclick="applyPreset('z = a*cos(x^2+y^2)')">涟漪面</button>
-            <button class="quick-btn" onclick="applyPreset('z = sqrt(r^2 - x^2 - y^2)')">球面</button>
+            <button class="quick-btn" onclick="applyPreset('z = a*x^2 - b*y^2')">双曲马鞍面</button>
+            <button class="quick-btn" onclick="applyPreset('z = a*cos(k*sqrt(x^2+y^2))')">波纹曲面</button>
         </div>
 
         <div class="params-section">
-            <h3>实时参数调节</h3>
-            <div id="sliders-container">
-                <!-- 动态参数滑动条在此生成 -->
-            </div>
+            <h3>参数微调</h3>
+            <div id="sliders-container"></div>
         </div>
     </aside>
 
     <main id="render-container">
-        <div id="toast" class="toast">格式错误，请输入正确的数学表达式</div>
-        
-        <div class="color-picker">
-            <div class="dot active" style="background: #6366f1;" onclick="setTheme(0x6366f1, this)"></div>
-            <div class="dot" style="background: #10b981;" onclick="setTheme(0x10b981, this)"></div>
-            <div class="dot" style="background: #f59e0b;" onclick="setTheme(0xf59e0b, this)"></div>
-            <div class="dot" style="background: #ec4899;" onclick="setTheme(0xec4899, this)"></div>
-        </div>
-
-        <div class="view-controls">
-            <div class="control-bubble" title="重置视角" id="reset-view">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
-            </div>
-        </div>
+        <div id="toast" class="toast">公式解析异常</div>
     </main>
 </div>
 
 <script>
-    // --- 核心状态 ---
+    // --- 核心状态与资源 ---
     let scene, camera, renderer, controls, currentObject;
-    let currentThemeColor = 0x6366f1;
-    let paramsValues = { k: 1, b: 0, a: 1, r: 5 };
+    let theme = 'dark';
+    let paramsValues = { a: 0.1, b: 0.1, k: 0.5, r: 8, k: 1, b: 0, c: 0 };
+    let lastRawInput = "z = a*x^2 - b*y^2";
+    let squareFadeMap = null;
+    
+    // 物理裁切范围
+    const clipLimit = 10;
+    const clipPlanes = [
+        new THREE.Plane(new THREE.Vector3(1, 0, 0), clipLimit),
+        new THREE.Plane(new THREE.Vector3(-1, 0, 0), clipLimit),
+        new THREE.Plane(new THREE.Vector3(0, 1, 0), clipLimit),
+        new THREE.Plane(new THREE.Vector3(0, -1, 0), clipLimit),
+        new THREE.Plane(new THREE.Vector3(0, 0, 1), clipLimit),
+        new THREE.Plane(new THREE.Vector3(0, 0, -1), clipLimit)
+    ];
 
-    // --- 初始化渲染引擎 ---
+    function generateSquareFade() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512; canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'black'; ctx.fillRect(0, 0, 512, 512);
+        const margin = 100;
+        for (let i = 0; i < margin; i++) {
+            const opacity = i / margin;
+            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            const offset = margin - i;
+            ctx.fillRect(offset, offset, 512 - offset * 2, 512 - offset * 2);
+        }
+        ctx.fillStyle = 'white'; ctx.fillRect(margin, margin, 512 - margin * 2, 512 - margin * 2);
+        return new THREE.CanvasTexture(canvas);
+    }
+
+    // --- 初始化 3D 渲染器 ---
     function initViewport() {
         const container = document.getElementById('render-container');
-        if (!container) return;
-
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a0f1e);
+        scene.background = new THREE.Color(0x05070a);
+        squareFadeMap = generateSquareFade();
 
-        const width = container.clientWidth || window.innerWidth - 320;
-        const height = container.clientHeight || window.innerHeight;
-
-        camera = new THREE.PerspectiveCamera(70, width / height, 0.1, 1000);
-        camera.position.set(15, 15, 15);
+        camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(25, 20, 25);
 
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        renderer.setSize(width, height);
+        renderer.setSize(container.clientWidth, container.clientHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.localClippingEnabled = true;
         container.appendChild(renderer.domElement);
 
-        // 强健的 OrbitControls 初始化逻辑
-        function setupControls() {
-            const OrbitControlsConstructor = 
-                THREE.OrbitControls || 
-                (window.THREE && window.THREE.OrbitControls) || 
-                window.OrbitControls;
-
-            if (OrbitControlsConstructor) {
-                controls = new OrbitControlsConstructor(camera, renderer.domElement);
+        const checkControls = setInterval(() => {
+            const Orbit = THREE.OrbitControls || window.OrbitControls;
+            if (Orbit) {
+                controls = new Orbit(camera, renderer.domElement);
                 controls.enableDamping = true;
-                controls.dampingFactor = 0.05;
-                return true;
+                controls.dampingFactor = 0.08;
+                clearInterval(checkControls);
             }
-            return false;
-        }
+        }, 100);
 
-        if (!setupControls()) {
-            console.warn("OrbitControls 尚未就绪，尝试轮询加载...");
-            let retryCount = 0;
-            const interval = setInterval(() => {
-                if (setupControls() || retryCount > 10) {
-                    clearInterval(interval);
-                }
-                retryCount++;
-            }, 200);
-        }
-
-        // --- 坐标系统网格 (XY, XZ, YZ) ---
-        // 1. 水平地面网格 (XZ 平面)
-        const gridXZ = new THREE.GridHelper(30, 30, 0x4f46e5, 0x1e293b);
+        // --- 坐标系参考 ---
+        const gridXZ = new THREE.GridHelper(20, 20, 0x2d3748, 0x1a202c);
         scene.add(gridXZ);
-
-        // 2. 正面垂直网格 (XY 平面)
-        const gridXY = new THREE.GridHelper(30, 30, 0x334155, 0x1e293b);
+        const gridXY = new THREE.GridHelper(20, 20, 0x2d3748, 0x1a202c);
         gridXY.rotation.x = Math.PI / 2;
-        gridXY.material.opacity = 0.2;
-        gridXY.material.transparent = true;
+        gridXY.material.opacity = 0.05; gridXY.material.transparent = true;
         scene.add(gridXY);
 
-        // 3. 侧面垂直网格 (YZ 平面)
-        const gridYZ = new THREE.GridHelper(30, 30, 0x334155, 0x1e293b);
-        gridYZ.rotation.z = Math.PI / 2;
-        gridYZ.material.opacity = 0.2;
-        gridYZ.material.transparent = true;
-        scene.add(gridYZ);
+        scene.add(new THREE.AxesHelper(5));
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const pointLight = new THREE.PointLight(0xffffff, 0.8);
+        pointLight.position.set(20, 40, 20);
+        scene.add(pointLight);
 
-        // 基础坐标轴
-        const axesHelper = new THREE.AxesHelper(15);
-        scene.add(axesHelper);
+        document.getElementById('theme-toggle').onclick = () => {
+            theme = theme === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', theme);
+            scene.background.setHex(theme === 'dark' ? 0x05070a : 0xf8fafc);
+            gridXZ.material.color.setHex(theme === 'dark' ? 0x2d3748 : 0xd1d5db);
+            document.getElementById('theme-toggle').innerHTML = theme === 'dark' ? 
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>' : 
+                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line></svg>';
+        };
 
-        // 灯光配置
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight.position.set(10, 20, 10);
-        scene.add(directionalLight);
-
-        window.addEventListener('resize', onWindowResize);
-        document.getElementById('reset-view').addEventListener('click', () => {
-            if (controls) controls.reset();
-            camera.position.set(15, 15, 15);
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
         });
 
         animate();
     }
 
-    function onWindowResize() {
-        const container = document.getElementById('render-container');
-        if (!container) return;
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
-        renderer.setSize(width, height);
-    }
-
     function animate() {
         requestAnimationFrame(animate);
         if (controls) controls.update();
-        if (renderer && scene && camera) renderer.render(scene, camera);
+        renderer.render(scene, camera);
     }
 
-    // --- 数学计算与可视化渲染 ---
+    // --- 居中对焦逻辑 ---
+    function focusOnObject() {
+        if (!currentObject || !controls) return;
+        const box = new THREE.Box3().setFromObject(currentObject);
+        const center = new THREE.Vector3();
+        box.getCenter(center);
+        controls.target.copy(center);
+    }
+
     function updateVisualization() {
-        let rawInput = document.getElementById('func-input').value || "z = x^2 + y^2";
+        let input = document.getElementById('func-input').value || lastRawInput;
         const toast = document.getElementById('toast');
         toast.style.display = 'none';
 
         try {
-            const cleanInput = rawInput.replace(/[\u4e00-\u9fa5]/g, '').trim();
-            if (!cleanInput) return;
+            const cleanExpr = input.replace(/[\u4e00-\u9fa5]/g, '').trim();
+            if (!cleanExpr) return;
+            lastRawInput = cleanExpr;
 
-            const parts = cleanInput.split('=');
-            let targetVar = 'z';
-            let expression = cleanInput;
+            const parts = cleanExpr.split('=');
+            let targetVar = parts.length === 2 ? parts[0].trim().toLowerCase() : 'z';
+            let expr = parts.length === 2 ? parts[1].trim() : cleanExpr;
+            const is3D = targetVar === 'z' || expr.includes('y');
 
-            if (parts.length === 2) {
-                targetVar = parts[0].trim().toLowerCase();
-                expression = parts[1].trim();
-            } else {
-                targetVar = 'z';
-                expression = cleanInput;
-            }
-
-            const is3D = targetVar === 'z' || expression.includes('y');
-            
-            const node = math.parse(expression);
+            const node = math.parse(expr);
             const symbols = [];
             node.traverse((n) => {
                 if (n.isSymbolNode && !['x', 'y', 'z', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sqrt', 'exp', 'abs', 'log', 'pi', 'e', 'pow'].includes(n.name)) {
                     symbols.push(n.name);
                 }
             });
-            const uniqueSymbols = [...new Set(symbols)];
-            updateSliders(uniqueSymbols);
+            refreshSliders([...new Set(symbols)]);
 
             if (currentObject) {
                 scene.remove(currentObject);
-                currentObject.traverse(child => {
-                    if (child.geometry) child.geometry.dispose();
-                    if (child.material) child.material.dispose();
-                });
+                currentObject.traverse(c => { if(c.geometry) c.geometry.dispose(); if(c.material) c.material.dispose(); });
             }
 
             const compiled = node.compile();
+            if (is3D) renderSurface(compiled);
+            else renderLine(compiled);
 
-            if (is3D) {
-                render3D(compiled);
-            } else {
-                render2D(compiled);
-            }
-
-            updateEquationDisplay(cleanInput);
-        } catch (err) {
-            console.warn("解析跳过:", err.message);
-            if (rawInput.length > 0 && (rawInput.includes('z') || rawInput.includes('y') || rawInput.includes('x'))) {
-                toast.style.display = 'block';
-            }
+            focusOnObject();
+            updateEquationDisplay();
+        } catch (e) {
+            toast.style.display = 'block';
         }
     }
 
-    function render2D(compiled) {
+    // 渲染线状图像 (2D 曲线)
+    function renderLine(compiled) {
         const points = [];
-        for (let x = -15; x <= 15; x += 0.1) {
+        const segments = []; // 存储不连续的线段
+        let currentSegment = [];
+
+        for (let x = -15; x <= 15; x += 0.05) {
             const scope = { x, ...paramsValues };
             try {
                 const y = compiled.evaluate(scope);
-                if (typeof y === 'number' && isFinite(y)) {
-                    points.push(new THREE.Vector3(x, y, 0));
+                // 处理无效数值和无穷大（如反比例函数在0处）
+                if (typeof y === 'number' && isFinite(y) && Math.abs(y) < 50) {
+                    currentSegment.push(new THREE.Vector3(x, y, 0));
+                } else {
+                    if (currentSegment.length > 0) segments.push(currentSegment);
+                    currentSegment = [];
                 }
-            } catch (e) {}
+            } catch(e){
+                if (currentSegment.length > 0) segments.push(currentSegment);
+                currentSegment = [];
+            }
         }
-        const geometry = new THREE.BufferGeometry().setFromPoints(points);
-        const material = new THREE.LineBasicMaterial({ color: currentThemeColor, linewidth: 4 });
-        currentObject = new THREE.Line(geometry, material);
+        if (currentSegment.length > 0) segments.push(currentSegment);
+
+        const group = new THREE.Group();
+        const mat = new THREE.LineBasicMaterial({ 
+            color: theme === 'dark' ? 0x6366f1 : 0x4f46e5, 
+            linewidth: 4, 
+            clippingPlanes: clipPlanes 
+        });
+
+        segments.forEach(seg => {
+            const geo = new THREE.BufferGeometry().setFromPoints(seg);
+            group.add(new THREE.Line(geo, mat));
+        });
+
+        currentObject = group;
         scene.add(currentObject);
     }
 
-    function render3D(compiled) {
-        const size = 20;
-        const segments = 100; // 提高细分数使表面更平滑
-        const geometry = new THREE.PlaneGeometry(size, size, segments, segments);
-        const pos = geometry.attributes.position;
-
+    function renderSurface(compiled) {
+        const size = 22; 
+        const res = 120;
+        const geo = new THREE.PlaneGeometry(size, size, res, res);
+        const pos = geo.attributes.position;
         for (let i = 0; i < pos.count; i++) {
-            const x = pos.getX(i);
-            const y = pos.getY(i);
+            const x = pos.getX(i); const y = pos.getY(i);
             const scope = { x, y, ...paramsValues };
             try {
                 let z = compiled.evaluate(scope);
-                if (typeof z !== 'number' || !isFinite(z)) z = 0;
-                z = Math.max(-15, Math.min(15, z));
-                pos.setZ(i, z);
-            } catch (e) {
-                pos.setZ(i, 0);
-            }
+                pos.setZ(i, isFinite(z) ? z : 0);
+            } catch(e){ pos.setZ(i, 0); }
         }
-
-        pos.needsUpdate = true;
-        geometry.computeVertexNormals();
-
-        // 仅渲染平滑材质的实体曲面，不再添加 wireframe 网格
-        const surfaceMat = new THREE.MeshPhongMaterial({
-            color: currentThemeColor,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.85,
-            shininess: 90,
-            specular: 0x444444
+        geo.computeVertexNormals();
+        const mat = new THREE.MeshPhongMaterial({
+            color: theme === 'dark' ? 0x6366f1 : 0x4f46e5,
+            side: THREE.DoubleSide, transparent: true, opacity: 0.9,
+            alphaMap: squareFadeMap, shininess: 100, specular: 0x444444,
+            clippingPlanes: clipPlanes 
         });
-        
-        const surfaceMesh = new THREE.Mesh(geometry, surfaceMat);
-        surfaceMesh.rotation.x = -Math.PI / 2;
-        
-        currentObject = surfaceMesh;
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.rotation.x = -Math.PI / 2;
+        currentObject = mesh;
         scene.add(currentObject);
     }
 
-    function updateSliders(symbols) {
+    function refreshSliders(symbols) {
         const container = document.getElementById('sliders-container');
-        const existingSliders = Array.from(container.querySelectorAll('.slider-item')).map(el => el.dataset.param);
-        
-        if (JSON.stringify(existingSliders) === JSON.stringify(symbols)) return;
-
+        const currentParams = Array.from(container.querySelectorAll('.slider-item')).map(el => el.dataset.p);
+        if (JSON.stringify(currentParams) === JSON.stringify(symbols)) return;
         container.innerHTML = '';
         if (symbols.length === 0) {
-            container.innerHTML = '<div style="color:var(--text-muted); font-size:0.8rem; padding: 10px; border: 1px dashed #334155; border-radius: 8px;">说出“双曲面”试试？</div>';
+            container.innerHTML = '<div style="color:var(--text-muted); font-size:0.7rem; text-align:center; padding:12px; border:1px dashed var(--border); border-radius:10px;">输入术语如“反比例函数”</div>';
             return;
         }
-
         symbols.forEach(s => {
             if (paramsValues[s] === undefined) paramsValues[s] = 1;
-            
             const item = document.createElement('div');
-            item.className = 'slider-item';
-            item.dataset.param = s;
+            item.className = 'slider-item'; item.dataset.p = s;
             item.innerHTML = `
-                <div class="slider-header">
-                    <span>参数 <b>${s}</b></span>
-                    <span id="val-${s}">${paramsValues[s]}</span>
-                </div>
-                <input type="range" min="-10" max="10" step="0.1" value="${paramsValues[s]}" 
-                    oninput="onSliderChange('${s}', this.value)">
+                <div class="slider-header"><span>参数 <b>${s.toUpperCase()}</b></span><span id="v-${s}">${paramsValues[s]}</span></div>
+                <input type="range" min="-5" max="5" step="0.01" value="${paramsValues[s]}" oninput="updateP('${s}', this.value)">
             `;
             container.appendChild(item);
         });
     }
 
-    function onSliderChange(s, val) {
-        paramsValues[s] = parseFloat(val);
-        const valLabel = document.getElementById(`val-${s}`);
-        if (valLabel) valLabel.innerText = val;
+    function updateP(s, v) {
+        paramsValues[s] = parseFloat(v);
+        document.getElementById(`v-${s}`).innerText = v;
         updateVisualization();
     }
 
-    function updateEquationDisplay(text) {
-        const view = document.getElementById('equation-view');
-        let pretty = text.replace(/\^2/g, '²').replace(/\^3/g, '³').replace(/sqrt/g, '√').replace(/\*/g, '·');
-        view.innerText = pretty;
+    function updateEquationDisplay() {
+        let display = lastRawInput;
+        Object.keys(paramsValues).forEach(key => {
+            const regex = new RegExp(`\\b${key}\\b`, 'g');
+            display = display.replace(regex, paramsValues[key]);
+        });
+        let pretty = display.replace(/\*/g, '·').replace(/\^2/g, '²').replace(/\^3/g, '³').replace(/sqrt/g, '√').replace(/\s+/g, ' ');
+        document.getElementById('equation-view').innerText = pretty;
     }
 
-    function applyPreset(func) {
-        document.getElementById('func-input').value = func;
+    function applyPreset(f) {
+        document.getElementById('func-input').value = f;
         updateVisualization();
     }
 
-    function setTheme(color, el) {
-        currentThemeColor = color;
-        document.querySelectorAll('.dot').forEach(d => d.classList.remove('active'));
-        el.classList.add('active');
-        updateVisualization();
-    }
-
+    // --- 强化版语音识别 ---
     function initSpeech() {
         const btn = document.getElementById('mic-btn');
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) {
-            btn.style.display = 'none';
-            return;
-        }
-
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'zh-CN';
-        let isListening = false;
-        
-        btn.onclick = () => {
-            if (isListening) recognition.stop();
-            else {
-                try { recognition.start(); } catch (e) { console.error(e); }
-            }
-        };
-
-        recognition.onstart = () => { isListening = true; btn.classList.add('active'); };
-        recognition.onend = () => { isListening = false; btn.classList.remove('active'); };
-
-        recognition.onresult = (event) => {
-            let result = event.results[0][0].transcript;
+        const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!Speech) return btn.style.display = 'none';
+        const rec = new Speech(); rec.lang = 'zh-CN'; let listening = false;
+        btn.onclick = () => listening ? rec.stop() : rec.start();
+        rec.onstart = () => { listening = true; btn.classList.add('active'); };
+        rec.onend = () => { listening = false; btn.classList.remove('active'); };
+        rec.onresult = (e) => {
+            let res = e.results[0][0].transcript;
             
-            const models = {
-                '马鞍面': 'z = x^2 - y^2', '双曲面': 'z = x^2 + y^2 - 5', 
-                '抛物面': 'z = x^2 + y^2', '球面': 'z = sqrt(r^2 - x^2 - y^2)', 
-                '圆锥面': 'z = sqrt(x^2 + y^2)', '涟漪': 'z = sin(sqrt(x^2 + y^2))', 
-                '波浪': 'z = sin(x) + cos(y)'
+            // 模型与函数术语语义映射
+            const models = { 
+                '马鞍面': 'z = a*x^2 - b*y^2', 
+                '钟形': 'z = a/(x^2+y^2+1)', 
+                '球面': 'z = sqrt(r^2-x^2-y^2)', 
+                '波纹': 'z = a*cos(k*sqrt(x^2+y^2))', 
+                '山丘': 'z = sin(k*x)*cos(k*y)',
+                '一次函数': 'y = k*x + b',
+                '线性': 'y = k*x + b',
+                '二次函数': 'y = a*x^2 + b*x + c',
+                '抛物线': 'y = a*x^2 + b*x + c',
+                '三次函数': 'y = a*x^3 + b*x^2 + c',
+                '反比例': 'y = k/x',
+                '正弦': 'y = a*sin(k*x + b)',
+                '余弦': 'y = a*cos(k*x + b)',
+                '正切': 'y = a*tan(k*x)',
+                '圆锥': 'z = sqrt(x^2 + y^2)'
             };
+            for (let n in models) if (res.includes(n)) { applyPreset(models[n]); return; }
 
-            for (let name in models) {
-                if (result.includes(name)) {
-                    document.getElementById('func-input').value = models[name];
-                    updateVisualization();
-                    return;
-                }
-            }
-            
-            const dict = {
-                '等于': '=', '加': '+', '减': '-', '乘': '*', '除以': '/', 
-                '的平方': '^2', '的立方': '^3', '平方': '^2', '立方': '^3',
-                '正弦': 'sin', '余弦': 'cos', '正切': 'tan', '根号': 'sqrt'
-            };
-            for (let k in dict) { result = result.split(k).join(dict[k]); }
-
-            result = result.replace(/(\w+)分之(\w+)/g, '$2/$1');
-            result = result.replace(/的(\d+)次方/g, '^$1');
-            result = result.replace(/根号下(\w+)/g, 'sqrt($1)');
-            result = result.replace(/(\d+)([a-z])/gi, '$1*$2');
-            
-            const noise = ['请', '帮我', '画一个', '绘制', '显示', '一下', '图形', '图像', '函数', '生成', '看看'];
-            noise.forEach(word => { result = result.split(word).join(''); });
-
-            result = result.replace(/[\u4e00-\u9fa5]/g, '').trim();
-            
-            if (result.length > 0) {
-                document.getElementById('func-input').value = result;
-                updateVisualization();
-            }
+            const dict = { '等于': '=', '加': '+', '减': '-', '乘': '*', '除以': '/', '正弦': 'sin', '余弦': 'cos', '正切': 'tan', '根号': 'sqrt' };
+            for (let k in dict) res = res.split(k).join(dict[k]);
+            res = res.replace(/(\w+)分之(\w+)/g, '$2/$1').replace(/的(\d+)次方/g, '^$1').replace(/[\u4e00-\u9fa5]/g, '').trim();
+            if (res) { document.getElementById('func-input').value = res; updateVisualization(); }
         };
-
-        recognition.onerror = () => { isListening = false; btn.classList.remove('active'); };
     }
 
     window.onload = () => {
         setTimeout(() => {
-            initViewport();
-            initSpeech();
+            initViewport(); initSpeech();
             document.getElementById('render-btn').onclick = updateVisualization;
             updateVisualization();
         }, 100);
