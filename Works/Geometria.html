@@ -48,6 +48,49 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         
         #formula-display .katex-display { margin: 0.5em 0; font-size: 1.15em; color: #94a3b8; }
+        
+        /* Fullscreen button */
+        .main-layout {
+            position: relative;
+        }
+        
+        #fullscreen-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            width: 40px;
+            height: 40px;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #fullscreen-btn:hover {
+            background: rgba(15, 23, 42, 0.95);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+        
+        #fullscreen-btn.hidden {
+            display: none;
+        }
+        
+        /* Ensure main layout fills fullscreen */
+        .main-layout:fullscreen,
+        .main-layout:-webkit-full-screen,
+        .main-layout:-moz-full-screen,
+        .main-layout:-ms-fullscreen {
+            width: 100vw;
+            height: 100vh;
+        }
     </style>
 </head>
 <body>
@@ -123,10 +166,17 @@
  <!-- MRX CopyRight 2026 -->
         <!-- 3D 画布区域 -->
         <main id="canvas-container"></main>
+        
+        <!-- Fullscreen button -->
+        <button id="fullscreen-btn" title="Enter Fullscreen">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+        </button>
     </div>
 
     <script>
-        const apiKey = "AIzaSyADMi3gjEEvpXGnJTyGifobiF12lGXToHQ";
+        const apiKey = "AIzaSyC1srXgBzqkGRTnZIepYzDeO1DdgGZVOCQ";
         let scene, camera, renderer, controls, currentObject = null;
         let isListening = false;
         let currentMetadata = null; 
@@ -458,6 +508,64 @@
         document.getElementById('send-btn').onclick = () => processInput(document.getElementById('user-input').value);
         document.getElementById('user-input').onkeypress = (e) => e.key === 'Enter' && processInput(e.target.value);
         function quickAction(t) { document.getElementById('user-input').value = t; processInput(t); }
+
+        // Fullscreen functionality
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const mainLayout = document.querySelector('.main-layout');
+        
+        function toggleFullscreen() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && 
+                !document.mozFullScreenElement && !document.msFullscreenElement) {
+                // Enter fullscreen
+                if (mainLayout.requestFullscreen) {
+                    mainLayout.requestFullscreen();
+                } else if (mainLayout.webkitRequestFullscreen) {
+                    mainLayout.webkitRequestFullscreen();
+                } else if (mainLayout.mozRequestFullScreen) {
+                    mainLayout.mozRequestFullScreen();
+                } else if (mainLayout.msRequestFullscreen) {
+                    mainLayout.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        }
+        
+        function updateFullscreenButton() {
+            const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                                 document.mozFullScreenElement || document.msFullscreenElement;
+            if (isFullscreen) {
+                fullscreenBtn.classList.add('hidden');
+            } else {
+                fullscreenBtn.classList.remove('hidden');
+            }
+            // Update renderer size when entering/exiting fullscreen
+            onWindowResize();
+        }
+        
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
+        
+        // Listen for fullscreen changes
+        document.addEventListener('fullscreenchange', updateFullscreenButton);
+        document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+        document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+        document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+        
+        // Exit fullscreen on ESC key (standard browser behavior, but we ensure button visibility)
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                updateFullscreenButton();
+            }
+        });
 
         window.onload = initThree;
     </script>
