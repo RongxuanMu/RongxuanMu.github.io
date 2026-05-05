@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XR Gameplay & Prototypes</title>
+    <link rel="stylesheet" href="../project-styles.css">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/x-icon">
+    <script src="../darkmode.js"></script>
+
+</head>
+<script>
+    // Lazy load videos to prevent loading errors
+    document.addEventListener('DOMContentLoaded', function() {
+        const videos = document.querySelectorAll('video');
+        videos.forEach(video => {
+            const sources = video.querySelectorAll('source');
+            sources.forEach(source => {
+                const dataSrc = source.getAttribute('src');
+                if(dataSrc){
+                    source.setAttribute('data-src', dataSrc);
+                    source.removeAttribute('src');
+                }
+            });
+        });
+
+        // Intersection Observer to load videos when they come into view
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const video = entry.target;
+                    const sources = video.querySelectorAll('source');
+                    sources.forEach(source => {
+                        const dataSrc = source.getAttribute('data-src');
+                        if (dataSrc) source.setAttribute('src', dataSrc);
+                    });
+                    video.load();
+                    observer.unobserve(video);
+                }
+            });
+        }, {rootMargin: '100px'});
+
+        videos.forEach(video => {
+            observer.observe(video);
+        });
+    });
+</script>
+<body>
+    <header>
+        <div class="image-container" style="overflow: hidden; max-height: 70vh; position: relative;">
+            <video autoplay loop muted playsinline style="width: 100%; height: 70vh; object-fit: cover;">
+                <source src="../Resources/wfp/SpatialSwags.mp4" type="video/mp4">
+            </video>
+        </div>
+    </header>
+    <!-- Navigation Bar -->
+    <nav class="top-nav">
+        <ul>
+            <li><a href="#gameplay">Overview</a></li>
+            <li><a href="#mr-shooting">MR Shooting Game</a></li>
+            <li><a href="#cny-showcase">CNY Showcase</a></li>
+            <li><a href="#other-prototypes">Other Prototypes</a></li>
+            <li><a href="../index.html">← Home </a></li>
+        </ul>
+    </nav>
+
+    <!-- Dark Mode Toggle Button -->
+    <div class="dark-mode-toggle-container">
+        <button id="darkModeToggle" aria-label="Toggle dark mode">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <main>
+        <!-- Game Play Section -->
+        <section id="gameplay">
+            <h2>XR Gameplay & Prototypes</h2>
+
+            <p>
+                When I first joined PICO (Mar 2022 - Jun 2023), I worked as an <strong>XR Game Technical Designer</strong>. My main focus was to design innovative gameplay logic and rapidly prototype these interactive mechanics using <strong>Unity</strong> to demonstrate the mixed reality capabilities of our headsets.
+            </p>
+            <p>
+                My gameplay contributions lie in two specific projects:
+            </p>
+            <h3 id="mr-shooting">MR Multi-Player Shooting Game</h3>
+            <p>
+                This project is a mixed reality multi-player shooting game with rich property features.
+            </p>
+            <div style="text-align: center;">
+               
+                    <video width="800" height="auto" autoplay muted loop controls>
+                        <source src="../Resources/wfp/MRshooting.mp4" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+
+                    <p style="font-style: italic; color: grey; font-size: smaller;">Recording of the MR shooting game.
+                    </p>
+               
+            </div>
+
+            <h3 id="cny-showcase">2022 Chinese New Year Mixed-Reality Showcase</h3>
+            <div style="text-align: center;">
+                <iframe
+                    src="https://player.bilibili.com/player.html?isOutside=true&aid=947638004&bvid=BV14W4y1V7zJ&cid=962281470&p=1&autoplay=0"
+                    width="800" height="450" scrolling="no" border="0" frameborder="no" framespacing="0"
+                    allowfullscreen="true"></iframe>
+                <p style="text-align: center; font-style: italic; color: grey; font-size: smaller;">Bilibili video
+                    showcasing the 2022 Chinese New Year Mixed-Reality experience.</p>
+            </div>
+
+            <p>
+                This project demonstrates the potential of <strong>PICO 4</strong> in mixed reality (MR), featuring an
+                operation activity during CNY 2022. It included a New Year gift box and several different props with MR
+                features. I was in charge of the dragon dance wand that can trigger a spatial snake-like game.
+            </p>
+            <p>
+                Watch the real-time effect recording of our outcome:
+            </p>
+
+            <!-- Videos Embed -->
+            <div style="text-align: center;">
+                <iframe
+                    src="https://player.bilibili.com/player.html?isOutside=true&bvid=BV1R8411w7Ag&p=1&autoplay=0"
+                    width="800" height="450" scrolling="no" border="0" frameborder="no" framespacing="0"
+                    allowfullscreen="true"></iframe>
+                <p style="text-align: center; font-style: italic; color: grey; font-size: smaller;">Bilibili video of the
+                    real-time effect recording of the 2022 Chinese New Year showcase.</p>
+
+            </div>
+
+            <h3 id="other-prototypes">Other Gameplay Prototypes</h3>
+            <p>
+                I also worked on some other gameplay prototypes, including <strong>interactive Boids</strong> and some <strong>spatial swags</strong>.
+            </p>
+            <div style="text-align: center;">
+                <video width="800" height="auto" autoplay muted loop controls>
+                    <source src="../Resources/wfp/SpatialSwags.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            
+        </section>
+
+        <!-- Contact Section with Social Media Links -->
+        <section id="contact">
+
+            <div class="social-media">
+                <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="https://github.com/RongxuanMu" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="https://codepen.io/MuRongxuan" target="_blank"><i class="fab fa-codepen"></i></a>
+                <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
+                <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+                <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
+                <a href="mailto:rongxuanmu@foxmail.com"><i class="fas fa-envelope"></i></a>
+            </div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 Rongxuan. All rights reserved.</p>
+    </footer>
+</body>
+</html>
