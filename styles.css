@@ -41,7 +41,7 @@ a, img {
 }
 
 /* Ensure all interactive elements use PinchCursor */
-button, input, select, textarea, [role="button"], [tabindex] {
+button, input, select, textarea, [role="button"], [tabindex], a:hover {
     cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
 }
 
@@ -836,6 +836,24 @@ a:hover {
     filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(1.2);
 }
 
+/* Custom Link */
+.custom-link {
+    color: #2c5aa0;
+    text-decoration: underline;
+}
+
+.custom-link:hover {
+    color: #1e88e5;
+    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+}
+
+.dark-mode .custom-link {
+    color: #4a90e2;
+}
+
+.dark-mode .custom-link:hover {
+    color: #a0d0ff;
+}
 
 
 
