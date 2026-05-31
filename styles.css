@@ -100,9 +100,27 @@ html::before {
     content: '';
     position: fixed;
     inset: 0;
-    z-index: -1;
+    z-index: -2;
     background: var(--page-bg);
     pointer-events: none;
+}
+
+body {
+    position: relative;
+}
+
+#metaballs-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 1;
+}
+
+.dark-mode #metaballs-canvas {
+    opacity: 0.68;
 }
 
 html, body {
