@@ -1,3 +1,37 @@
+/* Frosted glass design tokens */
+:root {
+    --glass-bg: rgba(255, 255, 255, 0.55);
+    --glass-bg-strong: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-border-width: 1px;
+    --glass-radius: 16px;
+    --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+    --glass-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.11);
+    --glass-blur: blur(16px) saturate(100%);
+    --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    --section-max-width: 960px;
+    --avatar-tile-radius: 8px;
+    --text-primary: #333;
+    --text-secondary: #555;
+    --accent: #1e88e5;
+    --accent-hover: #1565c0;
+    --page-bg: linear-gradient(180deg, #f0f0f0 0%, #dcdcdc 100%);
+}
+
+.dark-mode {
+    --glass-bg: rgba(38, 38, 38, 0.62);
+    --glass-bg-strong: rgba(48, 48, 48, 0.78);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+    --glass-shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.45);
+    --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    --text-primary: #e0e0e0;
+    --text-secondary: #b0b0b0;
+    --accent: #64b5f6;
+    --accent-hover: #90caf9;
+    --page-bg: linear-gradient(180deg, #1e1e1e 0%, #141414 100%);
+}
+
 /* General Styles */
 * {
     -webkit-user-select: none;
@@ -52,24 +86,29 @@ button:active, input:active, select:active, textarea:active, [role="button"]:act
 html, body {
     font-family: Arial, sans-serif;
     margin: 0;
-    padding: 0;
-    color: #333;
+    padding: 0 16px 24px;
+    color: var(--text-primary);
     line-height: 1.6;
     cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
+    min-height: 100vh;
+    background: var(--page-bg);
+    background-attachment: fixed;
+    box-sizing: border-box;
 }
+
 h1 {
-    text-align: center; /* Center the heading */
-    font-size: 32px; /* Larger font size for the heading */
-    margin-bottom: 20px; /* Add space below the heading */
-    color: #333; /* Darker color for the heading */
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 20px;
+    color: var(--text-primary);
 }
 
 h2 {
-    text-align: center; /* Center the heading */
-    font-size: 32px; /* Larger font size for the heading */
-    margin-bottom: 40px; /* Add space below the heading */
-    color: #333; /* Darker color for the heading */
-    border-bottom: 1px solid #e0e0e0; /* Light, thin dividing line */
+    text-align: center;
+    font-size: 32px;
+    margin-bottom: 40px;
+    color: var(--text-primary);
+    border-bottom: var(--glass-border-width) solid var(--glass-border);
     padding-bottom: 0.5rem;
 }
 
@@ -96,20 +135,21 @@ h2:has(+ img) {
 
 
 nav.top-nav {
-    position: fixed; /* Fix the navigation to the viewport */
+    position: fixed;
     top: 20px;
     left: 20px;
-    height:auto; /* Full height to span the entire page vertically */
-    width: auto; /* Set a fixed width for the vertical nav */
-    z-index: 1000; /* Ensure it stays on top of other elements */
+    height: auto;
+    width: auto;
+    z-index: 1000;
     display: flex;
-    flex-direction: column; /* Stack items vertically */
-    padding: 20px 0; /* Padding for spacing */
-    background-color: rgba(255, 255, 255, 0.6);
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1); /* Optional: Shadow for depth */
-   
-    
+    flex-direction: column;
+    padding: 20px 0;
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
 }
 
 
@@ -130,14 +170,15 @@ nav.top-nav ul li {
 
 nav.top-nav ul li a {
     text-decoration: none;
-    text-align:center;
-    color: #333;
+    text-align: center;
+    color: var(--text-primary);
     font-weight: bold;
-    transition: color 0.3s ease;
-    padding: 10px 20px; /* Padding for clickable area */
-    width: 100%; /* Full width for the link */
-    box-sizing: border-box; /* Include padding in width */
+    transition: color 0.3s ease, background 0.3s ease;
+    padding: 10px 20px;
+    width: 100%;
+    box-sizing: border-box;
     cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+    border-radius: 8px;
 }
 
 nav.top-nav ul li a:active {
@@ -145,14 +186,26 @@ nav.top-nav ul li a:active {
 }
 
 nav.top-nav ul li a:hover {
-    color: #1e88e5; /* Brighter blue for better visibility */
-    
+    color: var(--accent);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.dark-mode nav.top-nav ul li a:hover {
+    background: rgba(255, 255, 255, 0.06);
 }
 
 /* Combined Name, Avatar, and About Section */
 #about {
     text-align: center;
-    padding: 60px 20px;
+    padding: 60px 24px;
+    max-width: var(--section-max-width);
+    margin: 20px auto 0;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
 }
 
 .avatar-container {
@@ -177,9 +230,11 @@ nav.top-nav ul li a:hover {
     width: 320px;
     height: 320px;
     gap: 2px;
-    border-radius: 12px;
+    border-radius: var(--glass-radius);
     overflow: visible;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    background: transparent;
+    border: none;
+    box-shadow: none;
 }
 
 .avatar-tile {
@@ -191,7 +246,7 @@ nav.top-nav ul li a:hover {
     position: relative;
     z-index: 1;
     border: none;
-    border-radius: 0;
+    border-radius: var(--avatar-tile-radius);
     display: block;
 }
 
@@ -200,7 +255,7 @@ nav.top-nav ul li a:hover {
     z-index: 10;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.85);
     border: none;
-    border-radius: 0;
+    border-radius: var(--avatar-tile-radius);
     cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
 }
 
@@ -221,10 +276,13 @@ nav.top-nav ul li a:hover {
     bottom: -35px;
     left: 50%;
     transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    color: var(--text-primary);
     padding: 6px 12px;
-    border-radius: 6px;
+    border-radius: 8px;
+    border: var(--glass-border-width) solid var(--glass-border);
     font-size: 12px;
     font-weight: 500;
     white-space: nowrap;
@@ -233,6 +291,7 @@ nav.top-nav ul li a:hover {
     transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
     z-index: 20;
     pointer-events: none;
+    box-shadow: var(--glass-shadow);
 }
 
 .device-tooltip::before {
@@ -243,7 +302,7 @@ nav.top-nav ul li a:hover {
     transform: translateX(-50%);
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
-    border-bottom: 5px solid rgba(0, 0, 0, 0.8);
+    border-bottom: 5px solid var(--glass-border);
 }
 
 .avatar-tile-wrapper:hover .device-tooltip {
@@ -257,14 +316,27 @@ nav.top-nav ul li a:hover {
     text-align: justify;
     max-width: 800px;
     margin: 0 auto;
+    padding: 20px 24px;
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-inset);
+    color: var(--text-secondary);
 }
 
 /* Project Section */
 #projects {
-    padding: 60px 20px;
-    background-color: #ffffff;
-    max-width: 960px; /* Reduced max-width for a more compact layout */
-    margin: 0 auto; /* Center the container */
+    padding: 60px 24px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
+    max-width: var(--section-max-width);
+    margin: 40px auto 0;
 }
 
 .project-grid {
@@ -288,20 +360,21 @@ nav.top-nav ul li a:hover {
     position: relative;
     background-size: cover;
     background-position: center;
-    width: 100%; /* Full width of the grid cell */
-    padding-bottom: 15%; /* Maintain 4:3 aspect ratio */
-    border: none;
-    border-radius: 8px;
+    width: 100%;
+    padding-bottom: 15%;
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
     text-decoration: none;
     color: inherit;
     display: flex;
     justify-content: center;
     align-items: flex-end;
     overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease; /* Added box-shadow transition */
-    min-height: 250px; /* Ensure a minimum height for the project grid items */
-    aspect-ratio: 4 / 3; /* Set the aspect ratio to 4:3 */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    min-height: 250px;
+    aspect-ratio: 4 / 3;
     cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 .codepen-canvas-card {
@@ -426,8 +499,9 @@ nav.top-nav ul li a:hover {
 
 /* Hover Effect */
 .project:hover {
-    transform: scale(1.05); /* Slightly scales up on hover */
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Adds shadow effect on hover */
+    transform: scale(1.05);
+    box-shadow: var(--glass-shadow-hover);
+    border-color: var(--glass-border);
 }
 
 /* Invert color effect on hover for titles and subtitles */
@@ -467,10 +541,16 @@ nav.top-nav ul li a:hover {
 
 /* Publications Section */
 #publications {
-    padding: 60px 20px;
-    text-align: left; /* Align text to the left for better readability */
-    max-width: 800px; /* Limit the width for a more focused layout */
-    margin: 0 auto; /* Center the section within the page */
+    padding: 60px 24px;
+    text-align: left;
+    max-width: var(--section-max-width);
+    margin: 40px auto 0;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
 }
 
 #publications p {
@@ -485,13 +565,18 @@ nav.top-nav ul li a:hover {
 }
 
 #publications li {
-    margin-bottom: 20px; /* Add space between list items */
-    padding: 10px; /* Add padding for better spacing */
-    border-bottom: 1px solid #ccc; /* Add a subtle border between items */
+    margin-bottom: 16px;
+    padding: 14px 16px;
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border-radius: var(--glass-radius);
+    border: var(--glass-border-width) solid var(--glass-border);
+    color: var(--text-secondary);
 }
 
 #publications li:last-child {
-    border-bottom: none; /* Remove border from the last item */
+    margin-bottom: 0;
 }
 
 #publications strong {
@@ -505,17 +590,23 @@ nav.top-nav ul li a:hover {
 
 /* Awards Section */
 #awards {
-    padding: 60px 20px;
-    text-align: center;/* Align text to the left for better readability */
-    max-width: 800px; /* Limit the width for a more focused layout */
-    margin: 0 auto; /* Center the section within the page */
+    padding: 60px 24px;
+    text-align: center;
+    max-width: var(--section-max-width);
+    margin: 40px auto 0;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
 }
 
 #awards p {
-    text-align: center; /* Center the introductory paragraph */
-    font-size: 1.2rem; /* Slightly larger font for the paragraph */
-    margin-bottom: 40px; /* Add space below the paragraph */
-    color: #666; /* Softer color for the introductory text */
+    text-align: center;
+    font-size: 1.2rem;
+    margin-bottom: 40px;
+    color: var(--text-secondary);
 }
 
 #awards ul {
@@ -527,37 +618,51 @@ nav.top-nav ul li a:hover {
     border-bottom: none; /* Remove border from the last item */
 }
 
+#awards li {
+    margin-bottom: 12px;
+    padding: 12px 16px;
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    color: var(--text-secondary);
+}
+
 #awards strong {
-    font-weight: bold; /* Ensure award names are bold */
-    color: #000; /* Ensure award names stand out */
+    font-weight: bold;
+    color: var(--text-primary);
 }
 
 /* Contact Section */
 .social-media {
     position: fixed;
-    bottom: 20px; /* Distance from the bottom */
-    right: 20px;  
+    bottom: 20px;
+    right: 20px;
     display: flex;
-    flex-direction: column; /* Stack links vertically */
-    gap: 10px; /* Space between links */
-    background-color: rgba(255, 255, 255, 0.6); /* Optional: Background for better visibility */
-    padding: 10px; /* Optional: Padding around the links */
-    border-radius: 8px; /* Optional: Rounded corners */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Shadow for depth */
-    z-index:1000;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border-width) solid var(--glass-border);
+    padding: 12px;
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
+    z-index: 1000;
     align-items: center;
 }
 
-
 .social-media a {
     text-decoration: none;
-    color: #000000;
-    font-size: 1.2rem; /* Adjust size as needed */
-    transition: color 0.3s ease;
+    color: var(--text-primary);
+    font-size: 1.2rem;
+    transition: color 0.3s ease, transform 0.2s ease;
 }
 
 .social-media a:hover {
-    color: #1e88e5; /* Brighter blue for better visibility */
+    color: var(--accent);
+    transform: scale(1.15);
 }
 
 
@@ -577,16 +682,21 @@ nav.top-nav ul li a:hover {
 }
 /* Footer */
 footer {
-
-    margin-top: 100px;
-    margin-left: 100px;
-    margin-right: 100px;
+    margin: 60px auto 24px;
     text-align: center;
-    padding: 20px;
-    background-color: #ffffff;
-    border-top: 1px solid #ccc;
+    padding: 16px 24px;
+    background: none;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
     position: relative;
-    z-index:0;
+    z-index: 0;
+    color: var(--text-secondary);
+}
+
+footer p {
+    margin: 0;
 }
 
 /* Store Cards (Homepage) */
@@ -603,19 +713,22 @@ footer {
     align-items: center;
     gap: 12px;
     padding: 14px 16px;
-    border: 1px solid #e6e6e6;
-    border-radius: 12px;
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
     text-decoration: none;
     color: inherit;
-    background: rgba(255,255,255,0.8);
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
     width: 100%;
+    box-shadow: var(--glass-inset);
 }
 
 .store-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
-    border-color: #dcdcdc;
+    box-shadow: var(--glass-shadow-hover);
+    border-color: var(--glass-border);
 }
 
 .store-card__icon {
@@ -652,8 +765,8 @@ footer {
 }
 
 .dark-mode .store-card {
-    background: rgba(26,26,26,0.7) !important;
-    border-color: #333 !important;
+    background: var(--glass-bg-strong) !important;
+    border-color: var(--glass-border) !important;
 }
 
 .dark-mode .store-card__eyebrow,
@@ -676,8 +789,13 @@ footer {
 
 /* Dark Mode Styles */
 .dark-mode {
-    background-color: #1a1a1a !important;
-    color: #e0e0e0 !important;
+    color: var(--text-primary) !important;
+}
+
+.dark-mode html,
+.dark-mode body {
+    background: var(--page-bg) !important;
+    background-attachment: fixed !important;
 }
 
 .dark-mode h1,
@@ -686,65 +804,26 @@ footer {
 .dark-mode h4,
 .dark-mode h5,
 .dark-mode h6 {
-    color: #ffffff !important;
-}
-
-.dark-mode nav.top-nav {
-    background-color: rgba(26, 26, 26, 0.8) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    color: var(--text-primary) !important;
 }
 
 .dark-mode nav.top-nav ul li a {
-    color: #e0e0e0 !important;
+    color: var(--text-primary) !important;
 }
 
 .dark-mode nav.top-nav ul li a:hover {
-    color: #1e88e5 !important; /* Unified blue hover color */
-}
-
-.dark-mode #projects {
-    background-color: #1a1a1a !important;
-}
-
-.dark-mode #publications {
-    background-color: #1a1a1a !important;
-}
-
-.dark-mode #publications li {
-    border-bottom: 1px solid #444 !important;
-}
-
-.dark-mode #publications li:last-child {
-    border-bottom: none !important;
-}
-
-
-.dark-mode #awards {
-    background-color: #1a1a1a !important;
-}
-
-.dark-mode #awards strong {
-    color: #ffffff !important;
-}
-
-.dark-mode .social-media {
-    background-color: rgba(26, 26, 26, 0.8) !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    color: var(--accent) !important;
 }
 
 .dark-mode .social-media a {
-    color: #e0e0e0 !important;
+    color: var(--text-primary) !important;
 }
 
 .dark-mode .social-media a:hover {
-    color: #1e88e5 !important; /* Unified blue hover color */
+    color: var(--accent) !important;
 }
 
 /* Dark mode support for avatar grid */
-.dark-mode .avatar-grid {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
-}
-
 .dark-mode .avatar-tile {
     border: none;
 }
@@ -756,52 +835,19 @@ footer {
 
 /* Dark mode tooltip styling */
 .dark-mode .device-tooltip {
-    background-color: rgba(26, 26, 26, 0.95);
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--glass-bg-strong);
+    color: var(--text-primary);
+    border: var(--glass-border-width) solid var(--glass-border);
 }
 
 .dark-mode .device-tooltip::before {
-    border-bottom-color: rgba(26, 26, 26, 0.95);
+    border-bottom-color: var(--glass-border);
 }
 
 .dark-mode footer {
-    background-color: #1a1a1a !important;
-    border-top: 1px solid #444 !important;
-    color: #e0e0e0 !important;
-}
-
-/* Dark Mode Toggle Button */
-#darkModeToggle {
-    background: none;
-    border: 2px solid #333;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    color: #333;
-    font-size: 16px;
-}
-
-
-#darkModeToggle:hover {
-    border-color: #1e88e5;
-color: #1e88e5;
-    transform: scale(1.1);
-}
-
-.dark-mode #darkModeToggle {
-    border-color: #e0e0e0;
-    color: #e0e0e0;
-}
-
-.dark-mode #darkModeToggle:hover {
-    border-color: #1e88e5;
-    color: #1e88e5;
+    background: none !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
 }
 
 /* Dark Mode Button Positioning - Top Right Corner */
@@ -815,53 +861,15 @@ color: #1e88e5;
     gap: 10px;
 }
 
-#darkModeToggle {
-    background: none;
-    border: 2px solid #333;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    color: #333;
-    font-size: 16px;
-    background-color: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-#darkModeToggle:hover {
-    border-color: #1e88e5;
-    color: #1e88e5;
-    transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.dark-mode #darkModeToggle {
-    border-color: #e0e0e0;
-    color: #e0e0e0;
-    background-color: rgba(26, 26, 26, 0.8);
-}
-
-.dark-mode #darkModeToggle:hover {
-    border-color: #1e88e5;
-    color: #1e88e5;
-    background-color: rgba(26, 26, 26, 0.9);
-}
-
 /* Remove old dark mode button styles from nav */
 nav.top-nav #darkModeToggle {
     position: static;
     margin: 0;
 }
 
-/* Updated Dark Mode Button - Smaller and No Outline */
 .dark-mode-toggle-container #darkModeToggle {
-    background: none;
-    border: none;
+    background: var(--glass-bg-strong);
+    border: var(--glass-border-width) solid var(--glass-border);
     border-radius: 50%;
     width: 32px;
     height: 32px;
@@ -870,62 +878,60 @@ nav.top-nav #darkModeToggle {
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
-    color: #333;
+    color: var(--text-primary);
     font-size: 14px;
-    background-color: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
 }
 
 .dark-mode-toggle-container #darkModeToggle:hover {
-    color: #1e88e5;
+    color: var(--accent);
     transform: scale(1.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--glass-shadow-hover);
 }
 
 .dark-mode .dark-mode-toggle-container #darkModeToggle {
-    color: #e0e0e0;
-    background-color: rgba(26, 26, 26, 0.8);
+    color: var(--text-primary);
 }
 
 .dark-mode .dark-mode-toggle-container #darkModeToggle:hover {
-    color: #1e88e5;
-    background-color: rgba(26, 26, 26, 0.9);
+    color: var(--accent);
 }
 
 /* Highlight text for important content */
 .highlight-text {
-    color: #1e88e5; /* Brighter blue for better visibility in light mode */
+    color: var(--accent);
 }
 
 .dark-mode .highlight-text {
-    color: #a0d0ff; /* Brighter blue for dark mode */
+    color: var(--accent-hover);
 }
 
 /* Info text styling */
 .info-text {
-    color: #1e88e5; /* Brighter blue for better visibility in light mode */
+    color: var(--accent);
 }
 
 .dark-mode .info-text {
-    color: #a0d0ff; /* Brighter blue for dark mode */
+    color: var(--accent-hover);
 }
 
 /* Base link colors (content links like DOI) */
 a {
-    color: #1e88e5; /* Brighter blue for better visibility in light mode */
+    color: var(--accent);
 }
 
 a:hover {
-    color: #1e4a8c; /* Darker blue on hover */
+    color: var(--accent-hover);
 }
 
 .dark-mode a {
-    color: #a0d0ff; /* Brighter blue for dark mode */
+    color: var(--accent-hover);
 }
 
 .dark-mode a:hover {
-    color: #1e88e5; /* Unified blue hover color */
+    color: var(--accent);
 }
 
 /* Specific styling for white-backgrounded diagram images in WFP pages */
@@ -936,21 +942,21 @@ a:hover {
 
 /* Custom Link */
 .custom-link {
-    color: #2c5aa0;
+    color: var(--accent);
     text-decoration: underline;
 }
 
 .custom-link:hover {
-    color: #1e88e5;
+    color: var(--accent-hover);
     cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
 }
 
 .dark-mode .custom-link {
-    color: #4a90e2;
+    color: var(--accent-hover);
 }
 
 .dark-mode .custom-link:hover {
-    color: #a0d0ff;
+    color: var(--accent);
 }
 
 

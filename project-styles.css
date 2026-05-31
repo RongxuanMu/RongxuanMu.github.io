@@ -431,9 +431,9 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 .dark-mode footer {
-    background-color: #1a1a1a !important;
-    border-top: 1px solid #444 !important;
-    color: #e0e0e0 !important;
+    background: none !important;
+    border: none !important;
+    color: var(--text-secondary) !important;
 }
 
 /* Dark Mode Toggle Button */
