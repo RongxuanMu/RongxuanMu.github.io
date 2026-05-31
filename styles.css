@@ -11,13 +11,15 @@
     --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     --section-max-width: 960px;
     --avatar-tile-radius: 8px;
-    --avatar-tile-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(0, 0, 0, 0.38);
-    --avatar-tile-shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.65), 0 28px 56px rgba(0, 0, 0, 0.92);
+    --avatar-tile-shadow: 0 2px 4px rgba(0, 0, 0, 0.28), 0 3px 8px rgba(0, 0, 0, 0.2);
+    --avatar-tile-shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.45), 0 20px 40px rgba(0, 0, 0, 0.72);
     --text-primary: #333;
     --text-secondary: #555;
     --accent: #1e88e5;
     --accent-hover: #1565c0;
-    --page-bg: linear-gradient(180deg, #f0f0f0 0%, #dcdcdc 100%);
+    --page-bg-top: #f0f0f0;
+    --page-bg-bottom: #dcdcdc;
+    --page-bg: linear-gradient(180deg, var(--page-bg-top) 0%, var(--page-bg-bottom) 100%);
 }
 
 .dark-mode {
@@ -31,9 +33,11 @@
     --text-secondary: #b0b0b0;
     --accent: #64b5f6;
     --accent-hover: #90caf9;
-    --page-bg: linear-gradient(180deg, #1e1e1e 0%, #141414 100%);
-    --avatar-tile-shadow-hover: 0 10px 20px rgba(0, 0, 0, 0.85), 0 28px 56px rgba(0, 0, 0, 1);
-    --avatar-tile-shadow: 0 2px 6px rgba(0, 0, 0, 0.65), 0 4px 12px rgba(0, 0, 0, 0.5);
+    --page-bg-top: #1e1e1e;
+    --page-bg-bottom: #141414;
+    --page-bg: linear-gradient(180deg, var(--page-bg-top) 0%, var(--page-bg-bottom) 100%);
+    --avatar-tile-shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.55), 0 20px 40px rgba(0, 0, 0, 0.85);
+    --avatar-tile-shadow: 0 2px 4px rgba(0, 0, 0, 0.38), 0 3px 8px rgba(0, 0, 0, 0.28);
 }
 
 /* General Styles */
@@ -87,6 +91,20 @@ button:active, input:active, select:active, textarea:active, [role="button"]:act
     cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
 
+html {
+    min-height: 100%;
+    background-color: var(--page-bg-bottom);
+}
+
+html::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--page-bg);
+    pointer-events: none;
+}
+
 html, body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -94,9 +112,8 @@ html, body {
     color: var(--text-primary);
     line-height: 1.6;
     cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
-    min-height: 100vh;
-    background: var(--page-bg);
-    background-attachment: fixed;
+    min-height: 100%;
+    background: transparent;
     box-sizing: border-box;
 }
 
@@ -802,10 +819,8 @@ footer p {
     color: var(--text-primary) !important;
 }
 
-.dark-mode html,
-.dark-mode body {
-    background: var(--page-bg) !important;
-    background-attachment: fixed !important;
+.dark-mode html {
+    background-color: var(--page-bg-bottom) !important;
 }
 
 .dark-mode h1,

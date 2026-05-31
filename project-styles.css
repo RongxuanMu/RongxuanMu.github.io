@@ -4,7 +4,7 @@ html, body {
     margin: 0;
     padding: 0;
     color: #333;
-    background-color: #ffffff;
+    background: transparent;
     cursor: url('Resources/common/PointingCursor.png') 1 1, auto;
 }
 
