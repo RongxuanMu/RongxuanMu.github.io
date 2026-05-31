@@ -352,14 +352,14 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 /* Responsive Design */
 @media (max-width: 768px) {
     nav.top-nav ul {
-        justify-content: center;
+        justify-content: flex-start;
     }
 }
 
 @media (max-width: 480px) {
     nav.top-nav ul {
         flex-direction: column;
-        align-items: center;
+        align-items: stretch;
     }
 
     nav.top-nav ul li {
@@ -439,7 +439,7 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 .dark-mode nav.top-nav ul li a:hover {
-    color: #1e88e5 !important; /* Unified blue hover color */
+    color: var(--accent-hover) !important;
 }
 
 .dark-mode .social-media {
