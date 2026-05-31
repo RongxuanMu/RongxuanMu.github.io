@@ -304,6 +304,104 @@ nav.top-nav ul li a:hover {
     cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
 }
 
+.codepen-canvas-card {
+    background:
+        radial-gradient(circle at 18% 18%, rgba(255, 221, 64, 0.3), transparent 22%),
+        radial-gradient(circle at 82% 72%, rgba(71, 207, 115, 0.26), transparent 28%),
+        linear-gradient(135deg, #111 0%, #1f2933 50%, #080808 100%);
+}
+
+.codepen-canvas-preview {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.codepen-canvas-preview::before {
+    content: '</>';
+    position: absolute;
+    left: 10%;
+    top: 10%;
+    color: rgba(255, 255, 255, 0.12);
+    font-family: Menlo, Consolas, monospace;
+    font-size: 5.5rem;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+.pen-window {
+    position: absolute;
+    display: block;
+    width: 44%;
+    height: 34%;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.36);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.pen-window::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 9px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ff5f56;
+    box-shadow: 13px 0 #ffbd2e, 26px 0 #27c93f;
+}
+
+.pen-window-one {
+    left: 10%;
+    top: 18%;
+    transform: rotate(-7deg);
+}
+
+.pen-window-two {
+    right: 11%;
+    top: 28%;
+    border-color: rgba(71, 207, 115, 0.45);
+    transform: rotate(6deg);
+}
+
+.pen-window-three {
+    left: 24%;
+    bottom: 16%;
+    border-color: rgba(255, 221, 64, 0.42);
+    transform: rotate(2deg);
+}
+
+.code-line {
+    position: absolute;
+    display: block;
+    height: 3px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.62);
+    z-index: 1;
+}
+
+.code-line-one {
+    left: 17%;
+    top: 40%;
+    width: 26%;
+}
+
+.code-line-two {
+    right: 17%;
+    top: 51%;
+    width: 30%;
+    background: rgba(71, 207, 115, 0.78);
+}
+
+.code-line-three {
+    left: 31%;
+    bottom: 30%;
+    width: 34%;
+    background: rgba(255, 221, 64, 0.78);
+}
+
 .project:active {
     cursor: url('Resources/common/PinchedCursor.png') 1 1, pointer;
 }
@@ -854,9 +952,6 @@ a:hover {
 .dark-mode .custom-link:hover {
     color: #a0d0ff;
 }
-
-
-
 
 
 

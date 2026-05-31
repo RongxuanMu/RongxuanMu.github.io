@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodePen Canvas - Rongxuan Portfolio</title>
+    <link rel="stylesheet" href="../project-styles.css">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/x-icon">
+    <script src="../darkmode.js"></script>
+    <meta name="description" content="CodePen Canvas collects Rongxuan Mu's interactive front-end sketches, motion prototypes, and web interface experiments on CodePen.">
+    <style>
+        .codepen-hero {
+            min-height: 420px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 2rem 4rem;
+            color: #fff;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(255, 221, 64, 0.28), transparent 24%),
+                radial-gradient(circle at 80% 72%, rgba(71, 207, 115, 0.26), transparent 30%),
+                linear-gradient(135deg, #0d0f12 0%, #1f2933 52%, #050505 100%);
+            overflow: hidden;
+        }
+
+        .codepen-hero__inner {
+            width: min(920px, 100%);
+        }
+
+        .codepen-hero h1 {
+            margin: 0 0 1rem;
+            color: #fff;
+            font-size: clamp(2.4rem, 6vw, 4.8rem);
+            line-height: 1;
+            letter-spacing: 0;
+        }
+
+        .codepen-hero p {
+            max-width: 680px;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 1.1rem;
+            text-align: left;
+        }
+
+        .pen-embed-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 18px;
+            margin-top: 1.5rem;
+        }
+
+        .pen-embed-card {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e6e6e6;
+            border-radius: 8px;
+            color: inherit;
+            text-decoration: none;
+            background: #fff;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .pen-embed-card:hover {
+            transform: translateY(-2px);
+            border-color: #d3d3d3;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .pen-embed-frame {
+            width: 100%;
+            height: 320px;
+            border: 0;
+            background: #111;
+        }
+
+        .pen-embed-meta {
+            padding: 16px 18px 18px;
+        }
+
+        .pen-embed-meta h3 {
+            margin: 0 0 0.5rem;
+            border: none;
+            padding: 0;
+            font-size: 1.2rem;
+        }
+
+        .pen-embed-meta p {
+            margin: 0;
+            color: #666;
+            font-size: 0.92rem;
+            text-align: left;
+        }
+
+        .pen-embed-link {
+            display: inline-flex;
+            margin-top: 12px;
+            color: #007bff;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .dark-mode .pen-embed-card {
+            background: rgba(26, 26, 26, 0.7) !important;
+            border-color: #333 !important;
+        }
+
+        .dark-mode .pen-embed-meta p {
+            color: #aaa !important;
+        }
+
+        @media (max-width: 768px) {
+            .pen-embed-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sticky Navigation Bar -->
+    <nav class="top-nav">
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#previews">Previews</a></li>
+            <li><a href="#profile-link">CodePen</a></li>
+            <li><a href="../index.html">← Home</a></li>
+        </ul>
+    </nav>
+
+    <!-- Dark Mode Toggle Button -->
+    <div class="dark-mode-toggle-container">
+        <button id="darkModeToggle" aria-label="Toggle dark mode">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <header class="codepen-hero">
+        <div class="codepen-hero__inner">
+            <h1>CodePen Canvas</h1>
+            <p>
+                A public sketchbook for small web interactions, interface fragments, motion studies, and playful
+                front-end experiments.
+            </p>
+        </div>
+    </header>
+
+    <main>
+        <!-- Overview Section -->
+        <section id="overview">
+            <h2>Overview</h2>
+            <p>
+                <strong>CodePen Canvas</strong> collects lightweight prototypes from my CodePen profile. These sketches
+                are useful for quickly testing interaction ideas before they become larger XR, web, or tool-building
+                projects.
+            </p>
+        </section>
+
+        <!-- CodePen Demos -->
+        <section id="previews">
+            <h2>CodePen Demos</h2>
+            <div class="pen-embed-grid">
+                <article class="pen-embed-card">
+                    <iframe class="pen-embed-frame" title="SenseGaze Demo on CodePen" src="https://codepen.io/MuRongxuan/embed/preview/dPMVdvz?default-tab=result&theme-id=dark" loading="lazy" allowfullscreen></iframe>
+                    <div class="pen-embed-meta">
+                        <h3>SenseGaze Demo</h3>
+                        <p>A gaze-sensing interaction sketch for exploring how attention, direction, and interface feedback can be visualized in the browser.</p>
+                        <a class="pen-embed-link" href="https://codepen.io/MuRongxuan/full/dPMVdvz" target="_blank" rel="noopener noreferrer">Open full view</a>
+                    </div>
+                </article>
+                <article class="pen-embed-card">
+                    <iframe class="pen-embed-frame" title="Spherical Distance Demo on CodePen" src="https://codepen.io/MuRongxuan/embed/preview/qENZKyL?default-tab=result&theme-id=dark" loading="lazy" allowfullscreen></iframe>
+                    <div class="pen-embed-meta">
+                        <h3>Spherical Distance Demo</h3>
+                        <p>A spatial math sketch for inspecting distance relationships on a sphere, useful for XR geometry, gaze fields, and curved-surface interaction thinking.</p>
+                        <a class="pen-embed-link" href="https://codepen.io/MuRongxuan/full/qENZKyL" target="_blank" rel="noopener noreferrer">Open full view</a>
+                    </div>
+                </article>
+                <article class="pen-embed-card">
+                    <iframe class="pen-embed-frame" title="Dynamic Scale XR UI on CodePen" src="https://codepen.io/MuRongxuan/embed/preview/myPvvEP?default-tab=result&theme-id=dark" loading="lazy" allowfullscreen></iframe>
+                    <div class="pen-embed-meta">
+                        <h3>Dynamic Scale XR UI</h3>
+                        <p>A browser-native XR interface prototype exploring adaptive scale, readable depth, and responsive spatial UI feedback.</p>
+                        <a class="pen-embed-link" href="https://codepen.io/MuRongxuan/full/myPvvEP" target="_blank" rel="noopener noreferrer">Open full view</a>
+                    </div>
+                </article>
+                <article class="pen-embed-card">
+                    <iframe class="pen-embed-frame" title="Camera Culling on CodePen" src="https://codepen.io/MuRongxuan/embed/preview/myPvvEP?default-tab=result&theme-id=dark" loading="lazy" allowfullscreen></iframe>
+                    <div class="pen-embed-meta">
+                        <h3>Camera Culling</h3>
+                        <p>A camera-space visibility sketch for testing how interface elements can appear, disappear, or simplify based on view constraints.</p>
+                        <a class="pen-embed-link" href="https://codepen.io/MuRongxuan/full/myPvvEP" target="_blank" rel="noopener noreferrer">Open full view</a>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- Profile Link -->
+        <section id="profile-link">
+            <h2>CodePen Profile</h2>
+            <p>
+                Browse the full set of public pens and experiments on CodePen.
+            </p>
+            <div class="store-cards">
+                <a class="store-card" href="https://codepen.io/MuRongxuan" target="_blank" rel="noopener noreferrer" aria-label="Open MuRongxuan on CodePen">
+                    <div class="store-card__icon">
+                        <i class="fab fa-codepen"></i>
+                    </div>
+                    <div class="store-card__content">
+                        <div class="store-card__eyebrow">Open Profile</div>
+                        <div class="store-card__title">MuRongxuan on CodePen</div>
+                        <div class="store-card__meta">codepen.io/MuRongxuan</div>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Contact & Social Media -->
+        <section id="contact">
+            <div class="social-media">
+                <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="https://github.com/RongxuanMu" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="https://codepen.io/MuRongxuan" target="_blank"><i class="fab fa-codepen"></i></a>
+                <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
+                <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+                <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
+                <a href="mailto:rongxuanmu@foxmail.com"><i class="fas fa-envelope"></i></a>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2025 Rongxuan Mu. All rights reserved.</p>
+    </footer>
+</body>
+</html>
