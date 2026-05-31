@@ -49,7 +49,32 @@ button:active, input:active, select:active, textarea:active, [role="button"]:act
 header {
     color: #333;
     padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: none;
     text-align: center;
+}
+
+header .image-container {
+    position: relative;
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: calc(50% - 50vw);
+    margin-right: calc(50% - 50vw);
+    padding: 0;
+    overflow: hidden;
+    line-height: 0;
+}
+
+header .image-container video,
+header .image-container img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    min-height: 240px;
+    object-fit: cover;
+    object-position: center;
 }
 
 header h1 {
