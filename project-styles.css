@@ -439,7 +439,8 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 }
 
 .dark-mode nav.top-nav ul li a:hover {
-    color: var(--accent-hover) !important;
+    color: var(--text-primary) !important;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .dark-mode .social-media {

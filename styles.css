@@ -49,8 +49,6 @@
     -webkit-touch-callout: none;
     -webkit-tap-highlight-color: transparent;
     cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
 }
 
 /* Global active state for all elements */
@@ -234,8 +232,8 @@ nav.top-nav ul li a:active {
 }
 
 nav.top-nav ul li a:hover {
-    color: var(--accent);
-    background: rgba(30, 136, 229, 0.12);
+    color: var(--text-primary);
+    background: rgba(0, 0, 0, 0.06);
 }
 
 nav.top-nav ul li a:focus-visible {
@@ -283,6 +281,9 @@ nav.top-nav ul li a:focus-visible {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    image-rendering: auto;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
     cursor: url('./Resources/common/PointingCursor.png') 1 1, auto;
     transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
     position: relative;
@@ -853,8 +854,8 @@ footer p {
 }
 
 .dark-mode nav.top-nav ul li a:hover {
-    color: var(--accent-hover) !important;
-    background: rgba(100, 181, 246, 0.18);
+    color: var(--text-primary) !important;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .dark-mode .social-media a {
