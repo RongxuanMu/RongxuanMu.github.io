@@ -84,53 +84,139 @@ header h1 {
 
 main {
     padding: 2rem;
-    max-width: 800px;
+    max-width: var(--section-max-width, 960px);
     margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-section {
-    margin-top: 2rem;
-    margin-bottom: 2rem;
+main section {
+    display: block;
+    margin: 1.25rem auto 0;
+    padding: 2rem 2rem;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
     text-align: justify;
-    padding-top: 2rem;
-    margin: 0 auto;
+    background: var(--glass-bg, rgba(255, 255, 255, 0.55));
+    backdrop-filter: var(--glass-blur, blur(16px) saturate(100%));
+    -webkit-backdrop-filter: var(--glass-blur, blur(16px) saturate(100%));
+    border: var(--glass-border-width, 1px) solid var(--glass-border, rgba(0, 0, 0, 0.1));
+    border-radius: var(--glass-radius, 16px);
+    box-shadow: var(--glass-shadow, 0 4px 24px rgba(0, 0, 0, 0.07)),
+        var(--glass-inset, inset 0 1px 0 rgba(255, 255, 255, 0.5));
+    color: var(--text-secondary, #555);
 }
 
+main section:first-of-type {
+    margin-top: 0;
+}
 
+/* Contact holds the fixed social bar — no glass panel (backdrop-filter breaks position: fixed) */
+main section#contact {
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin-top: 1.5rem;
+    overflow: visible;
+}
 
-section h2 {
+main section#contact .social-media {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--glass-bg-strong, rgba(255, 255, 255, 0.72));
+    backdrop-filter: var(--glass-blur, blur(16px) saturate(100%));
+    -webkit-backdrop-filter: var(--glass-blur, blur(16px) saturate(100%));
+    border: var(--glass-border-width, 1px) solid var(--glass-border, rgba(0, 0, 0, 0.1));
+    padding: 12px;
+    border-radius: var(--glass-radius, 16px);
+    box-shadow: var(--glass-shadow, 0 4px 24px rgba(0, 0, 0, 0.07)),
+        var(--glass-inset, inset 0 1px 0 rgba(255, 255, 255, 0.5));
+    z-index: 1000;
+    align-items: center;
+}
+
+main section h1 {
+    color: var(--text-primary, #333);
+}
+
+main section h2 {
     font-size: 1.8rem;
-    color: #333;
-    border-bottom: 1px solid #e0e0e0;
+    color: var(--text-primary, #333);
+    border-bottom: var(--glass-border-width, 1px) solid var(--glass-border, rgba(0, 0, 0, 0.1));
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
     text-align: left;
 }
 
 /* Remove dividing line when h2 is immediately followed by image/video container */
-section h2:has(+ .image-container),
-section h2:has(+ .image-row) {
+main section h2:has(+ .image-container),
+main section h2:has(+ .image-row) {
     border-bottom: none;
     padding-bottom: 0;
 }
-section h3 {
+
+main section h3 {
     font-size: 1.5rem;
-    color: #333;
-    border-bottom: 1px solid #e0e0e0;
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-}
-section h4 {
-    font-size: 1.2rem;
-    color: #333;
+    color: var(--text-primary, #333);
+    border-bottom: var(--glass-border-width, 1px) solid var(--glass-border, rgba(0, 0, 0, 0.1));
     padding-bottom: 0.5rem;
     margin-bottom: 1rem;
 }
 
-section p,
-section ul {
+main section h4 {
+    font-size: 1.2rem;
+    color: var(--text-primary, #333);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+main section p,
+main section ul {
     font-size: 1rem;
     margin-bottom: 1rem;
+    max-width: 100%;
+}
+
+main section img,
+main section video {
+    max-width: 100%;
+    height: auto;
+}
+
+main section .image-container {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+main section .image-container video,
+main section .image-container img,
+main section .image-row {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+main section .image-row img {
+    border-radius: calc(var(--glass-radius, 16px) - 4px);
+}
+
+main section iframe {
+    max-width: 100%;
+}
+
+main section .store-cards {
+    max-width: 100%;
+    flex-wrap: wrap;
 }
 
 /* Store Cards (Project Pages) */
@@ -351,6 +437,14 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    main {
+        padding: 1.25rem;
+    }
+
+    main section {
+        padding: 1.5rem 1.25rem;
+    }
+
     nav.top-nav ul {
         justify-content: flex-start;
     }
@@ -408,6 +502,32 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
     color: #ffffff !important;
 }
 
+.dark-mode main section {
+    color: var(--text-secondary, #b0b0b0) !important;
+}
+
+.dark-mode main section h1,
+.dark-mode main section h2,
+.dark-mode main section h3,
+.dark-mode main section h4 {
+    color: var(--text-primary, #ffffff) !important;
+}
+
+.dark-mode main section h2 {
+    border-bottom: var(--glass-border-width, 1px) solid var(--glass-border, rgba(255, 255, 255, 0.12)) !important;
+}
+
+/* Dark mode: Remove dividing line when h2 is immediately followed by image/video container */
+.dark-mode main section h2:has(+ .image-container),
+.dark-mode main section h2:has(+ .image-row) {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+}
+
+.dark-mode main section h3 {
+    border-bottom: var(--glass-border-width, 1px) solid var(--glass-border, rgba(255, 255, 255, 0.12)) !important;
+}
+
 .dark-mode section h2 {
     color: #ffffff !important;
     border-bottom: 1px solid #444 !important;
@@ -441,6 +561,11 @@ img[src*="WorkFlowOfXRInteraction.png"]:hover {
 .dark-mode nav.top-nav ul li a:hover {
     color: var(--text-primary) !important;
     background: rgba(255, 255, 255, 0.08);
+}
+
+.dark-mode main section#contact .social-media {
+    background-color: var(--glass-bg-strong, rgba(48, 48, 48, 0.78)) !important;
+    box-shadow: var(--glass-shadow, 0 4px 24px rgba(0, 0, 0, 0.35)) !important;
 }
 
 .dark-mode .social-media {

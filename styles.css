@@ -10,6 +10,7 @@
     --glass-blur: blur(16px) saturate(100%);
     --glass-inset: inset 0 1px 0 rgba(255, 255, 255, 0.5);
     --section-max-width: 960px;
+    --content-max-width: 800px;
     --avatar-tile-radius: 8px;
     --avatar-tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 2px 5px rgba(0, 0, 0, 0.08);
     --avatar-tile-shadow-hover: 0 8px 16px rgba(0, 0, 0, 0.45), 0 20px 40px rgba(0, 0, 0, 0.72);
@@ -358,7 +359,7 @@ nav.top-nav ul li a:focus-visible {
 
 .about-description {
     text-align: justify;
-    max-width: 800px;
+    max-width: var(--content-max-width);
     margin: 0 auto;
     padding: 0;
     background: none;
@@ -385,38 +386,76 @@ nav.top-nav ul li a:focus-visible {
 
 .project-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 projects per line */
-    gap: 40px; /* Increased gap between projects */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin-inline: auto;
 }
 .project video {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+    display: block;
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
     transform: translate(-50%, -50%);
+    object-fit: cover;
+    object-position: center center;
     z-index: 0;
     cursor: inherit;
     pointer-events: none;
+}
+
+/* Landscape clips in square tiles — slight zoom + vertical framing */
+.project:has(source[src*="Geometria"]) video {
+    object-position: center 40%;
+    transform: translate(-50%, -50%) scale(1.12);
+}
+
+.project:has(source[src*="MRshooting"]) video,
+.project:has(source[src*="Structuralism"]) video {
+    object-position: center 42%;
+    transform: translate(-50%, -50%) scale(1.14);
+}
+
+.project:has(source[src*="FOVpreview"]) video {
+    transform: translate(-50%, -50%) scale(1.04);
+}
+
+.project:has(source[src*="tutorialVideo"]) video {
+    object-position: center 38%;
+    transform: translate(-50%, -50%) scale(1.08);
+}
+
+.project:has(source[src*="OpenBrush"]) video,
+.project:has(source[src*="Mechanical"]) video,
+.project:has(source[src*="Muzuo"]) video,
+.project:has(source[src*="CityMemo"]) video {
+    transform: translate(-50%, -50%) scale(1.03);
+}
+
+.project:not(:has(video)) {
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
 }
 .project {
     position: relative;
     background-size: cover;
     background-position: center;
     width: 100%;
-    padding-bottom: 15%;
+    padding-bottom: 0;
     border: var(--glass-border-width) solid var(--glass-border);
     border-radius: var(--glass-radius);
     text-decoration: none;
     color: inherit;
-    display: flex;
-    justify-content: center;
-    align-items: flex-end;
+    display: block;
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
-    min-height: 250px;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1 / 1;
     cursor: url('Resources/common/PinchCursor.png') 1 1, pointer;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
@@ -556,12 +595,12 @@ nav.top-nav ul li a:focus-visible {
 
 /* Adjusting the project title and description positioning */
 .project h3 {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     margin: 0;
     color: rgb(255, 255, 255); /* Title color */
     text-align: center;
     position: absolute; /* Positioning for titles */
-    bottom: 40px; /* Positioning for titles */
+    bottom: 32px; /* Positioning for titles */
     left: 0;
     right: 0;
     z-index: 1; /* Ensures text is on top */
@@ -570,12 +609,12 @@ nav.top-nav ul li a:focus-visible {
 }
 
 .project p {
-    font-size: 1rem;
-    margin: 5px 0 0;
+    font-size: 0.8rem;
+    margin: 4px 0 0;
     color: white; /* Description color */
     text-align: center;
     position: absolute; /* Positioning for descriptions */
-    bottom: 20px; /* Positioning for descriptions */
+    bottom: 14px; /* Positioning for descriptions */
     left: 0;
     right: 0;
     z-index: 1; /* Ensures text is on top */
@@ -606,6 +645,10 @@ nav.top-nav ul li a:focus-visible {
 #publications ul {
     list-style-type: none; /* Remove default list styling */
     padding: 0; /* Remove default padding */
+    max-width: var(--content-max-width);
+    margin-inline: auto;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 #publications li {
@@ -656,6 +699,11 @@ nav.top-nav ul li a:focus-visible {
 #awards ul {
     list-style-type: none; /* Remove default list styling */
     padding: 0; /* Remove default padding */
+    max-width: var(--content-max-width);
+    margin-inline: auto;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
 }
 
 #awards li:last-child {
@@ -821,7 +869,9 @@ footer p {
 /* Media Queries for Responsive Design */
 @media (max-width: 768px) {
     .project-grid {
-        grid-template-columns: repeat(2, 1fr); /* 2 projects per line on smaller screens */
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+        max-width: 480px;
     }
 }
 
