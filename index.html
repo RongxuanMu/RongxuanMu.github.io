@@ -24,15 +24,8 @@
     <script src="darkmode.js?v=1"></script>
     <script src="metaballs.js?v=22" defer></script>
     <script>
-        // Prevent text selection and copying
+        // Prevent keyboard copy shortcuts
         document.addEventListener('DOMContentLoaded', function() {
-            // Disable right-click context menu
-            document.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                return false;
-            });
-            
-            // Disable keyboard shortcuts for copy, cut, paste, select all
             document.addEventListener('keydown', function(e) {
                 // Disable Ctrl+A (Select All)
                 if (e.ctrlKey && e.keyCode === 65) {
