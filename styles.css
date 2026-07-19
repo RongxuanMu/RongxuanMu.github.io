@@ -769,8 +769,13 @@ nav.top-nav ul li a:focus-visible {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 64px;
+    width: 100%;
+    max-width: 92%;
+    font-size: clamp(24px, 6vw, 64px);
     font-weight: bold;
+    line-height: 1.15;
+    text-wrap: balance;
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
 }
 /* Footer */
 footer {

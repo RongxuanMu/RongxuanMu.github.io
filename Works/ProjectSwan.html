@@ -6,12 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>Project Swan + OS 6</title>
-    <link rel="stylesheet" href="../project-styles.css?v=3">
-    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../project-styles.css?v=6">
+    <link rel="stylesheet" href="../styles.css?v=7">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/x-icon">
     <script src="../darkmode.js"></script>
-    <script src="../metaballs.js?v=22" defer></script>
 </head>
 <script>
     // Lazy load videos to prevent loading errors
@@ -62,6 +61,12 @@
     <nav class="top-nav">
         <ul>
             <li><a href="#overview">Overview</a></li>
+            <li><a href="#interaction-paradigm">3D Interactions</a></li>
+            <li><a href="#interaction-conditions">Conditions</a></li>
+            <li><a href="#interaction-actions">Actions</a></li>
+            <li><a href="#interaction-kinds">Interaction Types</a></li>
+            <li><a href="#interaction-effects">Effects</a></li>
+            <li><a href="#interaction-conclusion">Conclusion</a></li>
             <li style="display: none;"><a href="#framework">Interaction Framework</a></li>
             <li><a href="../index.html">← Home </a></li>
         </ul>
@@ -89,6 +94,379 @@
                 <p style="font-style: italic; color: grey; font-size: smaller; margin-top: 10px;">
                     Demonstration of Project Swan and OS 6 features.
                 </p>
+            </div>
+        </section>
+
+        <!-- PICO OS 6 Interaction Paradigm -->
+        <section id="interaction-paradigm">
+            <h2>A New 3D Interaction Paradigm for Spatial Applications</h2>
+            <div class="article-figure">
+                <img src="../Resources/swan/os6-hero.jpg" alt="PICO OS 6 3D Object Interaction">
+            </div>
+            <p>
+                PICO OS 6 introduces a more unified set of foundational "3D Object Interaction" capabilities at the interaction level: from interaction conditions (making objects hittable by the interaction system) to interaction actions (Tap/Drag/Scale/Rotate/Pointer), and finally to interaction effects (highlighting, moving, scaling, rotating, momentum poking). It provides a unified input paradigm to cover eye tracking, hand gestures, and controllers. Under the same <code>SpatialView</code> + Compose input framework, it simultaneously supports hand gestures, gaze coordination, controller rays, and pointer-based inputs. Furthermore, it uses a finer-grained interaction type (<code>InteractionKind</code>) to distinguish how different input methods trigger the same type of interaction action.
+            </p>
+            <p>
+                The goal of these capabilities is clear: to enable developers to build more intuitive and natural interaction experiences with fewer branches and a more consistent input model. This is especially true for scenarios requiring frequent manipulation of 3D content (model viewing, content editing, spatial UI, display interactions), where it can significantly reduce accidental touches and fatigue, while improving overall feel and predictability.
+            </p>
+
+            <h3>Highlights</h3>
+            <ul>
+                <li><strong>Unified Interaction Condition Specification:</strong> Uses <code>CollisionComponent</code> + <code>InteractableComponent</code> to uniformly define an entity's hittable range and interactive state, ensuring consistent and predictable hit and response behaviors.</li>
+                <li><strong>Unified Multi-modal Input Paradigm:</strong> Uses <code>Modifier.pointerInput</code> on <code>SpatialView</code> as a unified entry point, covering eye tracking, hand gestures, and controller inputs, making it easy to reuse the same object rules, feedback rules, and interaction semantics.</li>
+                <li><strong>Core Interaction Action Coverage:</strong> Provides core interface capabilities starting with <code>detectSpatial</code> (Tap/Drag/Scale/Rotate/PointerEvent) to cover selecting, grabbing and moving, two-handed scaling, two-handed rotating, and lower-level pointer event extensions.</li>
+                <li><strong>Multi-source Interaction Type Differentiation:</strong> Distinguishes interaction sources (DirectPinch / Poke / GazePinch / RayBasedPinch / Pointer) through the <code>interactionKind</code> property within the same action interface. This allows the same action to express different semantics (e.g., drag can be used for pinch-to-move or poke-to-rotate).</li>
+                <li><strong>Enhanced Rotation Experience:</strong> Supports modes like delayed rotation and momentum rotation, providing a more continuous and natural interaction feel for large-angle and multi-turn rotation scenarios.</li>
+            </ul>
+        </section>
+
+        <!-- Interaction Conditions -->
+        <section id="interaction-conditions">
+            <h2>Interaction Conditions: Making 3D Objects "Touchable and Responsive"</h2>
+            <p>
+                In spatial applications, not all entities are directly manipulable by the user by default. To make a 3D object support basic interactions like "tapping/pinching/poking", two conditions must be met:
+            </p>
+
+            <h3>1) The Object has Collision Volume (Collision)</h3>
+            <p>Configure a collision volume for the entity to define the spatial range where interactions can occur. Common related elements include:</p>
+            <ul>
+                <li><code>CollisionComponent</code>: Enables the collision volume for the entity.</li>
+                <li><code>ShapeResource</code>: Defines the collision shape (e.g., Box / Sphere / ConvexMesh).</li>
+                <li><code>PhysicsMaterialResource</code>: Collider material (default settings work for most interaction scenarios).</li>
+            </ul>
+            <p><strong>Common Configuration Methods:</strong></p>
+            <ul>
+                <li><strong>Bounding Box Generation (Box / Sphere):</strong> High configuration efficiency and low performance overhead. Suitable for rapid prototyping, regular geometry, or scenarios with a large number of objects.</li>
+                <li><strong>Mesh-based Generation (ConvexMesh):</strong> Fits the model contour more closely, resulting in more precise interactions. Suitable for objects requiring high accuracy for edge touching. You can use the <a href="https://developer.picoxr.com/document/spatial-toolkit/know-spatial-editor/" target="_blank" rel="noopener noreferrer" class="custom-link">PICO Spatial Editor</a> to assist in setting up and adjusting the collision volume.</li>
+            </ul>
+
+            <div class="figure-grid figure-grid--2">
+                <figure>
+                    <img src="../Resources/swan/collider-box.jpg" alt="Box cube collider">
+                    <figcaption>Box cube collider</figcaption>
+                </figure>
+                <figure>
+                    <img src="../Resources/swan/collider-sphere.jpg" alt="Sphere spherical collider">
+                    <figcaption>Sphere spherical collider</figcaption>
+                </figure>
+                <figure>
+                    <img src="../Resources/swan/collider-boundingbox.jpg" alt="Bounding Box collider">
+                    <figcaption>Bounding Box</figcaption>
+                </figure>
+                <figure>
+                    <img src="../Resources/swan/collider-mesh.jpg" alt="Mesh collider">
+                    <figcaption>Mesh</figcaption>
+                </figure>
+            </div>
+
+            <h3>2) The Object is in an Interactable State (Interactable)</h3>
+            <p>Building upon having a collision volume, the entity must also be set to an interactable state:</p>
+            <ul>
+                <li><code>InteractableComponent</code>: Marks the entity as interactable, enabling it to respond to input and gesture events from the interaction system.</li>
+            </ul>
+            <p>
+                This setup makes it easy to centrally manage interaction capabilities across different modes (e.g., disabling interactions in viewing mode, enabling them in editing mode), ensuring the object's operability aligns with the product's interaction strategy.
+            </p>
+        </section>
+
+        <!-- Interaction Actions -->
+        <section id="interaction-actions">
+            <h2>Interaction Actions: The detectSpatial* Gesture System</h2>
+            <p>
+                PICO OS 6 provides a set of core interfaces starting with <code>detectSpatial*</code> to capture the most common actions in spatial interaction. The design focus of these interfaces is not to "provide more gestures," but to allow developers to build interactions around stable action semantics: tapping handles triggering, dragging handles manipulation, two-handed gestures handle fine-tuning, and pointer events handle extensions.
+            </p>
+
+            <div class="table-wrapper">
+                <table class="article-table">
+                    <thead>
+                        <tr>
+                            <th>Interactive Gesture</th>
+                            <th>Schematic Diagram</th>
+                            <th>Specific Operation</th>
+                            <th>Interface</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Click</strong></td>
+                            <td><img src="../Resources/swan/gesture-tap.png" alt="Tap gesture schematic"></td>
+                            <td>Single hand, quickly bring two fingers together and slightly open, simulating pinching an object</td>
+                            <td><code>detectSpatialTapGesture()</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Drag and Drop</strong></td>
+                            <td><img src="../Resources/swan/gesture-drag.png" alt="Drag gesture schematic"></td>
+                            <td>Single hand, bring two fingers together, pinch a point on the object, then move within space</td>
+                            <td><code>detectSpatialDragGesture()</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Zoom</strong></td>
+                            <td><img src="../Resources/swan/gesture-scale.jpg" alt="Scale gesture schematic"></td>
+                            <td>Two hands, pinch two points on the object, then move hands closer or further apart</td>
+                            <td><code>detectSpatialScaleGesture()</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Spin</strong></td>
+                            <td><img src="../Resources/swan/gesture-rotate.jpg" alt="Rotate gesture schematic"></td>
+                            <td>Two hands, pinch two points on the object, then rotate both hands clockwise or counterclockwise simultaneously</td>
+                            <td><code>detectSpatialRotateGesture()</code></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Custom Gesture</strong></td>
+                            <td><img src="../Resources/swan/gesture-custom.jpg" alt="Custom gesture schematic"></td>
+                            <td>Two hands touch the object, then freely manipulate</td>
+                            <td><code>detectSpatialPointerEvent()</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>
+                These interfaces are typically mounted on the <code>SpatialView</code>'s <code>Modifier.pointerInput</code>: the same input paradigm can cover eye tracking, hand gestures, and controllers.
+            </p>
+            <p>
+                For applications, this significantly simplifies the engineering structure of "coexisting multiple inputs": you are mostly configuring "the semantics of the same action under different inputs" rather than copy-pasting multiple sets of interaction logic.
+            </p>
+
+            <h3>Coexistence of Multiple Gestures: One gesture per pointerInput</h3>
+            <p>When an object needs to support Drag + Scale + Rotate simultaneously, it is recommended:</p>
+            <ul>
+                <li><strong>Do NOT</strong> write multiple <code>detectSpatial*</code> within the same <code>pointerInput</code> DSL.</li>
+                <li><strong>DO</strong> use multiple chained <code>pointerInput</code>s, where each scope is responsible for one gesture (Separate Drag / Scale / Rotate).</li>
+            </ul>
+            <p>
+                This avoids mutual interference caused by the exclusivity of internal gesture recognition. From an engineering maintenance perspective, this separation is also more suitable for future expansion: you can clearly enable/disable certain interactions, and it's easier to perform A/B tuning and locate conflicts.
+            </p>
+
+            <h3>Accurately Specifying the Interaction Object: TargetEntity</h3>
+            <p>
+                In complex scenarios (multiple interactable entities), you can limit the effective range of a gesture using the <code>targetedToEntity</code> parameter. This is especially crucial in apps with "multi-object editing / multi-level models / coexistence of UI and 3D", because accidental touches are highly destructive to the experience.
+            </p>
+            <ul>
+                <li><code>TargetEntity.hit(entity)</code>: Only effective for a specific entity and its sub-tree. Suitable for editor logic, like "only manipulate the selected object after selecting it".</li>
+                <li><code>TargetEntity.any { predicate }</code>: Effective for a class of entities that meet the condition.</li>
+            </ul>
+            <p>This makes the behavior more aligned with user expectations (I only affect the object I'm operating on).</p>
+        </section>
+
+        <!-- Interaction Types -->
+        <section id="interaction-kinds">
+            <h2>Interaction Types: InteractionKind</h2>
+            <p>
+                In some complex scenarios, the gesture action alone is not enough to distinguish the user's actual operation method; this is where we need to further determine the interaction type. Except for <code>detectSpatialPointerEvent()</code>, all interfaces starting with <code>detectSpatial</code> provide an <code>InteractionKind</code> in the callback to identify how the current operation was triggered.
+            </p>
+            <ul>
+                <li><strong>Single-hand:</strong> <code>interactionKind</code></li>
+                <li><strong>Two-hand:</strong> <code>leftInteractionKind</code> / <code>rightInteractionKind</code></li>
+            </ul>
+            <p>Common types include:</p>
+
+            <div class="table-wrapper">
+                <table class="article-table article-table--kinds">
+                    <thead>
+                        <tr>
+                            <th>Direct Pinch</th>
+                            <th>Fingertip Touch/Poke</th>
+                            <th>Gaze + Pinch</th>
+                            <th>Controller Ray Click</th>
+                            <th>Pointer Input</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><img src="../Resources/swan/kind-directpinch.png" alt="Direct Pinch"></td>
+                            <td><img src="../Resources/swan/kind-poke.png" alt="Fingertip Touch / Poke"></td>
+                            <td><img src="../Resources/swan/kind-gazepinch.png" alt="Gaze + Pinch"></td>
+                            <td><img src="../Resources/swan/kind-raybasedpinch.png" alt="Controller Ray Click"></td>
+                            <td><img src="../Resources/swan/kind-pointer.png" alt="Pointer Input"></td>
+                        </tr>
+                        <tr>
+                            <td><code>DirectPinch</code></td>
+                            <td><code>Poke</code></td>
+                            <td><code>GazePinch</code></td>
+                            <td><code>RayBasedPinch</code></td>
+                            <td><code>Pointer</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p>In practical development, the same gesture interface often needs to carry multiple operations. For example:</p>
+            <ul>
+                <li>Single-hand drag → used to move the object</li>
+                <li>Single-hand swipe → used to rotate the object</li>
+            </ul>
+            <p>
+                Both of these operations can be implemented via <code>detectSpatialDragGesture()</code>. The key is to determine the current interaction method through <code>InteractionKind</code>, and thereby execute different logic. For example:
+            </p>
+            <ul>
+                <li><code>DirectPinch</code> / <code>GazePinch</code> → treated as "pinch to move"</li>
+                <li><code>Poke</code> → treated as "poke to rotate"</li>
+            </ul>
+
+            <div class="figure-grid figure-grid--2">
+                <figure>
+                    <div class="figure-pair">
+                        <img src="../Resources/swan/kind-directpinch.png" alt="DirectPinch dragging the object">
+                        <img src="../Resources/swan/kind-gazepinch.png" alt="GazePinch dragging the object">
+                    </div>
+                    <figcaption><code>DirectPinch</code> and <code>GazePinch</code> implement dragging the object.</figcaption>
+                </figure>
+                <figure>
+                    <div class="figure-pair">
+                        <img src="../Resources/swan/kind-poke.png" alt="Poke rotating the object">
+                        <img src="../Resources/swan/demo-poke.png" alt="Poke rotating the object continued">
+                    </div>
+                    <figcaption><code>Poke</code> implements rotating the object.</figcaption>
+                </figure>
+            </div>
+
+            <p>
+                Through this method, you can reuse the same gesture interface while allowing different operation methods to correspond to different effects, making the interaction more intuitive for the user.
+            </p>
+        </section>
+
+        <!-- Interaction Effects -->
+        <section id="interaction-effects">
+            <h2>Interaction Effects: Hover, Move, Scale, Rotate, and Momentum Poke</h2>
+            <p>
+                Interaction effects dictate the user's "feel": APIs can often make things move, but whether users find it easy to use depends on whether the feedback is clear, whether the behavior aligns with their expectations, and whether continuous operations are effortless.
+            </p>
+
+            <h3>Highlight Prompts: HoverEffectComponent (Crucial Feedback for Remote Interaction)</h3>
+            <ul>
+                <li><code>HoverEffectComponent</code>: Triggers a preset highlight when the user's gaze or hand ray sweeps across an entity.</li>
+                <li><strong>Applicability:</strong> Remote interactions such as eye-hand coordination (<code>GazePinch</code>) and controller rays (<code>RayBasedPinch</code>), reducing fatigue and enhancing comprehensibility.</li>
+            </ul>
+            <div class="article-video">
+                <video autoplay muted loop playsinline>
+                    <source src="../Resources/swan/vid-hover.mp4" type="video/mp4">
+                </video>
+            </div>
+            <p>
+                For remote interaction to work, it must solve the confirmation problem of "what am I operating right now?". Highlighting/hover is not merely decorative; it is the lowest-cost prompt layer for remote interaction. It makes users more confident to act, reduces hesitation and accidental touches, and significantly elevates the credibility of the overall interaction.
+            </p>
+
+            <h3>Move: Drag → Transform Position Update</h3>
+            <ul>
+                <li>The <code>Drag</code> callback provides the displacement increment (commonly involving "unit conversion" and "coordinate system mapping").</li>
+                <li><strong>Common Tools/Types:</strong> <code>Offset3D</code>, <code>LocalPhysicalLengthConverter</code>, <code>LengthUnit.Meters</code>.</li>
+                <li><strong>Common Components:</strong> <code>TransformComponent.setPosition(...)</code>.</li>
+            </ul>
+            <div class="article-video">
+                <video autoplay muted loop playsinline>
+                    <source src="../Resources/swan/vid-move.mp4" type="video/mp4">
+                </video>
+            </div>
+            <p>
+                The most common experience issue with moving interactions is "sensitivity": too fast feels floaty, too slow feels tiring. It is recommended to design your movement mapping logic as adjustable parameters (e.g., speed coefficients, axis constraints, snapping strategies), so that different scenarios (showcase vs. editing) can have a different feel.
+            </p>
+
+            <h3>Scale: Scale → Transform Scale Update</h3>
+            <ul>
+                <li>The <code>detectSpatialScaleGesture()</code> callback provides the scale increment (vector or ratio).</li>
+                <li><strong>Common Components:</strong> <code>TransformComponent.setScaleVector(...)</code>.</li>
+            </ul>
+            <div class="article-video">
+                <video autoplay muted loop playsinline>
+                    <source src="../Resources/swan/vid-scale.mp4" type="video/mp4">
+                </video>
+            </div>
+            <p>
+                Scaling affects not only visual size but also the "perceived sensitivity" of subsequent interactions (the same hand displacement feels different on large versus small objects). Therefore, when building fine-tuning editing experiences, scaling and control sensitivity usually need to be considered in tandem rather than implemented independently.
+            </p>
+
+            <h3>Rotate: Two Routes (Choose based on experience)</h3>
+            <p><strong>A. Single-hand Drag Rotation (Reusing Drag)</strong></p>
+            <ul>
+                <li><strong>Applicability:</strong> Scenarios requiring single-hand operation, or where rotation coexists with other actions.</li>
+                <li><strong>Common Types:</strong> <code>Rotation3D</code>, <code>RotationAxis3D</code>, <code>NormalizedPoint3D</code>.</li>
+                <li><strong>Common Operations:</strong> Map displacement to a rotation increment, then convert it to a quaternion and update <code>TransformComponent.rotation</code>.</li>
+            </ul>
+            <div class="article-video">
+                <video autoplay muted loop playsinline>
+                    <source src="../Resources/swan/vid-rotate-onehand.mp4" type="video/mp4">
+                </video>
+            </div>
+            <p>
+                The advantage of single-hand rotation is "motion saving": the user doesn't need to use both hands, making it suitable for mobile-style quick browsing and lightweight control. It is also more suitable to combine with intent distribution (e.g., pinch-to-move vs. poke-to-rotate).
+            </p>
+            <p><strong>B. Two-hand Rotation (Dedicated RotateGesture)</strong></p>
+            <ul>
+                <li><code>detectSpatialRotateGesture()</code> directly provides the two-hand rotation increment.</li>
+                <li><strong>Applicability:</strong> Higher precision, providing an experience more "like twisting an object with both hands in reality".</li>
+            </ul>
+            <div class="article-video">
+                <video autoplay muted loop playsinline>
+                    <source src="../Resources/swan/vid-rotate-twohand.mp4" type="video/mp4">
+                </video>
+            </div>
+            <p>
+                Two-hand rotation is better suited for scenarios requiring precise posture adjustments (e.g., placing, aligning, content editing). Users' expectations of it are also more akin to real-world operations: stable, controllable, and with fewer accidental touches.
+            </p>
+
+            <h3>Poke Rotation: Delayed Rotation / Momentum Rotation (More like a real globe)</h3>
+            <p>
+                For Poke (poking/flicking), if you continue to make it "rotate instantly following the hand," users will often feel it is "laggy/hard to turn." A more natural approach is:
+            </p>
+            <ul>
+                <li><strong>Accumulate</strong> the poke trajectory during the interaction.</li>
+                <li><strong>Inject</strong> angular velocity at the end of the interaction, allowing the object to continue spinning and decelerate with damping (giving a sense of momentum).</li>
+            </ul>
+            <p><strong>Common Components/Parameters:</strong></p>
+            <ul>
+                <li><strong><code>RigidBodyComponent</code>:</strong> Hands the object over to the physics engine (commonly: dynamic mode, locked translation, rotation only).</li>
+                <li><strong><code>angularDamping</code>:</strong> Angular damping (simulates friction to control the deceleration feel).</li>
+                <li><strong><code>PhysicsVelocityComponent.angularVelocity</code>:</strong> Injects angular velocity (to achieve momentum rotation).</li>
+            </ul>
+            <p><strong>Implementation Notes:</strong></p>
+            <ul>
+                <li><strong>Practice Detail:</strong> Clear the old velocity component when starting an interaction to prevent subsequent pokes from failing to take effect.</li>
+                <li><strong>Additional Note:</strong> Scale affects "feel sensitivity". It is recommended to link sensitivity to the object's current scale rather than using a fixed constant.</li>
+            </ul>
+            <p>
+                The value of momentum rotation is that it not only "looks cooler" but, more importantly, it makes large-angle rotations less effortful and more intuitive for the user. Additionally, for showcase-type content (models/products/globes/planets), it can significantly elevate the "realism" and premium feel of the product.
+            </p>
+            <div class="article-video">
+                <video autoplay muted loop playsinline>
+                    <source src="../Resources/swan/vid-momentum-poke.mp4" type="video/mp4">
+                </video>
+            </div>
+        </section>
+
+        <!-- Conclusion -->
+        <section id="interaction-conclusion">
+            <h2>Conclusion: Tailored Interactions for Every Application</h2>
+            <p>
+                The core philosophy behind PICO OS 6 is that <strong>spatial interaction should never be one-size-fits-all.</strong> By providing a diverse and unified toolkit, we ensure that every type of application has the ideal interaction support it deserves:
+            </p>
+            <ul>
+                <li><strong>Remote Interaction (GazePinch / Ray):</strong> Best suited for long-duration browsing and media consumption. It reduces physical fatigue and provides clear focus via the <code>HoverEffectComponent</code>.</li>
+                <li><strong>Single-Hand Gestures (DirectPinch / Swipe):</strong> Ideal for lightweight control and rapid content browsing. It offers "motion-saving" efficiency for casual, everyday tasks.</li>
+                <li><strong>Two-Hand Precision (Rotate / Scale):</strong> Designed for professional creative tools and 3D content editing where precise posture adjustment is key. It provides high stability and control with significantly fewer accidental touches.</li>
+                <li><strong>Momentum Poke (Flicking / Poking):</strong> Perfect for product showcases, interactive globes, and immersive models. It delivers a sense of real-world physics and premium product texture.</li>
+            </ul>
+            <p>
+                PICO OS 6 is more than just a set of APIs; it is a commitment to a consistent, intuitive, and high-quality spatial ecosystem. By unifying eye tracking, hand gestures, and controllers into a single input paradigm, we are empowering developers to build applications where the interaction always feels exactly right, no matter the use case.
+            </p>
+            <p>
+                Learn more: <a href="https://developer.picoxr.com/document/spatial-sdk/basic-interactions-among-3d-entities/" target="_blank" rel="noopener noreferrer" class="custom-link">Implement basic interactions for 3D objects</a>
+            </p>
+
+            <div class="store-cards">
+                <a
+                    class="store-card"
+                    href="https://developer.picoxr.com/blog/a-new-3d-interaction-paradigm-for-spatial-applications/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    <div class="store-card__icon"><i class="fas fa-cube"></i></div>
+                    <div class="store-card__content">
+                        <div class="store-card__eyebrow">PICO Developer Blog</div>
+                        <div class="store-card__title">A New 3D Interaction Paradigm for Spatial Applications</div>
+                        <div class="store-card__meta">Read the original article</div>
+                    </div>
+                </a>
             </div>
         </section>
 
