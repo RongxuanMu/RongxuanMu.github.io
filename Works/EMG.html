@@ -133,15 +133,27 @@
             <h1 class="text-xl md:text-2xl font-bold text-sky-400 tracking-wider header-glow">EMG Dashboard</h1>
             <p class="text-slate-400 text-xs mt-0.5">16-CH | 10Hz | ±70µV Range</p>
         </div>
-        <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2">
-                <span class="relative flex h-3 w-3">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span class="text-sm font-medium text-emerald-400">Live Data</span>
+        <div class="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
+            <div class="hidden md:flex flex-col items-end mr-1">
+                <span class="text-[9px] text-slate-500 uppercase tracking-wider">This Device</span>
+                <span id="local-ip" class="text-[11px] font-mono text-slate-300">detecting…</span>
             </div>
-            <button id="toggleSimulationBtn" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-md px-2.5 py-1.5">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span id="status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span id="status-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </span>
+                <span id="status-text" class="text-xs font-medium text-amber-400">Demo Data</span>
+            </div>
+            <input id="wsUrlInput" type="text" value="ws://localhost:8765" spellcheck="false" autocomplete="off"
+                class="hidden bg-slate-900 border border-slate-700 rounded-md px-2 py-1.5 text-xs font-mono text-slate-200 w-44 lg:w-56 focus:outline-none focus:ring-1 focus:ring-sky-500">
+            <button id="modeToggleBtn" class="bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-400">
+                Switch to Live Stream
+            </button>
+            <button id="formatBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500 border border-slate-600">
+                Data Format
+            </button>
+            <button id="toggleSimulationBtn" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500">
                 Pause
             </button>
         </div>
@@ -257,6 +269,73 @@
 
     </main>
 
+    <!-- Data Format Modal -->
+    <div id="format-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-slate-800 border border-slate-600 rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center px-4 py-3 border-b border-slate-700 shrink-0">
+                <h3 class="text-sm font-bold text-sky-400">Streaming Data Format (WebSocket, JSON per frame)</h3>
+                <button id="format-close" class="text-slate-400 hover:text-white text-lg leading-none px-1">&times;</button>
+            </div>
+            <div class="overflow-y-auto p-4 text-xs text-slate-300 space-y-3 compact-scroll">
+                <p>
+                    In <span class="text-emerald-400 font-semibold">Live Stream</span> mode, this dashboard acts as a
+                    <strong>WebSocket client</strong>. Run a WebSocket server on your streaming device (e.g.
+                    <code class="bg-slate-900 px-1 rounded">ws://&lt;device-ip&gt;:8765</code>) and send one JSON
+                    message per frame at ~10&nbsp;Hz:
+                </p>
+<pre class="bg-slate-900 border border-slate-700 rounded p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-200">{
+  "type": "emg_frame",
+  "seq": 1024,               <span class="text-slate-500">// optional, frame counter</span>
+  "timestamp": 1752988800.123, <span class="text-slate-500">// optional, unix seconds</span>
+
+  <span class="text-sky-400">// Raw EMG: exactly 16 channels, microvolts (±70 µV display range)</span>
+  "emg": [12.4, -3.1, 45.0, ...],
+
+  <span class="text-sky-400">// Inferred hand pose: all values normalized 0.0 (open) … 1.0 (fully curled)</span>
+  "pose": {
+    "thumb":  0.10,
+    "index":  0.85,
+    "middle": 0.80,
+    "ring":   0.30,
+    "pinky":  0.25
+  },
+
+  <span class="text-sky-400">// Optional: estimated fingertip normal force in Newtons (0–40 N)</span>
+  "force": {
+    "thumb": 2.5, "index": 12.0, "middle": 10.4, "ring": 3.1, "pinky": 2.2
+  }
+}</pre>
+                <ul class="list-disc pl-5 space-y-1 text-slate-400">
+                    <li><code class="bg-slate-900 px-1 rounded">emg</code> is required. If <code class="bg-slate-900 px-1 rounded">pose</code> is omitted, pose is inferred from EMG channel groups (CH1–4 → index, CH5–8 → middle, CH9–12 → ring/pinky, CH13–16 → thumb).</li>
+                    <li>If <code class="bg-slate-900 px-1 rounded">force</code> is omitted, force is estimated from pose activation.</li>
+                    <li>Messages may also be a bare 16-float array <code class="bg-slate-900 px-1 rounded">[…]</code> as shorthand for <code class="bg-slate-900 px-1 rounded">{"emg": […]}</code>.</li>
+                </ul>
+                <p class="text-slate-400">
+                    Minimal Python sender:
+                </p>
+<pre class="bg-slate-900 border border-slate-700 rounded p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-200">import asyncio, json, time, websockets
+
+async def handler(ws):
+    seq = 0
+    while True:
+        await ws.send(json.dumps({
+            "type": "emg_frame", "seq": seq, "timestamp": time.time(),
+            "emg": read_emg_16ch(),          # list of 16 floats, µV
+            "pose": infer_pose(),            # dict of 5 floats, 0..1
+        }))
+        seq += 1
+        await asyncio.sleep(0.1)             # 10 Hz
+
+asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
+                <p class="text-amber-400/90">
+                    Note: when this page is served over HTTPS (e.g. GitHub Pages), browsers only allow
+                    <code class="bg-slate-900 px-1 rounded">ws://</code> connections to <code class="bg-slate-900 px-1 rounded">localhost</code>.
+                    For a remote device, use <code class="bg-slate-900 px-1 rounded">wss://</code> or open this file locally.
+                </p>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- Configuration & State ---
         const NUM_CHANNELS = 16;
@@ -277,7 +356,19 @@
         let isSimulationRunning = true;
         let currentTimeIndex = 0;
         let animationFrameId;
-        
+
+        // --- Receiver state ---
+        // dataMode: 'demo' = looping fake data, 'live' = frames received over WebSocket
+        let dataMode = 'demo';
+        let ws = null;
+        let wsReconnectTimer = null;
+        let liveFrameCount = 0;
+        const liveFrame = {
+            emg: new Float32Array(NUM_CHANNELS), // µV
+            pose: null,   // { thumb, index, middle, ring, pinky } each 0..1, or null
+            force: null,  // { thumb, index, middle, ring, pinky } in Newtons, or null
+        };
+
         // Data structures
         const emgData = Array.from({ length: NUM_CHANNELS }, () => new Float32Array(TOTAL_POINTS));
         const charts = [];
@@ -287,6 +378,157 @@
         // UI Elements
         const chartsGrid = document.getElementById('charts-grid');
         const toggleBtn = document.getElementById('toggleSimulationBtn');
+        const modeToggleBtn = document.getElementById('modeToggleBtn');
+        const wsUrlInput = document.getElementById('wsUrlInput');
+        const statusDot = document.getElementById('status-dot');
+        const statusPing = document.getElementById('status-ping');
+        const statusText = document.getElementById('status-text');
+        const localIpEl = document.getElementById('local-ip');
+        const formatModal = document.getElementById('format-modal');
+
+        // --- Connection status indicator ---
+        const STATUS_COLORS = { amber: '#f59e0b', emerald: '#10b981', sky: '#0ea5e9', rose: '#f43f5e' };
+        function setStatus(color, text) {
+            statusDot.style.backgroundColor = STATUS_COLORS[color];
+            statusPing.style.backgroundColor = STATUS_COLORS[color];
+            statusText.style.color = STATUS_COLORS[color];
+            statusText.innerText = text;
+        }
+
+        // --- Incoming frame parser ---
+        // Accepted formats (JSON):
+        //   { "type":"emg_frame", "seq":n, "timestamp":t, "emg":[16 floats µV],
+        //     "pose":{thumb,index,middle,ring,pinky 0..1}, "force":{... N} }
+        //   or a bare array of 16 floats as shorthand for {"emg":[...]}
+        function handleIncomingMessage(raw) {
+            let msg;
+            try { msg = JSON.parse(raw); } catch { return; }
+
+            if (Array.isArray(msg)) msg = { emg: msg };
+            if (!msg || !Array.isArray(msg.emg)) return;
+
+            const n = Math.min(NUM_CHANNELS, msg.emg.length);
+            for (let i = 0; i < n; i++) {
+                const v = Number(msg.emg[i]);
+                if (Number.isFinite(v)) {
+                    liveFrame.emg[i] = Math.max(-MAX_UV, Math.min(MAX_UV, v));
+                }
+            }
+
+            const FINGERS = ['thumb', 'index', 'middle', 'ring', 'pinky'];
+            if (msg.pose && typeof msg.pose === 'object') {
+                liveFrame.pose = {};
+                for (const f of FINGERS) {
+                    const v = Number(msg.pose[f]);
+                    liveFrame.pose[f] = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0;
+                }
+            }
+            if (msg.force && typeof msg.force === 'object') {
+                liveFrame.force = {};
+                for (const f of FINGERS) {
+                    const v = Number(msg.force[f]);
+                    liveFrame.force[f] = Number.isFinite(v) ? Math.max(0, Math.min(40, v)) : 0;
+                }
+            }
+
+            liveFrameCount++;
+            if (dataMode === 'live') {
+                setStatus('emerald', `Live · ${liveFrameCount} frames`);
+            }
+        }
+
+        // --- WebSocket receiver ---
+        function connectWebSocket() {
+            disconnectWebSocket();
+            const url = wsUrlInput.value.trim();
+            if (!url) { setStatus('rose', 'No WS URL'); return; }
+
+            setStatus('sky', 'Connecting…');
+            try {
+                ws = new WebSocket(url);
+            } catch {
+                setStatus('rose', 'Invalid WS URL');
+                scheduleReconnect();
+                return;
+            }
+
+            ws.onopen = () => { liveFrameCount = 0; setStatus('emerald', 'Live · waiting for frames'); };
+            ws.onmessage = (e) => handleIncomingMessage(e.data);
+            ws.onerror = () => {};
+            ws.onclose = () => {
+                if (dataMode === 'live') {
+                    setStatus('rose', 'Disconnected · retrying');
+                    scheduleReconnect();
+                }
+            };
+        }
+
+        function scheduleReconnect() {
+            clearTimeout(wsReconnectTimer);
+            if (dataMode !== 'live') return;
+            wsReconnectTimer = setTimeout(connectWebSocket, 2000);
+        }
+
+        function disconnectWebSocket() {
+            clearTimeout(wsReconnectTimer);
+            if (ws) {
+                ws.onclose = null;
+                try { ws.close(); } catch {}
+                ws = null;
+            }
+        }
+
+        // --- Demo / Live mode toggle ---
+        function setDataMode(mode) {
+            dataMode = mode;
+            if (mode === 'live') {
+                modeToggleBtn.innerText = 'Switch to Demo Data';
+                modeToggleBtn.classList.replace('bg-sky-600', 'bg-emerald-600');
+                modeToggleBtn.classList.replace('hover:bg-sky-500', 'hover:bg-emerald-500');
+                wsUrlInput.classList.remove('hidden');
+                connectWebSocket();
+            } else {
+                modeToggleBtn.innerText = 'Switch to Live Stream';
+                modeToggleBtn.classList.replace('bg-emerald-600', 'bg-sky-600');
+                modeToggleBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-sky-500');
+                wsUrlInput.classList.add('hidden');
+                disconnectWebSocket();
+                liveFrame.pose = null;
+                liveFrame.force = null;
+                setStatus('amber', 'Demo Data');
+            }
+        }
+
+        // --- Local IP detection (best effort, via WebRTC ICE candidates) ---
+        function detectLocalIP() {
+            if (!window.RTCPeerConnection) { localIpEl.innerText = 'unavailable'; return; }
+            try {
+                const pc = new RTCPeerConnection({ iceServers: [] });
+                pc.createDataChannel('');
+                let found = false;
+                pc.onicecandidate = (e) => {
+                    if (found || !e.candidate) return;
+                    const cand = e.candidate.candidate;
+                    const ipMatch = cand.match(/(\d{1,3}(?:\.\d{1,3}){3})/);
+                    if (ipMatch && ipMatch[1] !== '0.0.0.0') {
+                        found = true;
+                        localIpEl.innerText = ipMatch[1];
+                        pc.close();
+                    } else if (/[a-f0-9-]+\.local/.test(cand)) {
+                        // Browser hides the real IP behind an mDNS name
+                        localIpEl.innerText = 'hidden by browser (mDNS)';
+                        localIpEl.title = 'Check your OS network settings for the LAN IP';
+                    }
+                };
+                pc.createOffer().then((o) => pc.setLocalDescription(o));
+                setTimeout(() => {
+                    if (!found && localIpEl.innerText === 'detecting…') localIpEl.innerText = 'unavailable';
+                    try { pc.close(); } catch {}
+                }, 3000);
+            } catch {
+                localIpEl.innerText = 'unavailable';
+            }
+        }
 
         // Chart.js defaults for performance and dark theme
         Chart.defaults.color = '#94a3b8'; // slate-400
@@ -767,6 +1009,11 @@
                 
                 let sumRms = 0, sumSnr = 0, sumMdf = 0;
 
+                // Source of the current frame: demo loop or live WebSocket frame
+                const frameValue = (ch) => dataMode === 'live'
+                    ? liveFrame.emg[ch]
+                    : emgData[ch][currentTimeIndex];
+
                 for (let ch = 0; ch < NUM_CHANNELS; ch++) {
                     const buffer = charts[ch].dataBuffer;
                     
@@ -775,8 +1022,8 @@
                         buffer[i] = buffer[i + 1];
                     }
                     
-                    // Insert new point from our looped pre-generated data
-                const latestValue = emgData[ch][currentTimeIndex];
+                    // Insert new point from the current frame source
+                const latestValue = frameValue(ch);
                 buffer[TOTAL_POINTS - 1] = latestValue;
                 
                 // Tell Chart.js to update
@@ -837,19 +1084,30 @@
                     let sum = 0;
                     for(let i = startCh; i <= endCh; i++) {
                         // Absolute value normalized by MAX_UV
-                        sum += Math.abs(emgData[i][currentTimeIndex]) / MAX_UV; 
+                        sum += Math.abs(frameValue(i)) / MAX_UV; 
                     }
                     return sum / (endCh - startCh + 1);
                 };
 
-                const indexAct = getGroupActivity(0, 3);
-                const midAct = getGroupActivity(4, 7);
-                const ringPinkyAct = getGroupActivity(8, 11);
-                const thumbAct = getGroupActivity(12, 15);
+                let indexAct = getGroupActivity(0, 3);
+                let midAct = getGroupActivity(4, 7);
+                let ringPinkyAct = getGroupActivity(8, 11);
+                let thumbAct = getGroupActivity(12, 15);
                 
                 // Separate channels for force visualization
-                const ringAct = getGroupActivity(8, 9);
-                const pinkyAct = getGroupActivity(10, 11);
+                let ringAct = getGroupActivity(8, 9);
+                let pinkyAct = getGroupActivity(10, 11);
+
+                // If the live stream provides an inferred pose, it takes priority
+                // over the EMG-group heuristic above.
+                if (dataMode === 'live' && liveFrame.pose) {
+                    thumbAct = liveFrame.pose.thumb;
+                    indexAct = liveFrame.pose.index;
+                    midAct = liveFrame.pose.middle;
+                    ringAct = liveFrame.pose.ring;
+                    pinkyAct = liveFrame.pose.pinky;
+                    ringPinkyAct = (liveFrame.pose.ring + liveFrame.pose.pinky) / 2;
+                }
 
                 // Overall activation for UI meters
                 const totalAct = (indexAct + midAct + ringPinkyAct + thumbAct) / 4;
@@ -896,12 +1154,15 @@
                         // Map 100% to roughly 40.0 N for simulation scaling
                         return { pct: pct, val: (pct * 0.4).toFixed(1) }; 
                     };
-                    
-                    const fThumb = calcForce(thumbAct);
-                    const fIndex = calcForce(indexAct);
-                    const fMid = calcForce(midAct);
-                    const fRing = calcForce(ringAct);
-                    const fPinky = calcForce(pinkyAct);
+                    // Streamed force values (Newtons, 0-40) take priority when present
+                    const directForce = (n) => ({ pct: Math.min(100, (n / 40) * 100), val: n.toFixed(1) });
+                    const lf = (dataMode === 'live' && liveFrame.force) ? liveFrame.force : null;
+
+                    const fThumb = lf ? directForce(lf.thumb) : calcForce(thumbAct);
+                    const fIndex = lf ? directForce(lf.index) : calcForce(indexAct);
+                    const fMid = lf ? directForce(lf.middle) : calcForce(midAct);
+                    const fRing = lf ? directForce(lf.ring) : calcForce(ringAct);
+                    const fPinky = lf ? directForce(lf.pinky) : calcForce(pinkyAct);
 
                     document.getElementById('force-thumb').style.width = `${fThumb.pct}%`;
                     document.getElementById('force-val-thumb').innerText = `${fThumb.val} N`;
@@ -927,6 +1188,27 @@
         }
 
         // --- Event Listeners ---
+        modeToggleBtn.addEventListener('click', () => {
+            setDataMode(dataMode === 'demo' ? 'live' : 'demo');
+        });
+
+        wsUrlInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && dataMode === 'live') connectWebSocket();
+        });
+
+        document.getElementById('formatBtn').addEventListener('click', () => {
+            formatModal.classList.remove('hidden');
+        });
+        document.getElementById('format-close').addEventListener('click', () => {
+            formatModal.classList.add('hidden');
+        });
+        formatModal.addEventListener('click', (e) => {
+            if (e.target === formatModal) formatModal.classList.add('hidden');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') formatModal.classList.add('hidden');
+        });
+
         toggleBtn.addEventListener('click', () => {
             isSimulationRunning = !isSimulationRunning;
             if (isSimulationRunning) {
@@ -1003,6 +1285,8 @@
             initChartsAndStats();
             init3D();
             initResizers(); // Initialize drag-to-resize
+            detectLocalIP();
+            setStatus('amber', 'Demo Data');
             
             // Start simulation
             animationFrameId = requestAnimationFrame(updateSimulation);
