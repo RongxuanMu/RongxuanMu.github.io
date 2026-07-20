@@ -10,8 +10,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         body {
-            background-color: #0f172a; /* Slate 900 */
-            color: #e2e8f0; /* Slate 200 */
+            background-color: #0a0a0a; /* Slate 900 */
+            color: #e5e5e5; /* Slate 200 */
             font-family: 'Inter', sans-serif;
             margin: 0;
             overflow-x: hidden;
@@ -26,14 +26,14 @@
             height: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #1e293b; /* Slate 800 */
+            background: #262626; /* Slate 800 */
         }
         ::-webkit-scrollbar-thumb {
-            background: #475569; /* Slate 600 */
+            background: #525252; /* Slate 600 */
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #64748b; /* Slate 500 */
+            background: #737373; /* Slate 500 */
         }
 
         .chart-container {
@@ -58,14 +58,14 @@
         #hand-model-container {
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            background: radial-gradient(circle at center, #262626 0%, #0a0a0a 100%);
             border-radius: 0.25rem;
             overflow: hidden;
             position: relative;
         }
 
         .header-glow {
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); /* Sky blue glow */
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.35); /* Soft white glow */
         }
 
         .compact-scroll::-webkit-scrollbar {
@@ -75,7 +75,7 @@
             background: transparent;
         }
         .compact-scroll::-webkit-scrollbar-thumb {
-            background: #475569;
+            background: #525252;
             border-radius: 2px;
         }
         
@@ -91,7 +91,7 @@
         .resizer::after {
             content: '';
             position: absolute;
-            background-color: #334155; /* slate-700 */
+            background-color: #404040; /* neutral-700 */
             border-radius: 9999px;
             transition: background-color 0.2s;
         }
@@ -128,17 +128,17 @@
 <body class="p-1.5 md:p-2 lg:p-3 flex flex-col gap-2 h-screen overflow-hidden">
 
     <!-- Header Section -->
-    <header class="flex justify-between items-center border-b border-slate-700 pb-2 shrink-0">
+    <header class="flex justify-between items-center border-b border-neutral-700 pb-2 shrink-0">
         <div>
-            <h1 class="text-xl md:text-2xl font-bold text-sky-400 tracking-wider header-glow">EMG Dashboard</h1>
-            <p class="text-slate-400 text-xs mt-0.5">16-CH | 10Hz | ±70µV Range</p>
+            <h1 class="text-xl md:text-2xl font-bold text-white tracking-wider header-glow">EMG Dashboard</h1>
+            <p class="text-neutral-400 text-xs mt-0.5">16-CH | 10Hz | ±70µV Range</p>
         </div>
         <div class="flex items-center gap-2 md:gap-3 flex-wrap justify-end">
             <div class="hidden md:flex flex-col items-end mr-1">
-                <span class="text-[9px] text-slate-500 uppercase tracking-wider">This Device</span>
-                <span id="local-ip" class="text-[11px] font-mono text-slate-300">detecting…</span>
+                <span class="text-[9px] text-neutral-500 uppercase tracking-wider">This Device</span>
+                <span id="local-ip" class="text-[11px] font-mono text-neutral-300">detecting…</span>
             </div>
-            <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700 rounded-md px-2.5 py-1.5">
+            <div class="flex items-center gap-2 bg-neutral-800/80 border border-neutral-700 rounded-md px-2.5 py-1.5">
                 <span class="relative flex h-2.5 w-2.5">
                   <span id="status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                   <span id="status-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
@@ -146,14 +146,14 @@
                 <span id="status-text" class="text-xs font-medium text-amber-400">Demo Data</span>
             </div>
             <input id="wsUrlInput" type="text" value="ws://localhost:8765" spellcheck="false" autocomplete="off"
-                class="hidden bg-slate-900 border border-slate-700 rounded-md px-2 py-1.5 text-xs font-mono text-slate-200 w-44 lg:w-56 focus:outline-none focus:ring-1 focus:ring-sky-500">
-            <button id="modeToggleBtn" class="bg-sky-600 hover:bg-sky-500 text-white px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-400">
+                class="hidden bg-neutral-900 border border-neutral-700 rounded-md px-2 py-1.5 text-xs font-mono text-neutral-200 w-44 lg:w-56 focus:outline-none focus:ring-1 focus:ring-sky-500">
+            <button id="modeToggleBtn" class="bg-neutral-700 hover:bg-neutral-600 text-neutral-200 border border-neutral-600 px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-neutral-400">
                 Switch to Live Stream
             </button>
-            <button id="formatBtn" class="bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500 border border-slate-600">
+            <button id="formatBtn" class="bg-neutral-700 hover:bg-neutral-600 text-neutral-200 px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500 border border-neutral-600">
                 Data Format
             </button>
-            <button id="toggleSimulationBtn" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <button id="toggleSimulationBtn" class="bg-neutral-700 hover:bg-neutral-600 text-white px-3 py-1.5 rounded-md transition-colors text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500">
                 Pause
             </button>
         </div>
@@ -165,16 +165,16 @@
         <!-- Left Column: Hand Model, Force & Stats -->
         <div id="left-col" class="flex flex-col min-h-0 shrink-0" style="width: 38%;">
             <!-- Left Upper: Hand Pose -->
-            <section id="panel-pose" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg shrink-0 relative" style="flex: 0 0 50%; min-height: 150px;">
-                <h2 class="text-sm font-semibold text-slate-100 mb-1.5 shrink-0 flex items-center gap-1.5 z-10">
+            <section id="panel-pose" class="bg-neutral-800 rounded-lg p-2.5 border border-neutral-700 flex flex-col shadow-lg shrink-0 relative" style="flex: 0 0 50%; min-height: 150px;">
+                <h2 class="text-sm font-semibold text-neutral-100 mb-1.5 shrink-0 flex items-center gap-1.5 z-10">
                     <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"></path></svg>
                     EMG to Pose
                 </h2>
-                <div class="flex-1 relative border border-slate-700/50 rounded bg-slate-900 min-h-0 overflow-hidden">
+                <div class="flex-1 relative border border-neutral-700/50 rounded bg-neutral-900 min-h-0 overflow-hidden">
                     <div id="hand-model-container" class="w-full h-full absolute inset-0">
                         <!-- Three.js canvas appended here -->
                     </div>
-                    <div class="absolute bottom-1.5 left-1.5 text-[9px] text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded backdrop-blur-sm z-10">
+                    <div class="absolute bottom-1.5 left-1.5 text-[9px] text-neutral-400 bg-neutral-800/80 px-1.5 py-0.5 rounded backdrop-blur-sm z-10">
                         Drag: Rotate
                     </div>
                 </div>
@@ -184,46 +184,46 @@
             <div class="resizer resizer-y" id="resizer-y1"></div>
 
             <!-- Left Middle: Normal Force Chart -->
-            <section id="panel-force" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg relative" style="flex: 1; min-height: 140px;">
-                <h2 class="text-sm font-semibold text-slate-100 mb-2 shrink-0 flex items-center gap-1.5">
+            <section id="panel-force" class="bg-neutral-800 rounded-lg p-2.5 border border-neutral-700 flex flex-col shadow-lg relative" style="flex: 1; min-height: 140px;">
+                <h2 class="text-sm font-semibold text-neutral-100 mb-2 shrink-0 flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                     Normal Force (Estimated)
                 </h2>
                 <div class="flex-1 flex flex-col justify-between gap-1 pr-1">
                     <div class="flex items-center gap-2">
-                        <span class="w-8 text-[9px] text-slate-400 font-mono">Thumb</span>
-                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                        <span class="w-8 text-[9px] text-neutral-400 font-mono">Thumb</span>
+                        <div class="flex-1 h-2 bg-neutral-700 rounded-full overflow-hidden shadow-inner relative">
                             <div id="force-thumb" class="h-full bg-blue-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
                         </div>
-                        <span id="force-val-thumb" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                        <span id="force-val-thumb" class="w-10 text-[10px] text-neutral-300 font-mono text-right">0.0 N</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="w-8 text-[9px] text-slate-400 font-mono">Index</span>
-                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                        <span class="w-8 text-[9px] text-neutral-400 font-mono">Index</span>
+                        <div class="flex-1 h-2 bg-neutral-700 rounded-full overflow-hidden shadow-inner relative">
                             <div id="force-index" class="h-full bg-indigo-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
                         </div>
-                        <span id="force-val-index" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                        <span id="force-val-index" class="w-10 text-[10px] text-neutral-300 font-mono text-right">0.0 N</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="w-8 text-[9px] text-slate-400 font-mono">Middle</span>
-                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                        <span class="w-8 text-[9px] text-neutral-400 font-mono">Middle</span>
+                        <div class="flex-1 h-2 bg-neutral-700 rounded-full overflow-hidden shadow-inner relative">
                             <div id="force-mid" class="h-full bg-purple-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
                         </div>
-                        <span id="force-val-mid" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                        <span id="force-val-mid" class="w-10 text-[10px] text-neutral-300 font-mono text-right">0.0 N</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="w-8 text-[9px] text-slate-400 font-mono">Ring</span>
-                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                        <span class="w-8 text-[9px] text-neutral-400 font-mono">Ring</span>
+                        <div class="flex-1 h-2 bg-neutral-700 rounded-full overflow-hidden shadow-inner relative">
                             <div id="force-ring" class="h-full bg-pink-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
                         </div>
-                        <span id="force-val-ring" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                        <span id="force-val-ring" class="w-10 text-[10px] text-neutral-300 font-mono text-right">0.0 N</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="w-8 text-[9px] text-slate-400 font-mono">Pinky</span>
-                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                        <span class="w-8 text-[9px] text-neutral-400 font-mono">Pinky</span>
+                        <div class="flex-1 h-2 bg-neutral-700 rounded-full overflow-hidden shadow-inner relative">
                             <div id="force-pinky" class="h-full bg-rose-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
                         </div>
-                        <span id="force-val-pinky" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                        <span id="force-val-pinky" class="w-10 text-[10px] text-neutral-300 font-mono text-right">0.0 N</span>
                     </div>
                 </div>
             </section>
@@ -232,15 +232,15 @@
             <div class="resizer resizer-y" id="resizer-y2"></div>
 
             <!-- Left Lower: Stats -->
-            <section id="panel-stats" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg shrink-0 relative min-h-0" style="flex: none;">
-                <h2 class="text-sm font-semibold text-slate-100 mb-1.5 shrink-0 flex items-center gap-1.5">
+            <section id="panel-stats" class="bg-neutral-800 rounded-lg p-2.5 border border-neutral-700 flex flex-col shadow-lg shrink-0 relative min-h-0" style="flex: none;">
+                <h2 class="text-sm font-semibold text-neutral-100 mb-1.5 shrink-0 flex items-center gap-1.5">
                     <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                     Average Metrics
                 </h2>
-                <div class="grid grid-cols-4 gap-1 text-[10px] font-semibold text-slate-400 mb-1 shrink-0 px-1">
+                <div class="grid grid-cols-4 gap-1 text-[10px] font-semibold text-neutral-400 mb-1 shrink-0 px-1">
                     <div>CH</div><div>RMS (µV)</div><div>SNR (dB)</div><div>MDF (Hz)</div>
                 </div>
-                <div class="grid grid-cols-4 gap-1 text-[11px] items-center py-1 bg-slate-700/30 px-1 rounded-sm font-mono text-slate-200">
+                <div class="grid grid-cols-4 gap-1 text-[11px] items-center py-1 bg-neutral-700/30 px-1 rounded-sm font-mono text-neutral-200">
                     <div class="text-emerald-400 font-bold">AVG</div>
                     <div id="avg-rms">0.0</div>
                     <div id="avg-snr">0.0</div>
@@ -253,13 +253,13 @@
         <div class="resizer resizer-x" id="resizer-x"></div>
 
         <!-- Right Column: Stacked Channels -->
-        <section id="right-col" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg min-w-0 min-h-0" style="flex: 1;">
+        <section id="right-col" class="bg-neutral-800 rounded-lg p-2.5 border border-neutral-700 flex flex-col shadow-lg min-w-0 min-h-0" style="flex: 1;">
             <div class="flex justify-between items-center mb-1.5 shrink-0 px-1">
-                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                <h2 class="text-sm font-semibold text-neutral-100 flex items-center gap-1.5">
                     <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                     Raw EMG & Amplitudes
                 </h2>
-                <div class="text-[10px] text-slate-400 tracking-wide font-mono">10s Window | ±70µV Range</div>
+                <div class="text-[10px] text-neutral-400 tracking-wide font-mono">10s Window | ±70µV Range</div>
             </div>
             
             <div id="charts-grid" class="flex-1 flex flex-col gap-1 pr-1 pb-1 overflow-hidden">
@@ -271,22 +271,22 @@
 
     <!-- Data Format Modal -->
     <div id="format-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <div class="bg-slate-800 border border-slate-600 rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
-            <div class="flex justify-between items-center px-4 py-3 border-b border-slate-700 shrink-0">
+        <div class="bg-neutral-800 border border-neutral-600 rounded-lg shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center px-4 py-3 border-b border-neutral-700 shrink-0">
                 <h3 class="text-sm font-bold text-sky-400">Streaming Data Format (WebSocket, JSON per frame)</h3>
-                <button id="format-close" class="text-slate-400 hover:text-white text-lg leading-none px-1">&times;</button>
+                <button id="format-close" class="text-neutral-400 hover:text-white text-lg leading-none px-1">&times;</button>
             </div>
-            <div class="overflow-y-auto p-4 text-xs text-slate-300 space-y-3 compact-scroll">
+            <div class="overflow-y-auto p-4 text-xs text-neutral-300 space-y-3 compact-scroll">
                 <p>
                     In <span class="text-emerald-400 font-semibold">Live Stream</span> mode, this dashboard acts as a
                     <strong>WebSocket client</strong>. Run a WebSocket server on your streaming device (e.g.
-                    <code class="bg-slate-900 px-1 rounded">ws://&lt;device-ip&gt;:8765</code>) and send one JSON
+                    <code class="bg-neutral-900 px-1 rounded">ws://&lt;device-ip&gt;:8765</code>) and send one JSON
                     message per frame at ~10&nbsp;Hz:
                 </p>
-<pre class="bg-slate-900 border border-slate-700 rounded p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-200">{
+<pre class="bg-neutral-900 border border-neutral-700 rounded p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-neutral-200">{
   "type": "emg_frame",
-  "seq": 1024,               <span class="text-slate-500">// optional, frame counter</span>
-  "timestamp": 1752988800.123, <span class="text-slate-500">// optional, unix seconds</span>
+  "seq": 1024,               <span class="text-neutral-500">// optional, frame counter</span>
+  "timestamp": 1752988800.123, <span class="text-neutral-500">// optional, unix seconds</span>
 
   <span class="text-sky-400">// Raw EMG: exactly 16 channels, microvolts (±70 µV display range)</span>
   "emg": [12.4, -3.1, 45.0, ...],
@@ -305,15 +305,15 @@
     "thumb": 2.5, "index": 12.0, "middle": 10.4, "ring": 3.1, "pinky": 2.2
   }
 }</pre>
-                <ul class="list-disc pl-5 space-y-1 text-slate-400">
-                    <li><code class="bg-slate-900 px-1 rounded">emg</code> is required. If <code class="bg-slate-900 px-1 rounded">pose</code> is omitted, pose is inferred from EMG channel groups (CH1–4 → index, CH5–8 → middle, CH9–12 → ring/pinky, CH13–16 → thumb).</li>
-                    <li>If <code class="bg-slate-900 px-1 rounded">force</code> is omitted, force is estimated from pose activation.</li>
-                    <li>Messages may also be a bare 16-float array <code class="bg-slate-900 px-1 rounded">[…]</code> as shorthand for <code class="bg-slate-900 px-1 rounded">{"emg": […]}</code>.</li>
+                <ul class="list-disc pl-5 space-y-1 text-neutral-400">
+                    <li><code class="bg-neutral-900 px-1 rounded">emg</code> is required. If <code class="bg-neutral-900 px-1 rounded">pose</code> is omitted, pose is inferred from EMG channel groups (CH1–4 → index, CH5–8 → middle, CH9–12 → ring/pinky, CH13–16 → thumb).</li>
+                    <li>If <code class="bg-neutral-900 px-1 rounded">force</code> is omitted, force is estimated from pose activation.</li>
+                    <li>Messages may also be a bare 16-float array <code class="bg-neutral-900 px-1 rounded">[…]</code> as shorthand for <code class="bg-neutral-900 px-1 rounded">{"emg": […]}</code>.</li>
                 </ul>
-                <p class="text-slate-400">
+                <p class="text-neutral-400">
                     Minimal Python sender:
                 </p>
-<pre class="bg-slate-900 border border-slate-700 rounded p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-200">import asyncio, json, time, websockets
+<pre class="bg-neutral-900 border border-neutral-700 rounded p-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-neutral-200">import asyncio, json, time, websockets
 
 async def handler(ws):
     seq = 0
@@ -329,8 +329,8 @@ async def handler(ws):
 asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
                 <p class="text-amber-400/90">
                     Note: when this page is served over HTTPS (e.g. GitHub Pages), browsers only allow
-                    <code class="bg-slate-900 px-1 rounded">ws://</code> connections to <code class="bg-slate-900 px-1 rounded">localhost</code>.
-                    For a remote device, use <code class="bg-slate-900 px-1 rounded">wss://</code> or open this file locally.
+                    <code class="bg-neutral-900 px-1 rounded">ws://</code> connections to <code class="bg-neutral-900 px-1 rounded">localhost</code>.
+                    For a remote device, use <code class="bg-neutral-900 px-1 rounded">wss://</code> or open this file locally.
                 </p>
             </div>
         </div>
@@ -483,14 +483,14 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
             dataMode = mode;
             if (mode === 'live') {
                 modeToggleBtn.innerText = 'Switch to Demo Data';
-                modeToggleBtn.classList.replace('bg-sky-600', 'bg-emerald-600');
-                modeToggleBtn.classList.replace('hover:bg-sky-500', 'hover:bg-emerald-500');
+                modeToggleBtn.classList.replace('bg-neutral-700', 'bg-emerald-600');
+                modeToggleBtn.classList.replace('hover:bg-neutral-600', 'hover:bg-emerald-500');
                 wsUrlInput.classList.remove('hidden');
                 connectWebSocket();
             } else {
                 modeToggleBtn.innerText = 'Switch to Live Stream';
-                modeToggleBtn.classList.replace('bg-emerald-600', 'bg-sky-600');
-                modeToggleBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-sky-500');
+                modeToggleBtn.classList.replace('bg-emerald-600', 'bg-neutral-700');
+                modeToggleBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-neutral-600');
                 wsUrlInput.classList.add('hidden');
                 disconnectWebSocket();
                 liveFrame.pose = null;
@@ -531,7 +531,7 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
         }
 
         // Chart.js defaults for performance and dark theme
-        Chart.defaults.color = '#94a3b8'; // slate-400
+        Chart.defaults.color = '#a3a3a3'; // neutral-400
         Chart.defaults.font.family = 'Inter';
         
         // --- Data Generation ---
@@ -593,7 +593,7 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
 
                 // --- 1. Create Channel Row (Right Panel) ---
                 const row = document.createElement('div');
-                row.className = 'flex items-center gap-2 flex-1 min-h-0 w-full bg-slate-900/40 rounded p-1 border border-slate-700/30 hover:bg-slate-700/40 transition-colors';
+                row.className = 'flex items-center gap-2 flex-1 min-h-0 w-full bg-neutral-900/40 rounded p-1 border border-neutral-700/30 hover:bg-neutral-700/40 transition-colors';
                 
                 // Label
                 const label = document.createElement('div');
@@ -604,7 +604,7 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
 
                 // Line Chart Container
                 const lineContainer = document.createElement('div');
-                lineContainer.className = 'chart-container flex-1 bg-slate-900/80 rounded border border-slate-700/50 overflow-hidden';
+                lineContainer.className = 'chart-container flex-1 bg-neutral-900/80 rounded border border-neutral-700/50 overflow-hidden';
                 
                 const canvas = document.createElement('canvas');
                 lineContainer.appendChild(canvas);
@@ -612,15 +612,15 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
                 
                 // Bar Chart Container (Amplitude)
                 const barContainer = document.createElement('div');
-                barContainer.className = 'w-24 lg:w-32 h-full bg-slate-900/80 rounded border border-slate-700/50 p-1 flex items-center shadow-inner relative overflow-hidden';
+                barContainer.className = 'w-24 lg:w-32 h-full bg-neutral-900/80 rounded border border-neutral-700/50 p-1 flex items-center shadow-inner relative overflow-hidden';
                 
                 // Center zero-line for bar
                 const zeroLine = document.createElement('div');
-                zeroLine.className = 'absolute left-1/2 top-0 bottom-0 w-px bg-slate-500/50 z-0';
+                zeroLine.className = 'absolute left-1/2 top-0 bottom-0 w-px bg-neutral-500/50 z-0';
                 barContainer.appendChild(zeroLine);
 
                 const barFill = document.createElement('div');
-                barFill.className = 'bar-fill absolute top-1/2 -translate-y-1/2 z-10';
+                barFill.className = 'bar-fill absolute top-1/2 -tranneutral-y-1/2 z-10';
                 barFill.style.backgroundColor = chartColor;
                 barFill.style.left = '50%';
                 barFill.style.width = '0%';
@@ -701,7 +701,7 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
             dirLight.position.set(5, 5, 5);
             scene.add(dirLight);
             
-            const backLight = new THREE.DirectionalLight(0x818cf8, 0.5);
+            const backLight = new THREE.DirectionalLight(0x9ca3af, 0.5);
             backLight.position.set(-5, -5, -5);
             scene.add(backLight);
 
@@ -710,16 +710,16 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
             
             // Materials
             const palmMat = new THREE.MeshPhongMaterial({ 
-                color: 0x475569, // slate-600
+                color: 0x525252, // neutral-600
                 flatShading: true,
                 shininess: 10
             });
             const jointMat = new THREE.MeshPhongMaterial({ 
-                color: 0x38bdf8, // sky-400
+                color: 0xd4d4d4, // light grey
                 flatShading: true
             });
             const boneMat = new THREE.MeshPhongMaterial({ 
-                color: 0x94a3b8, // slate-400
+                color: 0xa3a3a3, // neutral-400
                 flatShading: true
             });
 
@@ -1213,14 +1213,14 @@ asyncio.run(websockets.serve(handler, "0.0.0.0", 8765))</pre>
             isSimulationRunning = !isSimulationRunning;
             if (isSimulationRunning) {
                 toggleBtn.innerText = 'Pause';
-                toggleBtn.classList.replace('bg-emerald-600', 'bg-slate-700');
-                toggleBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-slate-600');
+                toggleBtn.classList.replace('bg-emerald-600', 'bg-neutral-700');
+                toggleBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-neutral-600');
                 lastUpdateTime = performance.now();
                 updateSimulation(performance.now());
             } else {
                 toggleBtn.innerText = 'Resume';
-                toggleBtn.classList.replace('bg-slate-700', 'bg-emerald-600');
-                toggleBtn.classList.replace('hover:bg-slate-600', 'hover:bg-emerald-500');
+                toggleBtn.classList.replace('bg-neutral-700', 'bg-emerald-600');
+                toggleBtn.classList.replace('hover:bg-neutral-600', 'hover:bg-emerald-500');
                 cancelAnimationFrame(animationFrameId);
             }
         });
