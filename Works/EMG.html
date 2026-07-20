@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>EMG Visualizer & Hand Pose</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body {
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0; /* Slate 200 */
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Custom Scrollbar for better UI */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; /* Slate 800 */
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; /* Slate 600 */
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; /* Slate 500 */
+        }
+
+        .chart-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
+        .bar-fill {
+            height: 60%;
+            border-radius: 2px;
+            transition: width 0.1s linear, left 0.1s linear;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+
+        canvas {
+            -moz-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+        }
+
+        #hand-model-container {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            border-radius: 0.25rem;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header-glow {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.5); /* Sky blue glow */
+        }
+
+        .compact-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .compact-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .compact-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 2px;
+        }
+        
+        /* Resizer Handles */
+        .resizer {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: transparent;
+            z-index: 50;
+            position: relative;
+        }
+        .resizer::after {
+            content: '';
+            position: absolute;
+            background-color: #334155; /* slate-700 */
+            border-radius: 9999px;
+            transition: background-color 0.2s;
+        }
+        .resizer:hover::after, .resizer.resizing::after {
+            background-color: #38bdf8; /* sky-400 */
+        }
+        .resizer-x {
+            width: 12px;
+            cursor: col-resize;
+            margin: 0 4px;
+        }
+        .resizer-x::after {
+            width: 4px;
+            height: 40px;
+        }
+        .resizer-y {
+            height: 12px;
+            cursor: row-resize;
+            margin: 4px 0;
+            width: 100%;
+        }
+        .resizer-y::after {
+            height: 4px;
+            width: 40px;
+        }
+        
+        /* Prevent selection during drag */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body class="p-1.5 md:p-2 lg:p-3 flex flex-col gap-2 h-screen overflow-hidden">
+
+    <!-- Header Section -->
+    <header class="flex justify-between items-center border-b border-slate-700 pb-2 shrink-0">
+        <div>
+            <h1 class="text-xl md:text-2xl font-bold text-sky-400 tracking-wider header-glow">EMG Dashboard</h1>
+            <p class="text-slate-400 text-xs mt-0.5">16-CH | 10Hz | ±70µV Range</p>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span class="text-sm font-medium text-emerald-400">Live Data</span>
+            </div>
+            <button id="toggleSimulationBtn" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-md transition-colors text-sm font-medium focus:outline-none focus:ring-2 focus:ring-sky-500">
+                Pause
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 flex overflow-hidden min-h-0" id="main-container">
+        
+        <!-- Left Column: Hand Model, Force & Stats -->
+        <div id="left-col" class="flex flex-col min-h-0 shrink-0" style="width: 38%;">
+            <!-- Left Upper: Hand Pose -->
+            <section id="panel-pose" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg shrink-0 relative" style="flex: 0 0 50%; min-height: 150px;">
+                <h2 class="text-sm font-semibold text-slate-100 mb-1.5 shrink-0 flex items-center gap-1.5 z-10">
+                    <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"></path></svg>
+                    EMG to Pose
+                </h2>
+                <div class="flex-1 relative border border-slate-700/50 rounded bg-slate-900 min-h-0 overflow-hidden">
+                    <div id="hand-model-container" class="w-full h-full absolute inset-0">
+                        <!-- Three.js canvas appended here -->
+                    </div>
+                    <div class="absolute bottom-1.5 left-1.5 text-[9px] text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded backdrop-blur-sm z-10">
+                        Drag: Rotate
+                    </div>
+                </div>
+            </section>
+
+            <!-- Horizontal Splitter 1 -->
+            <div class="resizer resizer-y" id="resizer-y1"></div>
+
+            <!-- Left Middle: Normal Force Chart -->
+            <section id="panel-force" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg relative" style="flex: 1; min-height: 140px;">
+                <h2 class="text-sm font-semibold text-slate-100 mb-2 shrink-0 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Normal Force (Estimated)
+                </h2>
+                <div class="flex-1 flex flex-col justify-between gap-1 pr-1">
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 text-[9px] text-slate-400 font-mono">Thumb</span>
+                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                            <div id="force-thumb" class="h-full bg-blue-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
+                        </div>
+                        <span id="force-val-thumb" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 text-[9px] text-slate-400 font-mono">Index</span>
+                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                            <div id="force-index" class="h-full bg-indigo-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
+                        </div>
+                        <span id="force-val-index" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 text-[9px] text-slate-400 font-mono">Middle</span>
+                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                            <div id="force-mid" class="h-full bg-purple-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
+                        </div>
+                        <span id="force-val-mid" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 text-[9px] text-slate-400 font-mono">Ring</span>
+                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                            <div id="force-ring" class="h-full bg-pink-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
+                        </div>
+                        <span id="force-val-ring" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-8 text-[9px] text-slate-400 font-mono">Pinky</span>
+                        <div class="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden shadow-inner relative">
+                            <div id="force-pinky" class="h-full bg-rose-400 transition-all duration-100 absolute top-0 left-0" style="width: 0%"></div>
+                        </div>
+                        <span id="force-val-pinky" class="w-10 text-[10px] text-slate-300 font-mono text-right">0.0 N</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Horizontal Splitter 2 -->
+            <div class="resizer resizer-y" id="resizer-y2"></div>
+
+            <!-- Left Lower: Stats -->
+            <section id="panel-stats" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg shrink-0 relative min-h-0" style="flex: none;">
+                <h2 class="text-sm font-semibold text-slate-100 mb-1.5 shrink-0 flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    Average Metrics
+                </h2>
+                <div class="grid grid-cols-4 gap-1 text-[10px] font-semibold text-slate-400 mb-1 shrink-0 px-1">
+                    <div>CH</div><div>RMS (µV)</div><div>SNR (dB)</div><div>MDF (Hz)</div>
+                </div>
+                <div class="grid grid-cols-4 gap-1 text-[11px] items-center py-1 bg-slate-700/30 px-1 rounded-sm font-mono text-slate-200">
+                    <div class="text-emerald-400 font-bold">AVG</div>
+                    <div id="avg-rms">0.0</div>
+                    <div id="avg-snr">0.0</div>
+                    <div id="avg-mdf">0.0</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Vertical Splitter -->
+        <div class="resizer resizer-x" id="resizer-x"></div>
+
+        <!-- Right Column: Stacked Channels -->
+        <section id="right-col" class="bg-slate-800 rounded-lg p-2.5 border border-slate-700 flex flex-col shadow-lg min-w-0 min-h-0" style="flex: 1;">
+            <div class="flex justify-between items-center mb-1.5 shrink-0 px-1">
+                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    Raw EMG & Amplitudes
+                </h2>
+                <div class="text-[10px] text-slate-400 tracking-wide font-mono">10s Window | ±70µV Range</div>
+            </div>
+            
+            <div id="charts-grid" class="flex-1 flex flex-col gap-1 pr-1 pb-1 overflow-hidden">
+                <!-- Channel rows injected here -->
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // --- Configuration & State ---
+        const NUM_CHANNELS = 16;
+        const FREQUENCY = 10; // Hz
+        const DURATION_SEC = 10;
+        const TOTAL_POINTS = FREQUENCY * DURATION_SEC; 
+        const UPDATE_INTERVAL_MS = 1000 / FREQUENCY; 
+        const MAX_UV = 70; // Set scale to +- 70uV
+        
+        // Define channel colors globally so charts and 3D model can share them
+        const channelColors = [
+            '#38bdf8', '#818cf8', '#c084fc', '#f472b6', 
+            '#fb7185', '#fb923c', '#facc15', '#a3e635',
+            '#4ade80', '#2dd4bf', '#22d3ee', '#60a5fa',
+            '#a78bfa', '#e879f9', '#f43f5e', '#ea580c'
+        ];
+
+        let isSimulationRunning = true;
+        let currentTimeIndex = 0;
+        let animationFrameId;
+        
+        // Data structures
+        const emgData = Array.from({ length: NUM_CHANNELS }, () => new Float32Array(TOTAL_POINTS));
+        const charts = [];
+        const barElements = [];
+        let electrodeMaterials = []; // Holds references to the 16 marker materials
+        
+        // UI Elements
+        const chartsGrid = document.getElementById('charts-grid');
+        const toggleBtn = document.getElementById('toggleSimulationBtn');
+
+        // Chart.js defaults for performance and dark theme
+        Chart.defaults.color = '#94a3b8'; // slate-400
+        Chart.defaults.font.family = 'Inter';
+        
+        // --- Data Generation ---
+        function generateMockData() {
+            // Generate a distinct looping pattern for each channel
+            for (let ch = 0; ch < NUM_CHANNELS; ch++) {
+                // Base frequency and noise for this channel
+                const baseFreq = 0.5 + (ch * 0.1); // Slightly different fundamental freq per channel
+                const burstModulator = Math.sin(ch * Math.PI / 4); // Create clusters of activity
+                
+                for (let i = 0; i < TOTAL_POINTS; i++) {
+                    const t = (i / FREQUENCY); // Time in seconds (0 to 10)
+                    
+                    // 1. Base wandering baseline (low freq)
+                    const baseline = Math.sin(t * 0.2 * Math.PI) * 0.1;
+                    
+                    // 2. High frequency noise (simulating motor unit action potentials)
+                    // Use a combination of sines to make it look less synthetic
+                    let noise = Math.sin(t * 15 * Math.PI + ch) * 0.3 + 
+                                Math.cos(t * 27 * Math.PI - ch) * 0.2;
+                                
+                    // Add some random noise
+                    noise += (Math.random() - 0.5) * 0.4;
+                    
+                    // 3. Amplitude modulation (simulating muscle activation bursts)
+                    // Create bursts of activity that loop every 10s
+                    // Burst envelope follows a slow wave
+                    let envelope = Math.max(0, Math.sin(t * baseFreq * Math.PI) + burstModulator);
+                    // Add a secondary envelope for complexity
+                    envelope *= Math.abs(Math.sin(t * Math.PI)); 
+                    
+                    // 4. Combine
+                    // Scale noise by envelope to simulate activation, add baseline
+                    let value = baseline + (noise * envelope * 2.0); // Multiply by 2 for visibility
+                    
+                    // Scale from previous [-1.5, 1.5] range to approx [-70, 70]
+                    value = value * 45; 
+                    
+                    // Clamp value roughly between -MAX_UV and MAX_UV
+                    value = Math.max(-MAX_UV * 0.95, Math.min(MAX_UV * 0.95, value));
+                    
+                    emgData[ch][i] = value;
+                }
+            }
+        }
+
+        // --- Chart & Stats Initialization ---
+        function initChartsAndStats() {
+            const timeLabels = Array.from({ length: TOTAL_POINTS }, (_, i) => {
+                const sec = (i / FREQUENCY).toFixed(1);
+                return (i % FREQUENCY === 0) ? `${sec}s` : '';
+            });
+
+            chartsGrid.innerHTML = '';
+
+            for (let i = 0; i < NUM_CHANNELS; i++) {
+                const chartColor = channelColors[i % channelColors.length];
+                const chLabel = `CH${String(i + 1).padStart(2, '0')}`;
+
+                // --- 1. Create Channel Row (Right Panel) ---
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2 flex-1 min-h-0 w-full bg-slate-900/40 rounded p-1 border border-slate-700/30 hover:bg-slate-700/40 transition-colors';
+                
+                // Label
+                const label = document.createElement('div');
+                label.className = 'w-9 text-[10px] font-mono font-bold text-right shrink-0';
+                label.style.color = chartColor;
+                label.innerText = chLabel;
+                row.appendChild(label);
+
+                // Line Chart Container
+                const lineContainer = document.createElement('div');
+                lineContainer.className = 'chart-container flex-1 bg-slate-900/80 rounded border border-slate-700/50 overflow-hidden';
+                
+                const canvas = document.createElement('canvas');
+                lineContainer.appendChild(canvas);
+                row.appendChild(lineContainer);
+                
+                // Bar Chart Container (Amplitude)
+                const barContainer = document.createElement('div');
+                barContainer.className = 'w-24 lg:w-32 h-full bg-slate-900/80 rounded border border-slate-700/50 p-1 flex items-center shadow-inner relative overflow-hidden';
+                
+                // Center zero-line for bar
+                const zeroLine = document.createElement('div');
+                zeroLine.className = 'absolute left-1/2 top-0 bottom-0 w-px bg-slate-500/50 z-0';
+                barContainer.appendChild(zeroLine);
+
+                const barFill = document.createElement('div');
+                barFill.className = 'bar-fill absolute top-1/2 -translate-y-1/2 z-10';
+                barFill.style.backgroundColor = chartColor;
+                barFill.style.left = '50%';
+                barFill.style.width = '0%';
+                barContainer.appendChild(barFill);
+                
+                row.appendChild(barContainer);
+
+                // Real-time Value Container (Moved to the far right end)
+                const valueContainer = document.createElement('div');
+                valueContainer.className = 'w-10 text-[10px] font-mono text-right shrink-0 pl-1 pr-0.5';
+                valueContainer.style.color = chartColor;
+                valueContainer.innerText = '+0.0';
+                row.appendChild(valueContainer);
+
+                chartsGrid.appendChild(row);
+                barElements.push(barFill);
+
+                // Initialize Chart.js
+                const ctx = canvas.getContext('2d');
+                const displayData = Array(TOTAL_POINTS).fill(0);
+
+                const chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [{
+                            data: displayData,
+                            borderColor: chartColor,
+                            borderWidth: 1.2,
+                            pointRadius: 0,
+                            tension: 0.2,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        layout: { padding: { top: 3, bottom: 3, left: -5, right: 0 } },
+                        plugins: { legend: { display: false }, tooltip: { display: false } },
+                        scales: {
+                            x: { display: false },
+                            y: { display: false, min: -MAX_UV, max: MAX_UV }
+                    },
+                    interaction: { mode: null }
+                }
+            });
+            
+            charts.push({ instance: chart, dataBuffer: displayData, valueEl: valueContainer });
+        }
+    }
+
+    // --- 3D Hand Model (Three.js) ---
+        let scene, camera, renderer;
+        let handGroup;
+        const fingers = []; // Store finger joints for animation
+
+        function init3D() {
+            const container = document.getElementById('hand-model-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Setup
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+            camera.position.set(0, 0, 14);
+
+            renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 5, 5);
+            scene.add(dirLight);
+            
+            const backLight = new THREE.DirectionalLight(0x818cf8, 0.5);
+            backLight.position.set(-5, -5, -5);
+            scene.add(backLight);
+
+            // Build Abstract Hand
+            handGroup = new THREE.Group();
+            
+            // Materials
+            const palmMat = new THREE.MeshPhongMaterial({ 
+                color: 0x475569, // slate-600
+                flatShading: true,
+                shininess: 10
+            });
+            const jointMat = new THREE.MeshPhongMaterial({ 
+                color: 0x38bdf8, // sky-400
+                flatShading: true
+            });
+            const boneMat = new THREE.MeshPhongMaterial({ 
+                color: 0x94a3b8, // slate-400
+                flatShading: true
+            });
+
+            // Palm (Simple Box)
+            const palmGeo = new THREE.BoxGeometry(3, 3, 0.5);
+            const palm = new THREE.Mesh(palmGeo, palmMat);
+            handGroup.add(palm);
+
+            // Helper to create a finger
+            function createFinger(baseX, baseY, length, scale) {
+                const fingerGroup = new THREE.Group();
+                fingerGroup.position.set(baseX, baseY, 0);
+                
+                // Base joint (knuckle)
+                const knuckleGeo = new THREE.SphereGeometry(0.3 * scale, 8, 8);
+                const knuckle = new THREE.Mesh(knuckleGeo, jointMat);
+                fingerGroup.add(knuckle);
+
+                // Segment 1
+                const seg1Len = length * 0.4;
+                const seg1Geo = new THREE.CylinderGeometry(0.2*scale, 0.2*scale, seg1Len, 8);
+                // Move pivot to end
+                seg1Geo.translate(0, seg1Len/2, 0); 
+                const seg1 = new THREE.Mesh(seg1Geo, boneMat);
+                fingerGroup.add(seg1);
+
+                // Middle joint
+                const midJoint = new THREE.Group();
+                midJoint.position.set(0, seg1Len, 0);
+                
+                const midSphere = new THREE.Mesh(new THREE.SphereGeometry(0.25 * scale, 8, 8), jointMat);
+                midJoint.add(midSphere);
+                
+                // Segment 2
+                const seg2Len = length * 0.3;
+                const seg2Geo = new THREE.CylinderGeometry(0.18*scale, 0.15*scale, seg2Len, 8);
+                seg2Geo.translate(0, seg2Len/2, 0);
+                const seg2 = new THREE.Mesh(seg2Geo, boneMat);
+                midJoint.add(seg2);
+
+                // End joint
+                const endJoint = new THREE.Group();
+                endJoint.position.set(0, seg2Len, 0);
+                
+                const endSphere = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 8, 8), jointMat);
+                endJoint.add(endSphere);
+                
+                // Segment 3
+                const seg3Len = length * 0.3;
+                const seg3Geo = new THREE.CylinderGeometry(0.15*scale, 0.1*scale, seg3Len, 8);
+                seg3Geo.translate(0, seg3Len/2, 0);
+                const seg3 = new THREE.Mesh(seg3Geo, boneMat);
+                endJoint.add(seg3);
+
+                // Hierarchy
+                midJoint.add(endJoint);
+                seg1.add(midJoint);
+
+                handGroup.add(fingerGroup);
+
+                // Return references to parts we want to animate (rotate)
+                return {
+                    base: seg1,      // Rotates entire finger
+                    mid: midJoint,   // Rotates mid + end
+                    end: endJoint    // Rotates end
+                };
+            }
+
+            // Create Fingers (Index, Middle, Ring, Pinky)
+            const fingerSpacings = [-1.1, -0.4, 0.3, 1.0];
+            const fingerLengths = [2.8, 3.2, 3.0, 2.2];
+            const fingerScales = [1, 1, 1, 0.8];
+
+            for(let i=0; i<4; i++) {
+                // Position along top edge of palm
+                fingers.push(createFinger(fingerSpacings[i], 1.5, fingerLengths[i], fingerScales[i]));
+            }
+
+            // Create Thumb (special case, attached to side)
+            const thumbGroup = new THREE.Group();
+            thumbGroup.position.set(-1.6, -0.5, 0);
+            thumbGroup.rotation.z = Math.PI / 4; // Angle outwards
+            thumbGroup.rotation.y = -Math.PI / 6; // Angle slightly forward
+
+            const thumbKnuckle = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), jointMat);
+            thumbGroup.add(thumbKnuckle);
+
+            const thumbSeg1Len = 1.5;
+            const thumbSeg1Geo = new THREE.CylinderGeometry(0.25, 0.25, thumbSeg1Len, 8);
+            thumbSeg1Geo.translate(0, thumbSeg1Len/2, 0);
+            const thumbSeg1 = new THREE.Mesh(thumbSeg1Geo, boneMat);
+            thumbGroup.add(thumbSeg1);
+            
+            const thumbMidGroup = new THREE.Group();
+            thumbMidGroup.position.set(0, thumbSeg1Len, 0);
+            
+            const thumbMidSphere = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), jointMat);
+            thumbMidGroup.add(thumbMidSphere);
+
+            const thumbSeg2Len = 1.2;
+            const thumbSeg2Geo = new THREE.CylinderGeometry(0.25, 0.2, thumbSeg2Len, 8);
+            thumbSeg2Geo.translate(0, thumbSeg2Len/2, 0);
+            const thumbSeg2 = new THREE.Mesh(thumbSeg2Geo, boneMat);
+            thumbMidGroup.add(thumbSeg2);
+
+            thumbSeg1.add(thumbMidGroup);
+            handGroup.add(thumbGroup);
+
+            // Add thumb to fingers array for easier animation mapping
+            fingers.push({
+                base: thumbSeg1,
+                mid: thumbMidGroup,
+                end: null // Thumb only has two main phalanges we care about here
+            });
+
+
+            // Add Wrist Cylinder with 16 Channel Markers
+            const wristGroup = new THREE.Group();
+            wristGroup.position.set(0, -2.5, 0); // Position below the palm
+            
+            const wristGeo = new THREE.CylinderGeometry(1.6, 1.4, 2.5, 16);
+            wristGeo.translate(0, -1.25, 0); // Pivot at top
+            const wrist = new THREE.Mesh(wristGeo, boneMat);
+            wristGroup.add(wrist);
+
+            // Create glowing markers around the wrist
+            for(let i=0; i<16; i++) {
+                const angle = (i / 16) * Math.PI * 2;
+                const markerGeo = new THREE.SphereGeometry(0.25, 16, 16);
+                
+                const colorStr = channelColors[i % channelColors.length];
+                const markerColor = new THREE.Color(colorStr);
+
+                // Use MeshBasicMaterial for completely unlit rendering
+                const markerMat = new THREE.MeshBasicMaterial({ 
+                    color: markerColor.clone().multiplyScalar(0.2) // Start dim
+                });
+                markerMat.userData = { baseColor: markerColor }; // Store base color for animation
+                
+                const marker = new THREE.Mesh(markerGeo, markerMat);
+                
+                // Position around the upper surface of the wrist cylinder
+                const radius = 1.6; 
+                marker.position.x = Math.cos(angle) * radius;
+                marker.position.z = Math.sin(angle) * radius;
+                marker.position.y = -0.5; // Slightly below palm joint
+                
+                wristGroup.add(marker);
+                electrodeMaterials.push(markerMat);
+
+                // Create a 2D canvas to render the high-res text number
+                const numCanvas = document.createElement('canvas');
+                numCanvas.width = 128;
+                numCanvas.height = 128;
+                const ctx = numCanvas.getContext('2d');
+                
+                ctx.fillStyle = colorStr;
+                ctx.font = 'bold 80px Inter, monospace';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                // Removed drop shadow to ensure a purely flat, unlit look
+                ctx.fillText((i + 1).toString(), 64, 64);
+                
+                const numTex = new THREE.CanvasTexture(numCanvas);
+                numTex.minFilter = THREE.LinearFilter; // Ensure crisp text rendering
+                
+                const numMat = new THREE.MeshBasicMaterial({
+                    map: numTex,
+                    transparent: true,
+                    side: THREE.FrontSide
+                });
+                
+                const numMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), numMat);
+                
+                // Position the text slightly below the marker ball and just outside the cylinder radius
+                const labelRadius = 1.62;
+                numMesh.position.x = Math.cos(angle) * labelRadius;
+                numMesh.position.z = Math.sin(angle) * labelRadius;
+                numMesh.position.y = -1.1; 
+                
+                // Orient the plane to face exactly outward from the center axis of the cylinder
+                numMesh.lookAt(
+                    numMesh.position.x + Math.cos(angle),
+                    numMesh.position.y,
+                    numMesh.position.z + Math.sin(angle)
+                );
+                
+                wristGroup.add(numMesh);
+            }
+            handGroup.add(wristGroup);
+
+            scene.add(handGroup);
+            
+            // Initial positioning: elevate hand so wrist is visible
+            handGroup.position.y = 1.0;
+            handGroup.rotation.y = -0.3;
+            handGroup.rotation.x = 0.2;
+
+            // Simple Interaction (Drag to rotate)
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            container.addEventListener('mousedown', () => isDragging = true);
+            window.addEventListener('mouseup', () => isDragging = false);
+            window.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.offsetX - previousMousePosition.x,
+                        y: e.offsetY - previousMousePosition.y
+                    };
+
+                    handGroup.rotation.y += deltaMove.x * 0.01;
+                    handGroup.rotation.x += deltaMove.y * 0.01;
+                }
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+
+            // Handle Resize using ResizeObserver for robustness inside flex layouts
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const w = entry.contentRect.width;
+                    const h = entry.contentRect.height;
+                    renderer.setSize(w, h);
+                    camera.aspect = w / h;
+                    camera.updateProjectionMatrix();
+                }
+            });
+            resizeObserver.observe(container);
+
+            // Render loop for Three.js
+            const renderLoop = () => {
+                requestAnimationFrame(renderLoop);
+                renderer.render(scene, camera);
+                
+                // Add idle animation if simulation is paused
+                if(!isSimulationRunning) {
+                     handGroup.rotation.y += 0.001;
+                }
+            };
+            renderLoop();
+        }
+
+        // --- Main Simulation Loop ---
+        let lastUpdateTime = 0;
+
+        function calculateStats(dataBuffer) {
+            // Simplified calculations for simulation purposes
+            let sumSq = 0;
+            let signalPower = 0;
+            let noisePower = 0.01; // Avoid divide by zero
+            let crossings = 0;
+
+            for(let i=0; i<dataBuffer.length; i++) {
+                const val = dataBuffer[i];
+                sumSq += val * val;
+                
+                // Very naive SNR estimation for mock data: 
+                // Assume high amplitude is signal, low is noise
+                if(Math.abs(val) > MAX_UV * 0.2) signalPower += val*val;
+                else noisePower += val*val;
+
+                // Naive Median Frequency (MDF) estimation based on zero crossings
+                if(i > 0 && ((dataBuffer[i] > 0 && dataBuffer[i-1] < 0) || (dataBuffer[i] < 0 && dataBuffer[i-1] > 0))) {
+                    crossings++;
+                }
+            }
+
+            const rms = Math.sqrt(sumSq / dataBuffer.length);
+            const snr = 10 * Math.log10(signalPower / noisePower);
+            // MDF approx: Crossings per second / 2. (Multiply by freq/total_points to get per sec, roughly)
+            const mdf = (crossings * (FREQUENCY / TOTAL_POINTS)) * 10; 
+
+            return { 
+                rms: rms.toFixed(1), 
+                snr: Math.max(0, snr).toFixed(1), // Clamp SNR > 0
+                mdf: Math.min(FREQUENCY/2, mdf).toFixed(1) // Max is Nyquist freq
+            };
+        }
+
+        function updateSimulation(timestamp) {
+            if (!isSimulationRunning) return;
+
+            if (timestamp - lastUpdateTime > UPDATE_INTERVAL_MS) {
+                lastUpdateTime = timestamp;
+                
+                const shouldUpdateStats = currentTimeIndex % (FREQUENCY / 2) === 0; // Update stats twice a second
+                
+                let sumRms = 0, sumSnr = 0, sumMdf = 0;
+
+                for (let ch = 0; ch < NUM_CHANNELS; ch++) {
+                    const buffer = charts[ch].dataBuffer;
+                    
+                    // Shift left
+                    for (let i = 0; i < TOTAL_POINTS - 1; i++) {
+                        buffer[i] = buffer[i + 1];
+                    }
+                    
+                    // Insert new point from our looped pre-generated data
+                const latestValue = emgData[ch][currentTimeIndex];
+                buffer[TOTAL_POINTS - 1] = latestValue;
+                
+                // Tell Chart.js to update
+                charts[ch].instance.update();
+
+                // Update Real-time Value Text
+                const valStr = latestValue.toFixed(1);
+                charts[ch].valueEl.innerText = (latestValue >= 0 ? '+' : '') + valStr;
+
+                // Update Live Bar Chart (Amplitude)
+                // Maps the [-70, 70] raw voltage onto a center-aligned 0-50% width bar 
+                    const normalizedVal = latestValue / MAX_UV; 
+                    const barFill = barElements[ch];
+                    
+                    if (normalizedVal >= 0) {
+                        barFill.style.left = '50%';
+                        barFill.style.width = `${Math.min(50, normalizedVal * 50)}%`;
+                    } else {
+                        const width = Math.min(50, Math.abs(normalizedVal) * 50);
+                        barFill.style.left = `${50 - width}%`;
+                        barFill.style.width = `${width}%`;
+                    }
+
+                    // Collect Stats 
+                    if(shouldUpdateStats) {
+                        const stats = calculateStats(buffer);
+                        sumRms += parseFloat(stats.rms);
+                        sumSnr += parseFloat(stats.snr);
+                        sumMdf += parseFloat(stats.mdf);
+                    }
+
+                    // Update 3D Wrist Markers Intensity & Color
+                    if (electrodeMaterials.length > ch) {
+                        const markerMat = electrodeMaterials[ch];
+                        // Map 0 -> MAX_UV to 0 -> 1 for intensity
+                        const normalizedActivation = Math.abs(latestValue) / MAX_UV;
+                        
+                        // Modulate unlit material color directly (0.2 to 1.0 brightness scale)
+                        const intensity = 0.2 + Math.min(0.8, normalizedActivation * 2.0);
+                        markerMat.color.copy(markerMat.userData.baseColor).multiplyScalar(intensity);
+                    }
+                }
+                
+                // Update average stats row
+                if(shouldUpdateStats) {
+                    document.getElementById('avg-rms').innerText = (sumRms / NUM_CHANNELS).toFixed(1);
+                    document.getElementById('avg-snr').innerText = (sumSnr / NUM_CHANNELS).toFixed(1);
+                    document.getElementById('avg-mdf').innerText = (sumMdf / NUM_CHANNELS).toFixed(1);
+                }
+
+                // 2. Map EMG to Pose
+                // In a real scenario, this involves a trained ML model or complex kinematic mapping.
+                // Here, we'll map average activity of specific channel groups to finger curling.
+                
+                // Group channels arbitrarily for simulation:
+                // CH 0-3: Index, CH 4-7: Middle, CH 8-11: Ring/Pinky, CH 12-15: Thumb/Wrist
+                const getGroupActivity = (startCh, endCh) => {
+                    let sum = 0;
+                    for(let i = startCh; i <= endCh; i++) {
+                        // Absolute value normalized by MAX_UV
+                        sum += Math.abs(emgData[i][currentTimeIndex]) / MAX_UV; 
+                    }
+                    return sum / (endCh - startCh + 1);
+                };
+
+                const indexAct = getGroupActivity(0, 3);
+                const midAct = getGroupActivity(4, 7);
+                const ringPinkyAct = getGroupActivity(8, 11);
+                const thumbAct = getGroupActivity(12, 15);
+                
+                // Separate channels for force visualization
+                const ringAct = getGroupActivity(8, 9);
+                const pinkyAct = getGroupActivity(10, 11);
+
+                // Overall activation for UI meters
+                const totalAct = (indexAct + midAct + ringPinkyAct + thumbAct) / 4;
+                
+                // Smooth the values slightly for animation
+                const smoothFactor = 0.2;
+                
+                // Helper to apply rotation safely
+                const applyRotation = (joint, targetRotationX) => {
+                     if(!joint) return;
+                     // Map activation (0 to ~1.0) to rotation angle (0 to ~90 degrees/1.5 rad)
+                     const maxAngle = 1.5;
+                     // Interpolate for smooth movement
+                     joint.rotation.x += (targetRotationX * maxAngle - joint.rotation.x) * smoothFactor;
+                };
+
+                if (fingers.length === 5) {
+                    // Index [0]
+                    applyRotation(fingers[0].base, indexAct);
+                    applyRotation(fingers[0].mid, indexAct * 1.2);
+                    applyRotation(fingers[0].end, indexAct);
+
+                    // Middle [1]
+                    applyRotation(fingers[1].base, midAct);
+                    applyRotation(fingers[1].mid, midAct * 1.2);
+                    applyRotation(fingers[1].end, midAct);
+
+                    // Ring [2] & Pinky [3] move somewhat together
+                    applyRotation(fingers[2].base, ringPinkyAct);
+                    applyRotation(fingers[2].mid, ringPinkyAct * 1.2);
+                    applyRotation(fingers[2].end, ringPinkyAct);
+                    
+                    applyRotation(fingers[3].base, ringPinkyAct * 1.1);
+                    applyRotation(fingers[3].mid, ringPinkyAct * 1.3);
+                    applyRotation(fingers[3].end, ringPinkyAct);
+
+                    // Thumb [4]
+                    applyRotation(fingers[4].base, thumbAct);
+                    applyRotation(fingers[4].mid, thumbAct * 0.8);
+
+                    // Update Normal Force UI Panel
+                    const calcForce = (act) => {
+                        const pct = Math.min(100, act * 150);
+                        // Map 100% to roughly 40.0 N for simulation scaling
+                        return { pct: pct, val: (pct * 0.4).toFixed(1) }; 
+                    };
+                    
+                    const fThumb = calcForce(thumbAct);
+                    const fIndex = calcForce(indexAct);
+                    const fMid = calcForce(midAct);
+                    const fRing = calcForce(ringAct);
+                    const fPinky = calcForce(pinkyAct);
+
+                    document.getElementById('force-thumb').style.width = `${fThumb.pct}%`;
+                    document.getElementById('force-val-thumb').innerText = `${fThumb.val} N`;
+                    
+                    document.getElementById('force-index').style.width = `${fIndex.pct}%`;
+                    document.getElementById('force-val-index').innerText = `${fIndex.val} N`;
+                    
+                    document.getElementById('force-mid').style.width = `${fMid.pct}%`;
+                    document.getElementById('force-val-mid').innerText = `${fMid.val} N`;
+                    
+                    document.getElementById('force-ring').style.width = `${fRing.pct}%`;
+                    document.getElementById('force-val-ring').innerText = `${fRing.val} N`;
+                    
+                    document.getElementById('force-pinky').style.width = `${fPinky.pct}%`;
+                    document.getElementById('force-val-pinky').innerText = `${fPinky.val} N`;
+                }
+
+                // Advance time index, loop back to 0 at end
+                currentTimeIndex = (currentTimeIndex + 1) % TOTAL_POINTS;
+            }
+
+            animationFrameId = requestAnimationFrame(updateSimulation);
+        }
+
+        // --- Event Listeners ---
+        toggleBtn.addEventListener('click', () => {
+            isSimulationRunning = !isSimulationRunning;
+            if (isSimulationRunning) {
+                toggleBtn.innerText = 'Pause';
+                toggleBtn.classList.replace('bg-emerald-600', 'bg-slate-700');
+                toggleBtn.classList.replace('hover:bg-emerald-500', 'hover:bg-slate-600');
+                lastUpdateTime = performance.now();
+                updateSimulation(performance.now());
+            } else {
+                toggleBtn.innerText = 'Resume';
+                toggleBtn.classList.replace('bg-slate-700', 'bg-emerald-600');
+                toggleBtn.classList.replace('hover:bg-slate-600', 'hover:bg-emerald-500');
+                cancelAnimationFrame(animationFrameId);
+            }
+        });
+
+        // --- Panel Resizer Logic ---
+        function initResizers() {
+            const leftCol = document.getElementById('left-col');
+            const rightCol = document.getElementById('right-col');
+            const panelPose = document.getElementById('panel-pose');
+            const panelForce = document.getElementById('panel-force');
+            const panelStats = document.getElementById('panel-stats');
+            
+            let isResizing = null; // 'x', 'y1', 'y2'
+            
+            document.getElementById('resizer-x').addEventListener('mousedown', () => { isResizing = 'x'; document.body.classList.add('no-select', 'cursor-col-resize'); });
+            document.getElementById('resizer-y1').addEventListener('mousedown', () => { isResizing = 'y1'; document.body.classList.add('no-select', 'cursor-row-resize'); });
+            document.getElementById('resizer-y2').addEventListener('mousedown', () => { isResizing = 'y2'; document.body.classList.add('no-select', 'cursor-row-resize'); });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                
+                if (isResizing === 'x') {
+                    // Update left/right widths
+                    const containerWidth = document.getElementById('main-container').clientWidth;
+                    const newLeftWidth = (e.clientX / containerWidth) * 100;
+                    if(newLeftWidth > 15 && newLeftWidth < 85) {
+                        leftCol.style.width = `${newLeftWidth}%`;
+                    }
+                } 
+                else if (isResizing === 'y1') {
+                    // Update Top (Pose) Panel height
+                    const containerBounds = leftCol.getBoundingClientRect();
+                    const newHeight = ((e.clientY - containerBounds.top) / containerBounds.height) * 100;
+                    if(newHeight > 15 && newHeight < 85) {
+                        panelPose.style.flex = `0 0 ${newHeight}%`;
+                    }
+                }
+                else if (isResizing === 'y2') {
+                    // Update Bottom (Stats) Panel height
+                    const containerBounds = leftCol.getBoundingClientRect();
+                    const newHeight = ((containerBounds.bottom - e.clientY) / containerBounds.height) * 100;
+                    if(newHeight > 10 && newHeight < 50) {
+                        panelStats.style.flex = `0 0 ${newHeight}%`;
+                    }
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                if(isResizing) {
+                    isResizing = null;
+                    document.body.classList.remove('no-select', 'cursor-col-resize', 'cursor-row-resize');
+                    // Force a window resize event to ensure charts re-calculate if needed
+                    window.dispatchEvent(new Event('resize'));
+                }
+            });
+        }
+
+
+        // --- Startup ---
+        window.onload = () => {
+            generateMockData();
+            initChartsAndStats();
+            init3D();
+            initResizers(); // Initialize drag-to-resize
+            
+            // Start simulation
+            animationFrameId = requestAnimationFrame(updateSimulation);
+        };
+
+    </script>
+</body>
+</html>
