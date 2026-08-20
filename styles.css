@@ -262,15 +262,15 @@ nav.top-nav ul li a:focus-visible {
     align-items: center;
     margin-bottom: 24px;
     padding: 8px;
+    width: 100%;
 }
 
 .avatar-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    width: 320px;
-    height: 320px;
-    gap: 7px;
+    grid-template-columns: repeat(10, 1fr);
+    width: min(100%, 720px);
+    height: auto;
+    gap: 6px;
     border-radius: var(--glass-radius);
     overflow: visible;
     background: transparent;
@@ -281,6 +281,7 @@ nav.top-nav ul li a:focus-visible {
 .avatar-tile {
     width: 100%;
     height: 100%;
+    aspect-ratio: 1 / 1;
     object-fit: cover;
     image-rendering: auto;
     -webkit-backface-visibility: hidden;
@@ -296,7 +297,7 @@ nav.top-nav ul li a:focus-visible {
 }
 
 .avatar-tile:hover {
-    transform: scale(2.16) translateZ(50px);
+    transform: scale(2.4) translateZ(50px);
     z-index: 10;
     box-shadow: var(--avatar-tile-shadow-hover);
     border: none;
@@ -312,7 +313,7 @@ nav.top-nav ul li a:focus-visible {
 .avatar-tile-wrapper {
     position: relative;
     width: 100%;
-    height: 100%;
+    aspect-ratio: 1 / 1;
 }
 
 /* Device tooltip styling */
@@ -878,11 +879,33 @@ footer p {
         gap: 14px;
         max-width: 480px;
     }
+
+    .avatar-grid {
+        gap: 4px;
+        width: min(100%, 100%);
+    }
+
+    .avatar-tile:hover {
+        transform: scale(2.2) translateZ(50px);
+    }
 }
 
 @media (max-width: 480px) {
     .project-grid {
         grid-template-columns: 1fr; /* 1 project per line on very small screens */
+    }
+
+    .avatar-grid {
+        gap: 3px;
+    }
+
+    .avatar-tile:hover {
+        transform: scale(2) translateZ(50px);
+    }
+
+    .device-tooltip {
+        font-size: 10px;
+        padding: 4px 8px;
     }
 }
 
