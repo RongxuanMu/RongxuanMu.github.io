@@ -267,8 +267,8 @@ nav.top-nav ul li a:focus-visible {
 
 .avatar-grid {
     display: grid;
-    grid-template-columns: repeat(10, 1fr);
-    width: min(100%, 720px);
+    grid-template-columns: repeat(6, 1fr);
+    width: min(100%, 360px);
     height: auto;
     gap: 6px;
     border-radius: var(--glass-radius);
@@ -276,6 +276,11 @@ nav.top-nav ul li a:focus-visible {
     background: transparent;
     border: none;
     box-shadow: none;
+}
+
+/* Cap the grid at 36 tiles (6x6); extra tiles stay in the markup but are hidden */
+.avatar-grid .avatar-tile-wrapper:nth-child(n + 37) {
+    display: none;
 }
 
 .avatar-tile {
