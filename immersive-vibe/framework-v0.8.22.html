@@ -1,0 +1,3038 @@
+<!-- VibeXR Interaction Framework v0.8.8 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
+
+  v0.8.22: drawing worked again - v0.8.20 hid the sketch surface with object.visible = false, but
+           Interactable.isVisible walks the object tree, so the board stopped being a hit-test candidate.
+           The collider boxes now hide their MATERIAL instead.
+  v0.8.21: UI panels / buttons /board faces render in the OPAQUE pass with an alpha cutout (alphaTest +
+           alphaToCoverage) instead of as transparent quads. Distance-sorted transparency used the object
+           ORIGIN, so on a tilted panel a button near the top could sort behind its own background and vanish,
+           and the transparent floor grid could paint over a menu. Depth testing now decides both.
+  v0.8.20: no passthrough leaking through the UI - button / caption pills are filled opaque black in every
+           state, the square collider boxes behind buttons and the drawing surface are no longer drawn, the
+           handle is an opaque black capsule with an always-on white outline, and the slider track is opaque.
+  v0.8.19: UI depth fixed - the per-panel renderOrder layering (background 0 / base 1 / text 2) was GLOBAL, so
+           a distant panel's text drew over a nearer panel, and the hover outline at 100 drew over everything.
+           All UI and the outline now sort purely by distance; only true overlays (ray, reticle, poke and
+           long-press rings, hand mask, backdrop) keep an explicit order.
+  v0.8.18: table leg removed (floating plate); sketch board is one panel - the caption moved out of the canvas
+           into a capsule that shares the header row with capsule swatches and Clear, all on the board's own base;
+           the drag handle is a capsule too, and button labels auto-shrink to fit their pill.
+  v0.8.17: desk plate is a true short cylinder with thick (4 px) rims via the fat-line pipeline; hover outline
+           renders after the UI so panels no longer paint over it.
+  v0.8.16: one palette everywhere - black backgrounds (page, scene, VR backdrop, panels, desk), white lines and
+           text, neutral grey floor rings; no dark blue or cyan chrome left (object / swatch colours stay).
+  v0.8.15: hover outline is pushed outward in screen space from the object's projected centre - a constant
+           thickness in screen pixels (ICFG.outlinePx 2.5, outlinePxSelect 4) at any distance or scale, with
+           no gaps at box corners.
+  v0.8.14: hover / press feedback is a white outline (inverted hull, like the hand) instead of an emissive glow.
+  v0.8.13: UI panels, log, drawing surface and desk use an opaque pure black base (was a 35 % dark tint).
+  v0.8.12: finger-snap select sound; white-line sketch style extended to the log panel, drawing surface, board
+           handle, labels, floor ring and the desk (translucent dark base + white rims); every panel keeps a
+           translucent dark base for legibility; colour swatches show their true colour (painted on the face);
+           all hover / press feedback is a white glow; ray and cursor are always white.
+  v0.8.11: hand menu / UI panels, buttons and sliders restyled to the hand's white-line sketch look
+           (transparent panel + white outline, outlined buttons, inverted when pressed / on, white slider).
+           Reticle centre dot removed; floor grid replaced by radial rings (0.5 m steps, 1 m labels); crisp
+           WebAudio click on every press (Sfx); lighter blue (THEME.hover) for the ray / cursor hover state.
+  v0.8.10: ray / direct exclusivity is decided by hover alone - three states only: nothing hovered -> ray shown,
+           one near object hovered -> ray hidden, one far object hovered -> ray shown. The v0.8.9 "direct zone"
+           (ray off with nothing hovered) is removed. With several objects in near range exactly one gets the hover:
+           ranked by surface distance + nearCentroidWeight x centroid distance.
+  v0.8.9: no cursor ball in either mode (near cursor sphere removed too; direct hover = object highlight only).
+  v0.8.8: direct-interaction range enlarged (near 5 / 6 cm, poke hover 6 cm); pinch indicator ball removed so
+          the ray and a direct affordance never show together; speed gain only above 0.6 m/s (full at 1.8).
+  v0.8.7: far grab has no minimum distance (no jump when ray-pinching something close); far cone narrowed to
+          2\u00b0 diameter (1\u00b0 half-angle); idle cursor more visible (brighter ring + centre dot) and the cursor /
+          ray blend smoothly between idle, hover and select (cursorStateSmoothing).
+  v0.8.6: sketch board scaling also only updates while its handle is selected (like the facing);
+          cube-vs-cube physical collision and the settle-to-table fall removed.
+  v0.8.5: sketch board faces the viewer only while its handle is selected, and the facing is computed from the
+          panel centre (not the handle pivot); released, it keeps its orientation.
+  v0.8.4: table height calibrated to 0.5 m below the headset on every session start and reset
+          (TABLE_BELOW_HEAD); board slope back to K = 0.8 (linear, no upper clamp); softer far depth gain
+          (reachRef 0.35 -> 0.45, depthExponent 1.4 -> 1.25, speedMax 3 -> 2.5, about 30 % less push / pull).
+  v0.8.3: board never looks smaller with distance - slope K = 1 (constant angular size) and the 4x upper
+          clamp removed, so beyond 0.5 m the scale follows the same linear slope however far the board goes.
+  v0.8.2: board distance scaling - fixed inside 0.5 m, beyond that linear with slope 0.8 (BOARD_SCALE_NEAR / _K).
+  v0.8.0
+  - playground: (removed in v0.8.6) physical collision between the table cubes (box vs box, least-penetration push; held pushes free).
+  - sketch board: pivot moved to the handle bar, so distance scaling and facing happen about the grab point -
+    pulling it nearer by ray-pinch no longer slides the handle out from under the pinch.
+  v0.7.9: sketch board scales with distance to the viewer (constant angular size); two-hand scale edits the
+          user factor on top of that rule.
+  v0.7.8: sketch board keeps facing the viewer while dragged / scaled (re-faces the head every frame);
+          its handle drag is translation-only (new opts.translateOnly).
+  v0.7.7: cursor always visible while aiming (dim without a target); depth from a separate larger cone
+          (cursorConeAngle 10\u00b0 half-angle); nothing inside it -> depth is held, no fallback to a default.
+  v0.7.6: far cone tightened - hand / controller half-angle 2\u00b0 (4\u00b0 diameter), sticky exit 1.25x (5\u00b0 max).
+  v0.7.5: temporal solver on top of the spatial cursor depth (cursorSmoothing / cursorMaxSpeed, visual only).
+  v0.7.4: cursor depth is spatial, not temporal - a function of the ray orientation blending the two
+          angularly nearest targets (cursorBlendAngle / cursorDefaultDepth); no lag, no drift when still.
+  v0.7.3: hand mask + outline forced first in the opaque pass so cubes / spheres / table are clipped by the
+          hand too (not only the UI); UI panel moved off the table edge.
+  v0.7.2: sketch board handle on the lower edge (toolbar moved to the top); table at 1.44 m.
+
+  v0.7.1
+  - far ray is straight again (no bend toward the target); depth interpolation kept, hover = reticle + ray colour + highlight.
+  - sketch board: drag handle above it (move / two-hand rotate + scale); placed on the left by default.
+  - table raised (see TABLE_TOP); UI panel and log follow it.
+  - hands: outline hull is opaque, so UI in front of the hand covers it and UI behind it is occluded correctly.
+
+  v0.7 changes
+  - playground: SketchBoard - a 2D canvas you draw on with any method (fingertip poke with depth-based
+    width, near pinch, far ray pinch / trigger, mouse). Auto colour = by method; swatches + Clear below it.
+  - interaction: opts.multi - several simultaneous selections as independent presses (both hands can draw).
+  - ui: fixed the see-through hole behind panel titles / button labels / slider labels (text quads no
+    longer write depth; the layers are offset in z and sorted by distance - see v0.8.19).
+
+  v0.6.2: the far ray cursor interpolated its depth over time between targets (replaced by the spatial rule in v0.7.4).
+  v0.6.1: table raised to 1.04 m (TABLE_TOP constant in the playground; cubes, orb, bell and labels follow).
+
+  v0.6 changes
+  - hands: the joint / bone skeleton is hidden by default; "Joints" in the hand menu turns it on.
+  - hands: the hand mesh is drawn as a white outline only (depth-only mask + inverted hull), so the
+    real hand shows through in passthrough and occludes virtual objects behind it. "Hand outline" toggles it.
+  - removed the v0.5 throw / inertia (throwable, damping, settle); drags stop where you release.
+
+  v0.5 changes (on top of v0.4)
+  - input: sources without a gamepad (Vision Pro transient-pointer, gaze, screen taps) now select via the
+    session's selectstart/selectend events; new source kind "pointer" (far-only, no device visual).
+    Controllers also OR the session select events with the trigger, so a runtime that reports no
+    gamepad.buttons still works.
+  - interaction: sticky far hover (farExitScale) so small far targets stop flickering at the cone edge.
+  - interaction: opts.precise = exact triangle raycast against the meshes (spheres no longer hit at box corners).
+  - interaction: opts.constrain({position, quaternion, scale}) hook applied to drags and two-hand
+    transforms (playground cubes cannot go below the table).
+  - desktop: mouse wheel while ray-dragging = push / pull (mirrors the thumbstick); free wheel still orbits.
+-->
+<style>
+html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  canvas { display: block; }
+  #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  #overlay.hidden { display: none; }
+  .card { pointer-events: auto; background: #000000; border: 1px solid rgba(255,255,255,0.8); border-radius: 18px; padding: 28px 32px; max-width: 460px; width: calc(100% - 32px); box-sizing: border-box; backdrop-filter: blur(8px); }
+  h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: 0.02em; }
+  .sub { margin: 0 0 20px; color: rgba(255,255,255,0.65); font-size: 14px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  button { flex: 1 1 160px; font: 600 20px system-ui, sans-serif; padding: 18px 16px; border-radius: 14px; border: 2px solid #ffffff; cursor: pointer; background: #ffffff; color: #000000; }
+  button.alt { background: #000000; color: #ffffff; border: 2px solid rgba(255,255,255,0.7); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+  #status { margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.65); min-height: 1.2em; }
+  #error { margin-top: 10px; font-size: 14px; color: #ffb4a8; }
+  #ver { position: absolute; right: 14px; bottom: 10px; font-size: 11px; color: rgba(255,255,255,0.4); }
+  @media (max-width: 600px) { #overlay { align-items: flex-end; padding-bottom: 16px; } }
+</style>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
+} }
+</script>
+<script>window.__HAND_URL = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0.20/dist/profiles/generic-hand/";</script>
+<div id="overlay">
+  <div class="card">
+    <h1>VibeXR</h1>
+    <p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>
+    <div class="row">
+      <button id="enter-ar">Enter</button>
+      <button id="enter-vr" class="alt">VR only</button>
+    </div>
+    <div id="status">Loading&hellip;</div>
+    <div id="error" hidden></div>
+  </div>
+  <div id="ver"></div>
+</div>
+
+<script type="module">
+// VibeXR Interaction Framework v0.6 - CodePen build (three.js r186 via import map in the HTML panel)
+// src/main.js
+import * as THREE7 from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+
+// src/input.js
+import * as THREE from "three";
+var JOINTS = [
+  "wrist",
+  "thumb-metacarpal",
+  "thumb-phalanx-proximal",
+  "thumb-phalanx-distal",
+  "thumb-tip",
+  "index-finger-metacarpal",
+  "index-finger-phalanx-proximal",
+  "index-finger-phalanx-intermediate",
+  "index-finger-phalanx-distal",
+  "index-finger-tip",
+  "middle-finger-metacarpal",
+  "middle-finger-phalanx-proximal",
+  "middle-finger-phalanx-intermediate",
+  "middle-finger-phalanx-distal",
+  "middle-finger-tip",
+  "ring-finger-metacarpal",
+  "ring-finger-phalanx-proximal",
+  "ring-finger-phalanx-intermediate",
+  "ring-finger-phalanx-distal",
+  "ring-finger-tip",
+  "pinky-finger-metacarpal",
+  "pinky-finger-phalanx-proximal",
+  "pinky-finger-phalanx-intermediate",
+  "pinky-finger-phalanx-distal",
+  "pinky-finger-tip"
+];
+var J = Object.fromEntries(JOINTS.map((n, i) => [n, i]));
+var BONES = (() => {
+  const b = [];
+  const chains = [
+    ["thumb-metacarpal", "thumb-phalanx-proximal", "thumb-phalanx-distal", "thumb-tip"],
+    ...["index", "middle", "ring", "pinky"].map((f) => [
+      `${f}-finger-metacarpal`,
+      `${f}-finger-phalanx-proximal`,
+      `${f}-finger-phalanx-intermediate`,
+      `${f}-finger-phalanx-distal`,
+      `${f}-finger-tip`
+    ])
+  ];
+  for (const c of chains) {
+    b.push([J.wrist, J[c[0]]]);
+    for (let i = 0; i < c.length - 1; i++) b.push([J[c[i]], J[c[i + 1]]]);
+  }
+  b.push([J["index-finger-phalanx-proximal"], J["middle-finger-phalanx-proximal"]]);
+  b.push([J["middle-finger-phalanx-proximal"], J["ring-finger-phalanx-proximal"]]);
+  b.push([J["ring-finger-phalanx-proximal"], J["pinky-finger-phalanx-proximal"]]);
+  return b;
+})();
+var CFG = {
+  pinchOn: 0.018,
+  // thumb\u2013index tip distance (m) to start a pinch
+  pinchOff: 0.032,
+  // \u2026and to release it (hysteresis)
+  pinchFar: 0.06,
+  // distance mapped to pinch value 0
+  triggerOn: 0.55,
+  triggerOff: 0.35,
+  trackingGraceMs: 150,
+  palmFacingDot: 0.72
+};
+var _v = new THREE.Vector3();
+var _q = new THREE.Quaternion();
+var _id = 0;
+var Source = class {
+  constructor(kind, handedness, inputSource = null) {
+    this.id = `${kind}-${handedness}-${++_id}`;
+    this.kind = kind;
+    this.handedness = handedness;
+    this.inputSource = inputSource;
+    this.tracked = false;
+    this.lastTrackedAt = 0;
+    this.joints = JOINTS.map(() => ({ pos: new THREE.Vector3(), quat: new THREE.Quaternion(), radius: 8e-3, valid: false }));
+    this.pinchValue = 0;
+    this.pinchPoint = new THREE.Vector3();
+    this.palmCenter = new THREE.Vector3();
+    this.palmNormal = new THREE.Vector3(0, -1, 0);
+    this.palmFacingHead = false;
+    this.ray = { origin: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, -1), quat: new THREE.Quaternion(), valid: false };
+    this.grip = { pos: new THREE.Vector3(), quat: new THREE.Quaternion(), valid: false };
+    this.pokePoint = new THREE.Vector3();
+    this.nearPoint = new THREE.Vector3();
+    this.nearQuat = new THREE.Quaternion();
+    this.select = false;
+    this.selectDown = false;
+    this.selectUp = false;
+    this.selectValue = 0;
+    this.squeeze = 0;
+    this.buttons = { a: false, b: false };
+    this.buttonDown = { a: false, b: false };
+    this.stick = new THREE.Vector2();
+    this.gamepad = null;
+    this.xrSelect = false;
+    // from session selectstart / selectend (sources without a gamepad, e.g. Vision Pro transient-pointer)
+    this.xrSqueeze = false;
+    this.wheelStep = 0;
+  }
+  _setSelect(on) {
+    this.selectDown = on && !this.select;
+    this.selectUp = !on && this.select;
+    this.select = on;
+  }
+  pulse(intensity = 0.3, ms = 20) {
+    const h = this.gamepad?.hapticActuators?.[0];
+    try {
+      h?.pulse?.(intensity, ms);
+    } catch (_) {
+    }
+  }
+  updateFromFrame(frame, refSpace, head, now) {
+    const is = this.inputSource;
+    const rp = frame.getPose(is.targetRaySpace, refSpace);
+    if (rp) {
+      const t = rp.transform;
+      this.ray.origin.set(t.position.x, t.position.y, t.position.z);
+      this.ray.quat.set(t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w);
+      this.ray.dir.set(0, 0, -1).applyQuaternion(this.ray.quat);
+      this.ray.valid = true;
+    } else this.ray.valid = false;
+    if (is.gripSpace) {
+      const gp = frame.getPose(is.gripSpace, refSpace);
+      if (gp) {
+        const t = gp.transform;
+        this.grip.pos.set(t.position.x, t.position.y, t.position.z);
+        this.grip.quat.set(t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w);
+        this.grip.valid = true;
+      } else this.grip.valid = false;
+    }
+    if (this.kind === "hand") this._updateHand(frame, refSpace, head, now);
+    else if (this.kind === "pointer") this._updatePointer(now);
+    else this._updateController(now);
+  }
+  _updateHand(frame, refSpace, head, now) {
+    const hand = this.inputSource.hand;
+    let ok = true;
+    for (let i = 0; i < JOINTS.length; i++) {
+      const space = hand.get(JOINTS[i]);
+      const p = space ? frame.getJointPose(space, refSpace) : null;
+      const j = this.joints[i];
+      if (p) {
+        const t = p.transform;
+        j.pos.set(t.position.x, t.position.y, t.position.z);
+        j.quat.set(t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w);
+        j.radius = p.radius || 8e-3;
+        j.valid = true;
+      } else {
+        j.valid = false;
+        ok = false;
+      }
+    }
+    if (ok) {
+      this.tracked = true;
+      this.lastTrackedAt = now;
+    } else if (now - this.lastTrackedAt > CFG.trackingGraceMs) this.tracked = false;
+    if (!ok) {
+      this._setSelect(this.tracked ? this.select : false);
+      return;
+    }
+    const thumb = this.joints[J["thumb-tip"]].pos, index = this.joints[J["index-finger-tip"]].pos;
+    const d = thumb.distanceTo(index);
+    this.pinchValue = THREE.MathUtils.clamp(1 - (d - CFG.pinchOn) / (CFG.pinchFar - CFG.pinchOn), 0, 1);
+    this.pinchPoint.lerpVectors(thumb, index, 0.5);
+    this._setSelect(this.select ? d < CFG.pinchOff : d < CFG.pinchOn);
+    this.selectValue = this.pinchValue;
+    const mid = this.joints[J["middle-finger-metacarpal"]];
+    this.palmCenter.lerpVectors(this.joints[J.wrist].pos, this.joints[J["middle-finger-phalanx-proximal"]].pos, 0.55);
+    this.palmNormal.set(0, -1, 0).applyQuaternion(mid.quat);
+    _v.copy(head).sub(this.palmCenter).normalize();
+    this.palmFacingHead = this.palmNormal.dot(_v) > CFG.palmFacingDot;
+    this.pokePoint.copy(index);
+    this.nearPoint.copy(this.pinchPoint);
+    this.nearQuat.copy(this.grip.valid ? this.grip.quat : this.joints[J.wrist].quat);
+  }
+  _updateController(now) {
+    const gp = this.inputSource.gamepad;
+    this.gamepad = gp;
+    this.tracked = this.ray.valid;
+    if (this.tracked) this.lastTrackedAt = now;
+    const bv = (i) => gp && gp.buttons[i] ? gp.buttons[i].value : 0;
+    const bp = (i) => !!(gp && gp.buttons[i] && gp.buttons[i].pressed);
+    this.selectValue = gp && gp.buttons.length ? bv(0) : this.xrSelect ? 1 : 0;
+    const trig = gp && gp.buttons.length ? this.select ? this.selectValue > CFG.triggerOff : this.selectValue > CFG.triggerOn : false;
+    this._setSelect(trig || this.xrSelect);
+    this.squeeze = gp && gp.buttons.length > 1 ? bv(1) : this.xrSqueeze ? 1 : 0;
+    for (const [k, i] of [["a", 4], ["b", 5]]) {
+      const on = bp(i);
+      this.buttonDown[k] = on && !this.buttons[k];
+      this.buttons[k] = on;
+    }
+    if (gp && gp.axes.length >= 4) this.stick.set(gp.axes[2], gp.axes[3]);
+    else this.stick.set(0, 0);
+    this.pokePoint.copy(this.ray.dir).multiplyScalar(0.02).add(this.ray.origin);
+    this.nearPoint.copy(this.pokePoint);
+    this.nearQuat.copy(this.ray.quat);
+  }
+  // Gaze / transient pointers (Vision Pro Safari, screen taps): ray only, select from session events.
+  _updatePointer(now) {
+    this.gamepad = null;
+    this.tracked = this.ray.valid;
+    if (this.tracked) this.lastTrackedAt = now;
+    this._setSelect(this.xrSelect);
+    this.selectValue = this.select ? 1 : 0;
+    this.squeeze = this.xrSqueeze ? 1 : 0;
+    this.pokePoint.copy(this.ray.origin);
+    this.nearPoint.copy(this.ray.origin);
+    this.nearQuat.copy(this.ray.quat);
+  }
+};
+var InputSystem = class {
+  constructor() {
+    this.sources = /* @__PURE__ */ new Map();
+    this.head = new THREE.Vector3(0, 1.6, 0);
+    this.headQuat = new THREE.Quaternion();
+    this.onAdd = null;
+    this.onRemove = null;
+  }
+  list() {
+    return [...this.sources.values()];
+  }
+  // Session select / squeeze events. Needed for sources without a gamepad; also a fallback for controllers.
+  // A transient pointer can fire selectstart in the same frame it appears, so create the Source here if needed.
+  _attach(session) {
+    if (this._session === session) return;
+    this._session = session;
+    const set = (k, v) => (e) => {
+      const s = this._source(e.inputSource);
+      if (s) s[k] = v;
+    };
+    session.addEventListener("selectstart", set("xrSelect", true));
+    session.addEventListener("selectend", set("xrSelect", false));
+    session.addEventListener("squeezestart", set("xrSqueeze", true));
+    session.addEventListener("squeezeend", set("xrSqueeze", false));
+  }
+  _source(is) {
+    if (!is) return null;
+    let s = this.sources.get(is);
+    if (!s) {
+      const kind = is.hand ? "hand" : is.targetRayMode === "tracked-pointer" ? "controller" : "pointer";
+      s = new Source(kind, is.handedness, is);
+      this.sources.set(is, s);
+      this.onAdd?.(s);
+    }
+    return s;
+  }
+  update(frame, refSpace, now) {
+    this._attach(frame.session);
+    const vp = frame.getViewerPose(refSpace);
+    if (vp) {
+      const t = vp.transform;
+      this.head.set(t.position.x, t.position.y, t.position.z);
+      this.headQuat.set(t.orientation.x, t.orientation.y, t.orientation.z, t.orientation.w);
+    }
+    const seen = /* @__PURE__ */ new Set();
+    for (const is of frame.session.inputSources) {
+      seen.add(is);
+      const s = this._source(is);
+      s.updateFromFrame(frame, refSpace, this.head, now);
+    }
+    for (const [is, s] of this.sources) {
+      if (!seen.has(is)) {
+        this.sources.delete(is);
+        s.tracked = false;
+        this.onRemove?.(s);
+      }
+    }
+  }
+  clear() {
+    for (const s of this.sources.values()) this.onRemove?.(s);
+    this.sources.clear();
+    this._session = null;
+  }
+};
+var MouseSource = class extends Source {
+  constructor(camera, dom) {
+    super("mouse", "none");
+    this.camera = camera;
+    this.ndc = new THREE.Vector2(0, 0);
+    this.down = false;
+    this.inside = false;
+    this.raycaster = new THREE.Raycaster();
+    dom.addEventListener("pointermove", (e) => {
+      const r = dom.getBoundingClientRect();
+      this.ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      this.inside = true;
+    });
+    dom.addEventListener("pointerleave", () => {
+      this.inside = false;
+      this.down = false;
+    });
+    dom.addEventListener("pointerdown", (e) => {
+      if (e.button === 0) this.down = true;
+    });
+    window.addEventListener("pointerup", (e) => {
+      if (e.button === 0) this.down = false;
+    });
+    // wheel while the left button is held = push / pull along the ray (mirrors the thumbstick);
+    // capture phase so OrbitControls' own wheel listener never sees it. A free wheel still dollies the orbit.
+    this.wheelAcc = 0;
+    dom.addEventListener("wheel", (e) => {
+      if (!this.down) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      this.wheelAcc += -Math.sign(e.deltaY) * (Math.abs(e.deltaY) >= 40 ? 1 : 0.25);
+    }, { passive: false, capture: true });
+  }
+  update(now) {
+    this.wheelStep = this.wheelAcc;
+    this.wheelAcc = 0;
+    this.tracked = this.inside;
+    this.raycaster.setFromCamera(this.ndc, this.camera);
+    this.ray.origin.copy(this.raycaster.ray.origin);
+    this.ray.dir.copy(this.raycaster.ray.direction);
+    _q.setFromUnitVectors(_v.set(0, 0, -1), this.ray.dir);
+    this.ray.quat.copy(_q);
+    this.ray.valid = true;
+    this._setSelect(this.down && this.inside);
+    this.selectValue = this.select ? 1 : 0;
+  }
+};
+
+// src/interaction.js
+import * as THREE2 from "three";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+var ICFG = {
+  nearRadiusHand: 0.05,
+  nearRadiusController: 0.06,
+  nearExitScale: 1.6,
+  // hover hysteresis: keep a near target until 1.6\u00d7 the radius
+  outlinePx: 4,
+  // thickness of the white hover outline, in CSS pixels on desktop / eye-buffer pixels in XR (~0.1 deg either way)
+  outlinePxSelect: 7,
+  // ...and while pressed / held
+  nearCentroidWeight: 0.5,
+  // near ranking: score = surface distance + weight x centroid distance; the lowest score is the one hovered target
+  farExitScale: 1.25,
+  // far hover hysteresis: the current far target is kept until 1.25\u00d7 the cone angle (1\u00b0 \u2192 1.25\u00b0, i.e. 2.5\u00b0 diameter max)
+  selectGraceMs: 160,
+  // a pinch that closes just after hover was lost still grabs it
+  pokeHover: 0.06,
+  // m in front of a surface where poke hover starts
+  pokePress: 8e-3,
+  // penetration to fire press
+  pokeRelease: 4e-3,
+  // penetration to release (hysteresis)
+  pokeMaxDepth: 0.04,
+  // beyond this the finger has "gone through"
+  pokeMargin: 4e-3,
+  // lateral slack around a surface
+  // cone angles are HALF-angles measured from the ray to the target's silhouette (diameter = 2x)
+  coneAngleHand: THREE2.MathUtils.degToRad(1),
+  coneAngleController: THREE2.MathUtils.degToRad(1),
+  coneAngleMouse: THREE2.MathUtils.degToRad(1.5),
+  maxRayDistance: 12,
+  cursorStateSmoothing: 12,
+  // 1/s: how fast the ray / cursor blend between idle, hover and select looks
+  tapMaxMs: 550,
+  longPressMs: 650,
+  longPressShowMs: 180,
+  dragNear: 0.015,
+  dragFarAngle: THREE2.MathUtils.degToRad(2.2),
+  cursorConeAngle: THREE2.MathUtils.degToRad(10),
+  // half-angle of the (larger) depth-detection cone: targets inside it set the cursor depth by inverse-square
+  // angular weighting; when nothing is inside, the cursor keeps its previous depth
+  cursorDefaultDepth: 0.9,
+  // m: initial cursor depth before anything has been detected
+  cursorSmoothing: 16,
+  // 1/s: temporal solver on top of the spatial depth - exponential follow rate (visual only)
+  cursorMaxSpeed: 5,
+  // m/s: cap on how fast the visual cursor depth may change (a 2.5 m jump takes ~0.5 s; small shifts follow the exponential)
+  minScale: 0.25,
+  maxScale: 4,
+  pushPullSpeed: 1.5,
+  // m/s with thumbstick during far drag
+  // Far-drag "hand feel": gain only along the aim direction (push / pull). Rotation stays 1:1.
+  // Applied to hands and controllers, not the mouse.
+  farGain: {
+    enabled: true,
+    depth: true,
+    // Distance gain: object distance scales multiplicatively with hand reach along the aim ray,
+    // so the same hand travel moves a far object more than a near one (HOMER-like).
+    reachRef: 0.45,
+    // m of (effective) hand travel that doubles the grab distance, before the exponent
+    depthExponent: 1.25,
+    // >1 = stronger push / pull for the same reach
+    depthDeadzone: 0.015,
+    // m; ignore small wobble along the ray while aiming
+    // Speed gain on that same axis: slow push = precise, fast push = throws further.
+    speedMin: 1,
+    // gain at or below vLow
+    speedMax: 2.5,
+    // gain at or above vHigh
+    vLow: 0.6,
+    // m/s of hand speed along the aim ray below which there is no speed gain
+    vHigh: 1.8,
+    // m/s at which the full speed gain applies (only genuinely fast pushes / pulls)
+    smoothing: 14,
+    // no minimum hold distance: a far grab keeps the exact distance it was picked at (no jump on close targets)
+    // 1/s, how fast the speed gain follows (avoids jumps)
+    minDistance: 0
+  }
+};
+var _v1 = new THREE2.Vector3();
+var _v2 = new THREE2.Vector3();
+var _v3 = new THREE2.Vector3();
+var _m1 = new THREE2.Matrix4();
+var _m2 = new THREE2.Matrix4();
+var _q1 = new THREE2.Quaternion();
+var _ray = new THREE2.Ray();
+var _box = new THREE2.Box3();
+var _rc = new THREE2.Raycaster();
+var _cp = new THREE2.Vector3();
+var _cq = new THREE2.Quaternion();
+var _cs = new THREE2.Vector3();
+// White hover outline: an inverted hull (back faces) pushed outward in SCREEN space, away from the object's
+// projected centre, by a fixed number of pixels - so the line is the same thickness at any distance or object
+// scale and never tears at corners (expanding a box along its split face normals opened gaps at every corner).
+// The direction is normalised in PIXEL space (not NDC, which is anisotropic), so the push is exactly N px.
+// The hull still uses a merged-vertex copy so the silhouette is watertight.
+function outlineGeometry(geo) {
+  if (geo.userData.vxrHull) return geo.userData.vxrHull;
+  let g = geo;
+  try {
+    g = mergeVertices(geo.clone());
+    g.computeVertexNormals();
+  } catch (_) {
+    g = geo;
+  }
+  geo.userData.vxrHull = g;
+  return g;
+}
+function hoverOutlineMaterial() {
+  const m = new THREE2.MeshBasicMaterial({ color: 16777215, side: THREE2.BackSide, transparent: true, opacity: 0.9, depthWrite: false });
+  m.userData.px = { value: ICFG.outlinePx };
+  m.userData.viewport = { value: new THREE2.Vector2(1024, 1024) };
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uOutlinePx = m.userData.px;
+    sh.uniforms.uViewport = m.userData.viewport;
+    sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\n" + sh.vertexShader.replace(
+      "#include <project_vertex>",
+      "#include <project_vertex>\n vec4 vxrC = projectionMatrix * modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );\n vec2 vxrD = ( gl_Position.xy / gl_Position.w - vxrC.xy / vxrC.w ) * uViewport;\n if ( length( vxrD ) > 1e-6 ) gl_Position.xy += normalize( vxrD ) * uOutlinePx * 2.0 * gl_Position.w / uViewport;"
+    );
+  };
+  m.customProgramCacheKey = () => "vxr-hover-outline";
+  return m;
+}
+// the clip-space offset needs the pixel size of the viewport being drawn (per eye in XR)
+function outlineHull(sourceMesh, mat) {
+  const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);
+  hull.userData.isOutline = hull.userData.noCollider = hull.userData.noHighlight = true;
+  // no renderOrder: the hull sits at the object's own depth, so plain distance sorting puts it in front of
+  // whatever is behind the object and behind whatever is in front of it.
+  hull.frustumCulled = false;
+  hull.visible = false;
+  hull.onBeforeRender = (renderer, scene, camera) => {
+    const vp = camera.viewport;
+    // XR: this eye's viewport in render-target pixels. Desktop: CSS pixels (not the device-pixel buffer),
+    // so the thickness matches what the label says on a HiDPI screen.
+    if (vp) mat.userData.viewport.value.set(vp.z, vp.w);
+    else renderer.getSize(mat.userData.viewport.value);
+  };
+  return hull;
+}
+var Interactable = class _Interactable {
+  /**
+   * @param {THREE.Object3D} object
+   * @param {object} opts
+   *  near, far        : accept Near / Far interactors (default true)
+   *  poke             : null | 'surface' | 'volume'
+   *  draggable        : move with the selector while dragging (default false)
+   *  twoHand          : rotate + scale with two selectors (default false)
+   *  longPress        : show the long-press ring (default: true if a listener exists)
+   *  box              : THREE.Box3 in object-local space (auto from geometry)
+   *  highlight        : default emissive feedback (default true)
+   *  onPokeDepth(d)   : callback with poke penetration (for button travel)
+   *  precise          : exact triangle raycast for far hover (default false = bounding box)
+   *  constrain(t, it) : t = {position, quaternion, scale} in world space, mutate to constrain any transform
+   *  multi            : accept any number of simultaneous selections as independent presses (no two-hand transform)
+   *  translateOnly    : a drag moves the object with the selector but never rotates it (default false)
+   */
+  constructor(object, opts = {}) {
+    this.object = object;
+    this.opts = Object.assign({ near: true, far: true, poke: null, draggable: false, twoHand: false, highlight: true }, opts);
+    this.enabled = true;
+    this.listeners = {};
+    this.hoverers = /* @__PURE__ */ new Set();
+    this.selections = [];
+    this.localBox = opts.box ? opts.box.clone() : computeLocalBox(object);
+    this._outline = null;
+    this._outlineMat = null;
+    this._level = 0;
+    object.userData.interactable = this;
+  }
+  on(type, fn) {
+    (this.listeners[type] ||= []).push(fn);
+    return this;
+  }
+  off(type, fn) {
+    const l = this.listeners[type];
+    if (l) this.listeners[type] = l.filter((f) => f !== fn);
+    return this;
+  }
+  has(type) {
+    return !!(this.listeners[type] && this.listeners[type].length);
+  }
+  emit(type, e = {}) {
+    e.type = type;
+    e.target = this;
+    for (const fn of this.listeners[type] || []) {
+      try {
+        fn(e);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    _Interactable.onAny?.(e);
+  }
+  get wantsLongPress() {
+    return this.opts.longPress ?? this.has("longpress");
+  }
+  get isVisible() {
+    let o = this.object;
+    while (o) {
+      if (!o.visible) return false;
+      o = o.parent;
+    }
+    return true;
+  }
+  // - geometry queries (world space) -
+  worldCenter(out) {
+    return this.localBox.getCenter(out).applyMatrix4(this.object.matrixWorld);
+  }
+  worldRadius() {
+    this.localBox.getSize(_v1);
+    this.object.getWorldScale(_v2);
+    return 0.5 * Math.hypot(_v1.x * _v2.x, _v1.y * _v2.y, _v1.z * _v2.z);
+  }
+  closestPoint(p, out) {
+    _m1.copy(this.object.matrixWorld).invert();
+    out.copy(p).applyMatrix4(_m1);
+    this.localBox.clampPoint(out, out);
+    return out.applyMatrix4(this.object.matrixWorld);
+  }
+  distanceTo(p) {
+    return this.closestPoint(p, _v3).distanceTo(p);
+  }
+  raycast(origin, dir) {
+    _m1.copy(this.object.matrixWorld).invert();
+    _ray.origin.copy(origin).applyMatrix4(_m1);
+    _ray.direction.copy(dir).transformDirection(_m1);
+    const hit = _ray.intersectBox(this.localBox, _v1);
+    if (!hit) return null;
+    if (this.opts.precise) {
+      _rc.set(origin, dir);
+      const h = _rc.intersectObject(this.object, true).find((x) => x.object.visible && !x.object.userData.noCollider);
+      return h ? { point: h.point.clone(), distance: h.distance } : null;
+    }
+    hit.applyMatrix4(this.object.matrixWorld);
+    return { point: hit.clone(), distance: hit.distanceTo(origin) };
+  }
+  // Poke surface = local +Z face of the box. Returns {depth, point(world on surface), inside}
+  pokeQuery(p, out) {
+    _m1.copy(this.object.matrixWorld).invert();
+    _v1.copy(p).applyMatrix4(_m1);
+    const b = this.localBox;
+    this.object.getWorldScale(_v2);
+    const m = ICFG.pokeMargin;
+    const inside = _v1.x >= b.min.x - m / _v2.x && _v1.x <= b.max.x + m / _v2.x && _v1.y >= b.min.y - m / _v2.y && _v1.y <= b.max.y + m / _v2.y;
+    out.depth = (_v1.z - b.max.z) * _v2.z;
+    out.inside = inside;
+    out.point = (out.point || new THREE2.Vector3()).set(
+      THREE2.MathUtils.clamp(_v1.x, b.min.x, b.max.x),
+      THREE2.MathUtils.clamp(_v1.y, b.min.y, b.max.y),
+      b.max.z
+    ).applyMatrix4(this.object.matrixWorld);
+    out.normal = (out.normal || new THREE2.Vector3()).set(0, 0, 1).transformDirection(this.object.matrixWorld);
+    return out;
+  }
+  // - default visual feedback -
+  setLevel(level) {
+    if (this._level === level) return;
+    this._level = level;
+    this.emit("statechange", { level });
+    if (!this.opts.highlight) return;
+    if (!this._outline) {
+      // build the hulls once: one per mesh, parented to that mesh at identity so it follows every transform
+      this._outline = [];
+      this._outlineMat = hoverOutlineMaterial();
+      const parts = [];
+      this.object.traverse((o) => {
+        if (o.isMesh && o.geometry && !o.userData.noHighlight && !o.userData.noCollider && !o.userData.isOutline) parts.push(o);
+      });
+      for (const o of parts) {
+        const hull = outlineHull(o, this._outlineMat);
+        o.add(hull);
+        this._outline.push(hull);
+      }
+    }
+    for (const h of this._outline) h.visible = level > 0;
+    this._outlineMat.userData.px.value = level === 2 ? ICFG.outlinePxSelect : ICFG.outlinePx;
+    this._outlineMat.opacity = level === 2 ? 1 : 0.85;
+  }
+
+};
+function computeLocalBox(object) {
+  object.updateMatrixWorld(true);
+  const inv = new THREE2.Matrix4().copy(object.matrixWorld).invert();
+  const box = new THREE2.Box3();
+  object.traverse((o) => {
+    if (!o.isMesh || !o.geometry || o.userData.noCollider) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    _box.copy(o.geometry.boundingBox).applyMatrix4(_m2.multiplyMatrices(inv, o.matrixWorld));
+    box.union(_box);
+  });
+  if (box.isEmpty()) box.setFromCenterAndSize(new THREE2.Vector3(), new THREE2.Vector3(0.05, 0.05, 0.05));
+  return box;
+}
+var Interactor = class {
+  constructor(type, source) {
+    this.type = type;
+    this.source = source;
+    this.hover = null;
+    this.hoverPoint = new THREE2.Vector3();
+    this.hoverDistance = 0;
+    this.selecting = null;
+    this.active = false;
+    this.attach = new THREE2.Vector3();
+  }
+};
+var InteractorGroup = class {
+  constructor(source) {
+    this.source = source;
+    this.poke = new Interactor("poke", source);
+    this.near = new Interactor("near", source);
+    this.far = new Interactor("far", source);
+    this.list = [this.poke, this.near, this.far];
+    this.active = null;
+    this.blocked = false;
+    this.pokeState = { target: null, armed: false, pressed: false, depth: 1, q: {} };
+    this.farDistance = 0;
+    this.farAngle = 0;
+  }
+  get selecting() {
+    return this.list.find((i) => i.selecting)?.selecting || null;
+  }
+};
+var Selection = class {
+  constructor(interactor, target, now) {
+    this.interactor = interactor;
+    this.target = target;
+    this.t0 = now;
+    this.p0 = interactor.attach.clone();
+    this.dir0 = interactor.source.ray.dir.clone();
+    this.dragging = false;
+    this.longFired = false;
+    this.offset = new THREE2.Matrix4();
+    this.farDist = 0;
+    this.vq = interactor.source.ray.quat.clone();
+    this.d0 = 0;
+    this.poseDist = 0;
+    this.stick = 0;
+    this.lastHand = null;
+    this.reach = 0;
+    this.gain = 1;
+    this.peakGain = 1;
+  }
+};
+var InteractionManager = class {
+  constructor() {
+    this.interactables = /* @__PURE__ */ new Set();
+    this.groups = /* @__PURE__ */ new Map();
+    this.twoHand = /* @__PURE__ */ new Map();
+    this.now = 0;
+  }
+  add(obj, opts) {
+    const it = obj instanceof Interactable ? obj : new Interactable(obj, opts);
+    this.interactables.add(it);
+    return it;
+  }
+  remove(it) {
+    if (!it) return;
+    for (const s of [...it.selections]) this._endSelection(s, true);
+    for (const g of this.groups.values()) for (const i of g.list) if (i.hover === it) this._setHover(i, null);
+    this.interactables.delete(it);
+  }
+  addSource(src) {
+    const g = new InteractorGroup(src);
+    this.groups.set(src, g);
+    return g;
+  }
+  removeSource(src) {
+    const g = this.groups.get(src);
+    if (!g) return;
+    for (const i of g.list) {
+      if (i.selecting) this._endSelection(i.selecting, true);
+      this._setHover(i, null);
+    }
+    this.groups.delete(src);
+  }
+  group(src) {
+    return this.groups.get(src);
+  }
+  update(dt, now, head) {
+    this.now = now;
+    if (head) this.head = head;
+    for (const it of this.interactables) it.object.updateMatrixWorld();
+    for (const g of this.groups.values()) this._updateGroup(g, dt, now);
+    this._updateTwoHand();
+    for (const it of this.interactables) it.setLevel(it.selections.length ? 2 : it.hoverers.size ? 1 : 0);
+  }
+  _candidates(filter) {
+    const out = [];
+    for (const it of this.interactables) if (it.enabled && filter(it) && it.isVisible) out.push(it);
+    return out;
+  }
+  _updateGroup(g, dt, now) {
+    const src = g.source;
+    const usable = src.tracked && !g.blocked;
+    if (!usable) {
+      for (const i of g.list) {
+        if (i.selecting) this._endSelection(i.selecting, true);
+        this._setHover(i, null);
+        i.active = false;
+      }
+      g.active = null;
+      g.pokeState.target = null;
+      g.pokeState.armed = false;
+      g.pokeState.pressed = false;
+      return;
+    }
+    const sel = g.selecting;
+    if (sel) {
+      const i = sel.interactor;
+      if (i.type === "far") this._updateFarGain(sel, dt);
+      this._updateAttach(i, sel);
+      if (i.type === "poke") this._pokeStep(g, now);
+      else if (src.selectUp || !src.select) this._endSelection(sel, false);
+      else this._updateSelection(sel, dt, now);
+      for (const o of g.list) o.active = o === i;
+      g.active = i;
+      return;
+    }
+    const farOnly = src.kind === "mouse" || src.kind === "pointer";
+    const pokeHit = farOnly ? null : this._pokeStep(g, now);
+    if (pokeHit) {
+      this._setHover(g.near, null);
+      this._setHover(g.far, null);
+      this._activate(g, g.poke);
+      return;
+    }
+    this._setHover(g.poke, null);
+    let nearT = null, nearD = Infinity;
+    if (!farOnly) {
+      // near hover = the direct-interaction region. Exactly one target: candidates within the radius are ranked
+      // by surface distance + nearCentroidWeight x centroid distance (intention: the object whose body the hand
+      // is closest to wins ties at equal surface distance); the current target keeps a hysteresis radius.
+      // Whether the ray shows follows from this alone: near target hovered -> ray hidden, none -> ray shown.
+      const r = src.kind === "hand" ? ICFG.nearRadiusHand : ICFG.nearRadiusController;
+      let nearScore = Infinity;
+      for (const it of this._candidates((it2) => it2.opts.near && it2.opts.poke !== "volume")) {
+        const d = it.distanceTo(src.nearPoint);
+        const lim = it === g.near.hover ? r * ICFG.nearExitScale : r;
+        if (d >= lim) continue;
+        const score = d + ICFG.nearCentroidWeight * it.worldCenter(_v1).distanceTo(src.nearPoint);
+        if (score < nearScore) {
+          nearScore = score;
+          nearD = d;
+          nearT = it;
+        }
+      }
+      if (nearT) {
+        g.lastNear = nearT;
+        g.lastNearAt = now;
+      } else if (src.selectDown && g.lastNear && now - g.lastNearAt < ICFG.selectGraceMs && this.interactables.has(g.lastNear) && g.lastNear.enabled) {
+        nearT = g.lastNear;
+        nearD = nearT.distanceTo(src.nearPoint);
+      }
+    }
+    if (nearT) {
+      this._setHover(g.far, null);
+      this._setHover(g.near, nearT);
+      nearT.closestPoint(src.nearPoint, g.near.hoverPoint);
+      g.near.hoverDistance = nearD;
+      g.near.attach.copy(src.nearPoint);
+      this._activate(g, g.near);
+      if (src.selectDown) this._beginSelection(g.near, nearT, now);
+      return;
+    }
+    this._setHover(g.near, null);
+    if (!src.ray.valid || src.kind === "hand" && src.palmFacingHead) {
+      this._setHover(g.far, null);
+      this._activate(g, null);
+      return;
+    }
+    const cone = src.kind === "hand" || src.kind === "pointer" ? ICFG.coneAngleHand : src.kind === "mouse" ? ICFG.coneAngleMouse : ICFG.coneAngleController;
+    const hit = this._coneCast(src.ray.origin, src.ray.dir, cone, g.far.hover);
+    g.cursorDepth = this._cursorDepth(src.ray.origin, src.ray.dir, hit);
+    this._activate(g, g.far);
+    if (hit) {
+      this._setHover(g.far, hit.target);
+      g.far.hoverPoint.copy(hit.point);
+      g.far.hoverDistance = hit.distance;
+      g.far.attach.copy(hit.point);
+      g.farDistance = hit.distance;
+      if (src.selectDown) this._beginSelection(g.far, hit.target, now);
+    } else {
+      this._setHover(g.far, null);
+      g.farDistance = 0;
+    }
+  }
+  _activate(g, i) {
+    g.active = i;
+    for (const o of g.list) o.active = o === i;
+  }
+  // Exact ray hit first; fall back to the smallest angular miss inside the cone.
+  // `keep` (the current far hover) stays selected while it is within farExitScale x the cone (hysteresis).
+  _coneCast(origin, dir, cone, keep = null) {
+    const cands = this._candidates((it) => it.opts.far);
+    let best = null;
+    for (const it of cands) {
+      const h = it.raycast(origin, dir);
+      if (h && h.distance <= ICFG.maxRayDistance && (!best || h.distance < best.distance)) best = { target: it, point: h.point, distance: h.distance };
+    }
+    if (best) return best;
+    let bestAng = cone, kept = null;
+    for (const it of cands) {
+      const c = it.worldCenter(_v1);
+      _v2.copy(c).sub(origin);
+      const t = _v2.dot(dir);
+      if (t < 0.1 || t > ICFG.maxRayDistance) continue;
+      const perp = _v2.addScaledVector(dir, -t).length();
+      const ang = Math.atan2(Math.max(0, perp - it.worldRadius()), t);
+      const isKeep = it === keep;
+      if (ang < (isKeep ? cone * ICFG.farExitScale : bestAng)) {
+        const onRay = _v3.copy(dir).multiplyScalar(t).add(origin);
+        const p = it.closestPoint(onRay, new THREE2.Vector3());
+        const r = { target: it, point: p, distance: p.distanceTo(origin) };
+        if (isKeep) kept = r;
+        else {
+          bestAng = ang;
+          best = r;
+        }
+      }
+    }
+    return kept || best;
+  }
+  // Spatial cursor depth from a second, larger cone (cursorConeAngle, independent of the selection cone):
+  // inverse-square weighting of every far candidate by its angular distance from the ray (Shepard
+  // interpolation), tapered to zero at the cone edge. Exact on a target (weight -> infinity at angle 0),
+  // symmetric and continuous between targets. Returns null when nothing is inside the cone, and the
+  // visual cursor then simply keeps its previous depth. A pure function of the ray pose - no time term.
+  _cursorDepth(origin, dir, hit) {
+    const cut = ICFG.cursorConeAngle;
+    let sw = 0, sd = 0;
+    for (const it of this._candidates((it2) => it2.opts.far)) {
+      const c = it.worldCenter(_v1);
+      _v2.copy(c).sub(origin);
+      const t = _v2.dot(dir);
+      if (t < 0.1 || t > ICFG.maxRayDistance) continue;
+      const perp = _v2.addScaledVector(dir, -t).length();
+      const ang = Math.atan2(Math.max(0, perp - it.worldRadius()), t);
+      if (ang >= cut) continue;
+      const isHit = !!hit && hit.target === it;
+      let d;
+      if (isHit) d = hit.distance;
+      else {
+        _v3.copy(dir).multiplyScalar(t).add(origin);
+        d = it.closestPoint(_v3, _v3).distanceTo(origin);
+      }
+      if (ang < 1e-4) return d;
+      const taper = 1 - ang / cut;
+      const w = taper * taper / (ang * ang);
+      sw += w;
+      sd += w * d;
+    }
+    return sw > 0 ? sd / sw : null;
+  }
+  // opts.constrain hook: decompose the world matrix, let the object clamp it, recompose.
+  _constrain(it, m) {
+    const fn = it.opts.constrain;
+    if (!fn) return m;
+    m.decompose(_cp, _cq, _cs);
+    fn({ position: _cp, quaternion: _cq, scale: _cs }, it);
+    return m.compose(_cp, _cq, _cs);
+  }
+  // Poke evaluation. Returns true if the poke interactor owns the group this frame.
+  _pokeStep(g, now) {
+    const src = g.source, ps = g.pokeState, P = src.pokePoint;
+    const q = ps.q;
+    if (ps.target) {
+      const it = ps.target;
+      const alive = it.enabled && it.isVisible && this.interactables.has(it);
+      let keep = false;
+      if (alive && it.opts.poke === "surface") {
+        it.pokeQuery(P, q);
+        keep = (q.inside || ps.pressed) && q.depth < ICFG.pokeHover && q.depth > -ICFG.pokeMaxDepth && (ps.armed || q.depth >= 0);
+        if (keep) {
+          if (q.depth >= 0) ps.armed = true;
+          ps.depth = q.depth;
+          g.poke.hoverPoint.copy(q.point);
+          it.opts.onPokeDepth?.(Math.max(0, -q.depth));
+          if (!ps.pressed && ps.armed && q.depth < -ICFG.pokePress) {
+            ps.pressed = true;
+            g.poke.attach.copy(q.point);
+            this._beginSelection(g.poke, it, now);
+            src.pulse(0.5, 25);
+          } else if (ps.pressed && q.depth > -ICFG.pokeRelease) {
+            ps.pressed = false;
+            if (g.poke.selecting) this._endSelection(g.poke.selecting, false);
+          } else if (ps.pressed && g.poke.selecting) {
+            g.poke.attach.copy(q.point);
+            this._updateSelection(g.poke.selecting, 0, now);
+          }
+        }
+      } else if (alive && it.opts.poke === "volume") {
+        const d = it.distanceTo(P);
+        keep = d < ICFG.pokeHover;
+        if (keep) {
+          ps.depth = d;
+          it.closestPoint(P, g.poke.hoverPoint);
+          if (!ps.pressed && d <= 5e-4) {
+            ps.pressed = true;
+            g.poke.attach.copy(P);
+            this._beginSelection(g.poke, it, now);
+            src.pulse(0.5, 25);
+          } else if (ps.pressed && d > 6e-3) {
+            ps.pressed = false;
+            if (g.poke.selecting) this._endSelection(g.poke.selecting, false);
+          } else if (ps.pressed && g.poke.selecting) {
+            g.poke.attach.copy(P);
+            this._updateSelection(g.poke.selecting, 0, now);
+          }
+        }
+      }
+      if (keep) {
+        this._setHover(g.poke, it);
+        return true;
+      }
+      if (g.poke.selecting) this._endSelection(g.poke.selecting, !ps.pressed);
+      it.opts.onPokeDepth?.(0);
+      ps.target = null;
+      ps.armed = false;
+      ps.pressed = false;
+    }
+    let best = null, bestD = Infinity;
+    for (const it of this._candidates((it2) => !!it2.opts.poke)) {
+      if (it.opts.poke === "surface") {
+        it.pokeQuery(P, q);
+        if (q.inside && q.depth >= 0 && q.depth < ICFG.pokeHover && q.depth < bestD) {
+          bestD = q.depth;
+          best = it;
+        }
+      } else {
+        const d = it.distanceTo(P);
+        if (d > 5e-4 && d < ICFG.pokeHover && d < bestD) {
+          bestD = d;
+          best = it;
+        }
+      }
+    }
+    if (!best) return false;
+    ps.target = best;
+    ps.armed = true;
+    ps.pressed = false;
+    ps.depth = bestD;
+    if (best.opts.poke === "surface") {
+      best.pokeQuery(P, q);
+      g.poke.hoverPoint.copy(q.point);
+    } else best.closestPoint(P, g.poke.hoverPoint);
+    this._setHover(g.poke, best);
+    return true;
+  }
+  _setHover(i, it) {
+    if (i.hover === it) return;
+    const prev = i.hover;
+    i.hover = it;
+    if (prev) {
+      prev.hoverers.delete(i);
+      if (prev.hoverers.size === 0) prev.emit("hoverexit", { interactor: i });
+    }
+    if (it) {
+      const first = it.hoverers.size === 0;
+      it.hoverers.add(i);
+      if (first) it.emit("hoverenter", { interactor: i });
+      i.source.pulse(0.12, 12);
+    }
+  }
+  _selectorPose(i, out) {
+    const s = i.source;
+    if (i.type === "far") {
+      const sel = i.selecting;
+      if (!sel) return out.compose(s.ray.origin, s.ray.quat, _v3.set(1, 1, 1));
+      out.compose(s.ray.origin, sel.vq, _v3.set(1, 1, 1));
+      return out.multiply(_m2.makeTranslation(0, 0, -(sel.farDist - sel.poseDist)));
+    }
+    if (i.type === "poke") return out.compose(i.attach, s.nearQuat, _v3.set(1, 1, 1));
+    return out.compose(s.nearPoint, s.nearQuat, _v3.set(1, 1, 1));
+  }
+  _updateAttach(i, sel) {
+    const s = i.source;
+    if (i.type === "near") i.attach.copy(s.nearPoint);
+    else if (i.type === "far") i.attach.set(0, 0, -sel.farDist).applyQuaternion(sel.vq).add(s.ray.origin);
+  }
+  // Hand position used for reach (grip / wrist for hands, ray origin for controllers).
+  _handPoint(src) {
+    return src.kind === "hand" ? src.grip.valid ? src.grip.pos : src.joints[0].pos : src.ray.origin;
+  }
+  // Aim-axis gain for far manipulation, integrated every frame of a far selection:
+  // hand motion projected on the current aim direction, amplified by its speed (speed gain),
+  // then mapped multiplicatively onto the grab distance (distance gain). Rotation is 1:1.
+  _updateFarGain(sel, dt) {
+    const s = sel.interactor.source, G = ICFG.farGain;
+    sel.vq.copy(s.ray.quat);
+    const useGain = G.enabled && G.depth && s.kind !== "mouse" && s.kind !== "pointer";
+    const hp = this._handPoint(s);
+    if (!sel.lastHand) sel.lastHand = hp.clone();
+    const dReach = _v2.subVectors(hp, sel.lastHand).dot(s.ray.dir);
+    sel.lastHand.copy(hp);
+    let target = 1;
+    if (useGain && dt > 0) {
+      const k = THREE2.MathUtils.smoothstep(Math.abs(dReach) / dt, G.vLow, G.vHigh);
+      target = G.speedMin + (G.speedMax - G.speedMin) * k;
+    }
+    sel.gain += (target - sel.gain) * Math.min(1, dt * G.smoothing);
+    if (!useGain) sel.gain = 1;
+    sel.peakGain = Math.max(sel.peakGain, sel.gain);
+    sel.reach += dReach * sel.gain;
+    let d = sel.d0;
+    if (useGain) {
+      const dz = G.depthDeadzone;
+      const r = sel.reach > dz ? sel.reach - dz : sel.reach < -dz ? sel.reach + dz : 0;
+      d = sel.d0 * Math.pow(Math.max(0.05, 1 + r / G.reachRef), G.depthExponent);
+    }
+    sel.farDist = THREE2.MathUtils.clamp(d + sel.stick, G.minDistance, ICFG.maxRayDistance);
+  }
+  _beginSelection(i, it, now) {
+    if (!it.opts.multi) {
+      if (it.selections.length >= 1 && !it.opts.twoHand) return null;
+      if (it.selections.length >= 2) return null;
+    }
+    const sel = new Selection(i, it, now);
+    sel.farDist = i.type === "far" ? i.hoverDistance : 0;
+    sel.d0 = sel.poseDist = sel.farDist;
+    if (i.type === "far") {
+      sel.lastHand = this._handPoint(i.source).clone();
+      sel.hand0 = sel.lastHand.clone();
+    }
+    i.selecting = sel;
+    it.selections.push(sel);
+    this._baselineDrag(sel);
+    i.source.pulse(0.35, 20);
+    it.emit("press", { interactor: i, point: i.attach.clone() });
+    if (it.selections.length === 2 && !it.opts.multi) this._beginTwoHand(it);
+    return sel;
+  }
+  _updateSelection(sel, dt, now) {
+    const i = sel.interactor, it = sel.target, s = i.source;
+    const elapsed = now - sel.t0;
+    if (i.type === "far" && sel.dragging && s.kind === "controller" && Math.abs(s.stick.y) > 0.2) {
+      sel.stick += -s.stick.y * ICFG.pushPullSpeed * dt;
+    }
+    if (i.type === "far" && sel.dragging && s.kind === "mouse" && s.wheelStep) {
+      sel.stick += s.wheelStep * 0.08 * Math.max(1, sel.d0);
+    }
+    if (this.twoHand.has(it)) return;
+    if (!sel.dragging) {
+      let moved;
+      const th = it.opts.dragThreshold;
+      if (th === 0) moved = sel.p0.distanceToSquared(i.attach) > 1e-10 || sel.dir0.angleTo(s.ray.dir) > 1e-4;
+      else if (i.type === "far") moved = sel.dir0.angleTo(s.ray.dir) > ICFG.dragFarAngle || Math.abs(sel.farDist - sel.d0) > Math.max(0.03, sel.d0 * 0.04) || // reaching in / out also starts a drag
+      sel.hand0 && sel.hand0.distanceTo(this._handPoint(s)) > 0.035;
+      else moved = sel.p0.distanceTo(i.attach) > (th ?? ICFG.dragNear);
+      if (moved && !sel.longFired && (it.opts.draggable || it.has("dragstart") || it.has("drag"))) {
+        sel.dragging = true;
+        it.emit("dragstart", { interactor: i, point: i.attach.clone() });
+      } else if (!sel.longFired && it.wantsLongPress && elapsed > ICFG.longPressMs && !moved) {
+        sel.longFired = true;
+        s.pulse(0.7, 40);
+        it.emit("longpress", { interactor: i, point: i.attach.clone() });
+      }
+    }
+    if (sel.dragging) {
+      if (it.opts.draggable) this._applyDrag(sel);
+      it.emit("drag", { interactor: i, point: i.attach.clone(), delta: i.attach.clone().sub(sel.p0) });
+    }
+  }
+  _baselineDrag(sel) {
+    sel.poseDist = sel.farDist;
+    const o = sel.target.object;
+    o.updateMatrixWorld();
+    this._selectorPose(sel.interactor, _m1);
+    if (sel.target.opts.translateOnly) {
+      // world-space offset from the attach point (pinch point / point on the ray) to the object; rotation is left alone
+      sel.offsetPos = (sel.offsetPos || new THREE2.Vector3()).setFromMatrixPosition(o.matrixWorld).sub(sel.interactor.attach);
+    } else sel.offset.copy(_m1).invert().multiply(o.matrixWorld);
+  }
+  _applyDrag(sel) {
+    const o = sel.target.object;
+    this._selectorPose(sel.interactor, _m1);
+    if (sel.target.opts.translateOnly) {
+      _v1.copy(sel.interactor.attach).add(sel.offsetPos);
+      o.updateMatrixWorld();
+      _m1.copy(o.matrixWorld).setPosition(_v1);
+    } else _m1.multiply(sel.offset);
+    this._constrain(sel.target, _m1);
+    setWorldMatrix(o, _m1);
+  }
+  _endSelection(sel, cancelled) {
+    const i = sel.interactor, it = sel.target;
+    const wasTwo = this.twoHand.has(it);
+    if (wasTwo) this._endTwoHand(it);
+    it.selections = it.selections.filter((x) => x !== sel);
+    i.selecting = null;
+    const elapsed = this.now - sel.t0;
+    if (sel.dragging) it.emit("dragend", { interactor: i, point: i.attach.clone(), cancelled, peakGain: sel.peakGain, distance: sel.farDist, startDistance: sel.d0 });
+    else if (!cancelled && !sel.longFired && !sel.wasTwo && elapsed < Math.max(ICFG.tapMaxMs, it.wantsLongPress ? ICFG.longPressMs : 0)) {
+      it.emit("tap", { interactor: i, point: i.attach.clone() });
+    }
+    it.emit("release", { interactor: i, cancelled });
+    if (wasTwo && it.selections.length === 1) {
+      const rest = it.selections[0];
+      rest.wasTwo = true;
+      rest.dragging = !!(it.opts.draggable || it.has("drag"));
+      if (rest.dragging) {
+        this._baselineDrag(rest);
+        it.emit("dragstart", { interactor: rest.interactor, point: rest.interactor.attach.clone() });
+      }
+    }
+  }
+  // - two-hand rotate / scale -
+  _beginTwoHand(it) {
+    const [a, b] = it.selections;
+    for (const s of [a, b]) {
+      if (s.dragging) {
+        s.dragging = false;
+        it.emit("dragend", { interactor: s.interactor, point: s.interactor.attach.clone() });
+      }
+      s.wasTwo = true;
+    }
+    const o = it.object;
+    o.updateMatrixWorld();
+    const st = {
+      a,
+      b,
+      mid0: new THREE2.Vector3().lerpVectors(a.interactor.attach, b.interactor.attach, 0.5),
+      dir0: new THREE2.Vector3().subVectors(b.interactor.attach, a.interactor.attach),
+      pos0: new THREE2.Vector3(),
+      quat0: new THREE2.Quaternion(),
+      scale0: new THREE2.Vector3(),
+      lastRatio: 1,
+      lastQuat: new THREE2.Quaternion()
+    };
+    st.len0 = Math.max(st.dir0.length(), 1e-3);
+    st.dir0.normalize();
+    o.matrixWorld.decompose(st.pos0, st.quat0, st.scale0);
+    this.twoHand.set(it, st);
+    it.emit("transformstart", { interactors: [a.interactor, b.interactor] });
+  }
+  _updateTwoHand() {
+    for (const [it, st] of this.twoHand) {
+      const A = st.a.interactor.attach, B = st.b.interactor.attach;
+      const mid = _v1.lerpVectors(A, B, 0.5);
+      const dir = _v2.subVectors(B, A);
+      const len = Math.max(dir.length(), 1e-3);
+      dir.normalize();
+      let ratio = len / st.len0;
+      const s0 = st.scale0.x;
+      ratio = THREE2.MathUtils.clamp(s0 * ratio, ICFG.minScale, ICFG.maxScale) / s0;
+      const q = _q1.setFromUnitVectors(st.dir0, dir);
+      if (!it.has("rotate") && !it.opts.twoHand) q.identity();
+      if (it.opts.twoHand) {
+        const pos = _v3.copy(st.pos0).sub(st.mid0).multiplyScalar(ratio).applyQuaternion(q).add(mid);
+        const quat = q.clone().multiply(st.quat0);
+        const scl = st.scale0.clone().multiplyScalar(ratio);
+        _m1.compose(pos, quat, scl);
+        this._constrain(it, _m1);
+        setWorldMatrix(it.object, _m1);
+      }
+      if (Math.abs(ratio - st.lastRatio) > 1e-4) {
+        it.emit("scale", { ratio, delta: ratio / st.lastRatio });
+        st.lastRatio = ratio;
+      }
+      if (st.lastQuat.angleTo(q) > 1e-4) {
+        it.emit("rotate", { quaternion: q.clone(), angle: 2 * Math.acos(Math.min(1, Math.abs(q.w))) });
+        st.lastQuat.copy(q);
+      }
+    }
+  }
+  _endTwoHand(it) {
+    if (!this.twoHand.has(it)) return;
+    this.twoHand.delete(it);
+    it.emit("transformend", {});
+  }
+  // Long-press progress for visuals: [{point, progress}]
+  longPressProgress(out = []) {
+    out.length = 0;
+    for (const it of this.interactables) {
+      if (!it.wantsLongPress) continue;
+      for (const s of it.selections) {
+        if (s.dragging || s.longFired || this.twoHand.has(it)) continue;
+        const e = this.now - s.t0;
+        if (e < ICFG.longPressShowMs) continue;
+        out.push({ point: s.interactor.attach, progress: Math.min(1, (e - ICFG.longPressShowMs) / (ICFG.longPressMs - ICFG.longPressShowMs)) });
+      }
+    }
+    return out;
+  }
+};
+function setWorldMatrix(o, m) {
+  if (o.parent) {
+    o.parent.updateMatrixWorld();
+    _m2.copy(o.parent.matrixWorld).invert().multiply(m);
+  } else _m2.copy(m);
+  _m2.decompose(o.position, o.quaternion, o.scale);
+  o.updateMatrixWorld(true);
+}
+
+// src/visuals.js
+import * as THREE3 from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+var THEME = {
+  left: new THREE3.Color(16777215),
+  right: new THREE3.Color(16777215),
+  accent: new THREE3.Color(16777215),
+  hover: new THREE3.Color(16777215),
+  // everything interaction-related is white: ray, cursor, hover glow, poke / long-press rings
+  select: new THREE3.Color(16777215),
+  ray: new THREE3.Color(16777215)
+};
+var _v12 = new THREE3.Vector3();
+var _v22 = new THREE3.Vector3();
+var _v32 = new THREE3.Vector3();
+var _q2 = new THREE3.Quaternion();
+var _m = new THREE3.Matrix4();
+var _s = new THREE3.Vector3();
+var UP = new THREE3.Vector3(0, 1, 0);
+var handGLB = { left: null, right: null };
+// Outline material for the inverted-hull silhouette: back faces, pushed out along the (skinned) normal.
+// Paired with a depth-only mask on the real mesh, only the rim survives the depth test.
+// Both the mask and the hull are opaque and forced to the very front of the opaque pass (renderOrder -1000 /
+// -999). Everything else - opaque meshes and transparent UI alike - is then depth-tested against the hand:
+// what is in front of the hand covers it, what is behind is clipped, and in passthrough the real hand shows
+// through the clipped region. (Without the forced order, meshes sorted before the mask kept their colour.)
+function outlineMaterial(width = 2e-3, color = 16777215) {
+  const m = new THREE3.MeshBasicMaterial({ color, side: THREE3.BackSide });
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uOutline = { value: width };
+    sh.vertexShader = "uniform float uOutline;\n" + sh.vertexShader.replace(
+      "#include <project_vertex>",
+      "#ifndef USE_SKINNING\n#ifndef USE_ENVMAP\n vec3 objectNormal = vec3( normal );\n#endif\n#endif\n transformed += normalize( objectNormal ) * uOutline;\n#include <project_vertex>"
+    );
+  };
+  m.customProgramCacheKey = () => "vxr-outline";
+  return m;
+}
+function setHandAssets(left, right) {
+  handGLB.left = left;
+  handGLB.right = right;
+}
+function b64ToBuffer(b64) {
+  const bin = atob(b64);
+  const u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return u.buffer;
+}
+function setHandAssetsBase64(l, r) {
+  setHandAssets(b64ToBuffer(l), b64ToBuffer(r));
+}
+async function loadHandAssets(baseUrl) {
+  const get = (n) => fetch(`${baseUrl}${n}.glb`).then((r2) => {
+    if (!r2.ok) throw new Error(r2.status);
+    return r2.arrayBuffer();
+  });
+  const [l, r] = await Promise.all([get("left"), get("right")]);
+  setHandAssets(l, r);
+}
+var HandVisual = class {
+  constructor(source, scene, opts = {}) {
+    this.source = source;
+    this.root = new THREE3.Group();
+    this.root.name = `hand-${source.handedness}`;
+    scene.add(this.root);
+    const tint = source.handedness === "left" ? THEME.left : THEME.right;
+    this.tint = tint.clone();
+    this.showMesh = opts.showMesh ?? true;
+    this.showJoints = opts.showJoints ?? false;
+    const jg = new THREE3.SphereGeometry(1, 12, 8);
+    this.jointMat = new THREE3.MeshBasicMaterial({ color: 16777215, transparent: true, opacity: 0.95, depthTest: false });
+    this.joints = new THREE3.InstancedMesh(jg, this.jointMat, JOINTS.length);
+    this.joints.instanceColor = new THREE3.InstancedBufferAttribute(new Float32Array(JOINTS.length * 3), 3);
+    this.joints.frustumCulled = false;
+    this.joints.renderOrder = 10;
+    this.root.add(this.joints);
+    const bg = new THREE3.CylinderGeometry(1, 1, 1, 6, 1, true).translate(0, 0.5, 0);
+    this.boneMat = new THREE3.MeshBasicMaterial({ color: tint, transparent: true, opacity: 0.8, depthTest: false });
+    this.bones = new THREE3.InstancedMesh(bg, this.boneMat, BONES.length);
+    this.bones.frustumCulled = false;
+    this.bones.renderOrder = 9;
+    this.root.add(this.bones);
+    // (no pinch indicator ball: the near cursor is the direct-interaction affordance and the ray the far one,
+    //  so only one affordance is visible at a time)
+    this.mesh = null;
+    this.meshBones = [];
+    this._meshTried = false;
+    this._tint = tint;
+    this._c = new THREE3.Color();
+  }
+  _loadMesh() {
+    const buf = handGLB[this.source.handedness];
+    if (!buf || this._meshTried) return;
+    this._meshTried = true;
+    const tint = this._tint;
+    new GLTFLoader().parse(buf.slice(0), "", (gltf) => {
+      const obj = gltf.scene.children[0] || gltf.scene;
+      const hulls = [];
+      obj.traverse((o) => {
+        if (o.isSkinnedMesh || o.isMesh) {
+          o.frustumCulled = false;
+          // depth-only mask: no colour, but occludes what is behind the hand and the inside of the hull
+          o.material = new THREE3.MeshBasicMaterial({ colorWrite: false });
+          // must be the first thing drawn: a depth-only mask cannot erase colour that is already in the
+          // framebuffer, so any opaque mesh sorted before it would stay visible where the hand is in front
+          o.renderOrder = -1000;
+          o.userData.noHighlight = true;
+          o.userData.noCollider = true;
+          // inverted hull sharing the same skeleton -> white silhouette line
+          const hull = o.clone(false);
+          hull.material = outlineMaterial(2e-3);
+          hull.frustumCulled = false;
+          hull.renderOrder = -999;
+          hull.userData.noHighlight = true;
+          hull.userData.noCollider = true;
+          hulls.push([o, hull]);
+        }
+      });
+      for (const [o, hull] of hulls) o.parent.add(hull);
+      this.hulls = hulls.map(([, h]) => h);
+      for (const name of JOINTS) {
+        const b = obj.getObjectByName(name);
+        if (b) this.meshBones.push({ bone: b, j: J[name] });
+      }
+      this.mesh = obj;
+      obj.visible = false;
+      this.root.add(obj);
+    }, (err) => console.warn("hand mesh failed", err));
+  }
+  update() {
+    const s = this.source;
+    if (!this.mesh) this._loadMesh();
+    this.root.visible = s.tracked;
+    if (!s.tracked) return;
+    const pv = s.pinchValue;
+    this.joints.visible = this.bones.visible = this.showJoints;
+    for (let i = 0; i < JOINTS.length; i++) {
+      const j = s.joints[i];
+      const r = Math.max(4e-3, j.radius * 0.55);
+      _m.compose(j.pos, j.quat, _s.setScalar(r));
+      this.joints.setMatrixAt(i, _m);
+      const isPinchTip = i === J["thumb-tip"] || i === J["index-finger-tip"];
+      this._c.copy(this.tint).lerp(THEME.select, 0.55);
+      if (isPinchTip) this._c.lerp(THEME.accent, pv);
+      this.joints.setColorAt(i, this._c);
+    }
+    this.joints.instanceMatrix.needsUpdate = true;
+    this.joints.instanceColor.needsUpdate = true;
+    for (let b = 0; b < BONES.length; b++) {
+      const a = s.joints[BONES[b][0]].pos, c = s.joints[BONES[b][1]].pos;
+      _v12.subVectors(c, a);
+      const len = _v12.length();
+      _q2.setFromUnitVectors(UP, _v12.normalize());
+      _m.compose(a, _q2, _s.set(22e-4, len, 22e-4));
+      this.bones.setMatrixAt(b, _m);
+    }
+    this.bones.instanceMatrix.needsUpdate = true;
+    if (this.mesh) {
+      this.mesh.visible = this.showMesh;
+      if (this.showMesh) for (const { bone, j } of this.meshBones) {
+        bone.position.copy(s.joints[j].pos);
+        bone.quaternion.copy(s.joints[j].quat);
+      }
+    }
+  }
+  dispose() {
+    this.root.removeFromParent();
+  }
+};
+var ControllerVisual = class {
+  constructor(source, scene) {
+    this.source = source;
+    this.root = new THREE3.Group();
+    scene.add(this.root);
+    const tint = source.handedness === "left" ? THEME.left : THEME.right;
+    this.tint = tint.clone();
+    this.bodyMat = new THREE3.MeshStandardMaterial({ color: tint, roughness: 0.35, metalness: 0.1, transparent: true, opacity: 0.9, emissive: 0 });
+    this.body = new THREE3.Mesh(new THREE3.SphereGeometry(1, 32, 20), this.bodyMat);
+    this.body.userData.noHighlight = true;
+    this.root.add(this.body);
+    this.nose = new THREE3.Mesh(new THREE3.SphereGeometry(6e-3, 16, 12), new THREE3.MeshBasicMaterial({ color: 16777215 }));
+    this.root.add(this.nose);
+    const dotG = new THREE3.SphereGeometry(45e-4, 12, 8);
+    this.btnA = new THREE3.Mesh(dotG, new THREE3.MeshBasicMaterial({ color: 5592405 }));
+    this.btnB = new THREE3.Mesh(dotG, new THREE3.MeshBasicMaterial({ color: 5592405 }));
+    this.stick = new THREE3.Mesh(new THREE3.SphereGeometry(5e-3, 12, 8), new THREE3.MeshBasicMaterial({ color: 16777215 }));
+    this.root.add(this.btnA, this.btnB, this.stick);
+    this._c = new THREE3.Color();
+  }
+  update() {
+    const s = this.source;
+    this.root.visible = s.tracked;
+    if (!s.tracked) return;
+    this.root.position.copy(s.ray.origin);
+    this.root.quaternion.copy(s.ray.quat);
+    const t = s.selectValue, g = s.squeeze;
+    const rx = 0.022 * (1 + 0.18 * g), ry = 0.018 * (1 + 0.18 * g), rz = 0.05 * (1 - 0.18 * t);
+    this.body.scale.set(rx, ry, rz);
+    this.body.position.set(0, 0, -0.02 + rz);
+    this.nose.position.set(0, 0, -0.02);
+    this._c.copy(this.tint).lerp(THEME.accent, t);
+    this.bodyMat.color.copy(this._c);
+    this.bodyMat.emissive.copy(THEME.accent).multiplyScalar(0.35 * t + 0.25 * g);
+    this.nose.material.color.copy(s.select ? THEME.accent : THEME.select);
+    this.nose.scale.setScalar(s.select ? 1.5 : 1);
+    const top = ry * 0.92;
+    this.btnA.position.set(-6e-3, top, 0.012 + rz * 0.2);
+    this.btnB.position.set(6e-3, top, 0 + rz * 0.2);
+    this.btnA.material.color.set(s.buttons.a ? THEME.accent : 5592405);
+    this.btnB.material.color.set(s.buttons.b ? THEME.accent : 5592405);
+    this.stick.position.set(s.stick.x * 8e-3, top + 2e-3, 0.03 + s.stick.y * 8e-3);
+  }
+  dispose() {
+    this.root.removeFromParent();
+  }
+};
+var RAY_SEG = 24;
+var InteractorVisual = class {
+  constructor(group, scene) {
+    this.group = group;
+    this.root = new THREE3.Group();
+    scene.add(this.root);
+    const pos = new Float32Array((RAY_SEG + 1) * 3);
+    const alpha = new Float32Array(RAY_SEG + 1);
+    const geo = new THREE3.BufferGeometry();
+    geo.setAttribute("position", new THREE3.BufferAttribute(pos, 3));
+    geo.setAttribute("alpha", new THREE3.BufferAttribute(alpha, 1));
+    this.rayMat = new THREE3.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: { uColor: { value: THEME.ray.clone() }, uOpacity: { value: 0.6 } },
+      vertexShader: "attribute float alpha; varying float vA; void main(){ vA = alpha; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }",
+      fragmentShader: "uniform vec3 uColor; uniform float uOpacity; varying float vA; void main(){ gl_FragColor = vec4(uColor, vA * uOpacity); }"
+    });
+    this.ray = new THREE3.Line(geo, this.rayMat);
+    this.ray.frustumCulled = false;
+    this.ray.renderOrder = 20;
+    this.root.add(this.ray);
+    this.reticle = new THREE3.Mesh(
+      new THREE3.RingGeometry(0.6, 1, 32),
+      new THREE3.MeshBasicMaterial({ color: THEME.accent, transparent: true, opacity: 0.9, depthTest: false, side: THREE3.DoubleSide })
+    );
+    this.reticle.renderOrder = 30;
+    this.root.add(this.reticle);
+    // (no near cursor sphere: direct-interaction hover shows on the object itself)
+    this.pokeRing = new THREE3.Mesh(
+      new THREE3.RingGeometry(0.75, 1, 40),
+      new THREE3.MeshBasicMaterial({ color: THEME.accent, transparent: true, opacity: 0.9, depthTest: false, side: THREE3.DoubleSide })
+    );
+    this.pokeRing.renderOrder = 30;
+    this.root.add(this.pokeRing);
+    this.showRay = true;
+    this.fade = 1;
+    this.hk = 0;
+    this.sk = 0;
+    this._c1 = new THREE3.Color();
+    this.cursorDist = ICFG.cursorDefaultDepth;
+    this._cursorSnap = true;
+  }
+  update(head, dt = 1 / 60) {
+    const g = this.group, s = g.source, a = g.active;
+    const tracked = s.tracked && !g.blocked;
+    this.root.visible = tracked;
+    if (!tracked) {
+      this._cursorSnap = true;
+      return;
+    }
+    const holding = !!(g.far.selecting || g.near.selecting);
+    this.fade += ((holding ? 0 : 1) - this.fade) * Math.min(1, dt * (holding ? 12 : 20));
+    const F = this.fade;
+    const farOn = a === g.far && this.showRay;
+    const sel = g.far.selecting;
+    const hasTarget = !!(g.far.hover || sel);
+    // smoothed cursor / ray state (hover and select fade in and out instead of switching)
+    const rate = Math.min(1, dt * ICFG.cursorStateSmoothing);
+    this.hk += ((hasTarget ? 1 : 0) - this.hk) * rate;
+    this.sk += ((sel ? 1 : 0) - this.sk) * rate;
+    this.ray.visible = farOn && s.kind !== "mouse" && F > 0.01;
+    this.reticle.visible = farOn && F > 0.01;
+    if (!farOn) this._cursorSnap = true;
+    if (farOn) {
+      const o = s.ray.origin, d = s.ray.dir;
+      // straight ray along the aim direction. Its length is the spatial cursor depth from the interaction
+      // manager, run through a temporal solver (exponential follow + speed cap) so sudden large shifts and
+      // rapid flicker between neighbours are damped; it converges to the spatial value once the ray settles.
+      // Exact attach depth while holding; snaps when the ray (re)appears. Hover = reticle + ray colour + highlight.
+      // null = nothing inside the depth cone -> keep the previous depth
+      const target = sel ? Math.max(0.05, _v22.subVectors(g.far.attach, o).dot(d)) : g.cursorDepth ?? null;
+      if (target !== null) {
+        if (this._cursorSnap || sel) {
+          this.cursorDist = target;
+          this._cursorSnap = false;
+        } else {
+          let delta = (target - this.cursorDist) * Math.min(1, dt * ICFG.cursorSmoothing);
+          const maxStep = ICFG.cursorMaxSpeed * dt;
+          if (Math.abs(delta) > maxStep) delta = Math.sign(delta) * maxStep;
+          this.cursorDist += delta;
+        }
+      }
+      const end = _v12.copy(o).addScaledVector(d, this.cursorDist);
+      const pos = this.ray.geometry.attributes.position, al = this.ray.geometry.attributes.alpha;
+      for (let k = 0; k <= RAY_SEG; k++) {
+        const t = k / RAY_SEG;
+        _v32.lerpVectors(o, end, t);
+        pos.setXYZ(k, _v32.x, _v32.y, _v32.z);
+        al.setX(k, THREE3.MathUtils.lerp(Math.max(0, 0.9 - t) * 0.9, 0.25 + 0.75 * t, this.hk));
+      }
+      pos.needsUpdate = true;
+      al.needsUpdate = true;
+      this._c1.copy(THEME.ray).lerp(THEME.accent, this.hk).lerp(THEME.select, this.sk);
+      this.rayMat.uniforms.uColor.value.copy(this._c1);
+      this.rayMat.uniforms.uOpacity.value = THREE3.MathUtils.lerp(THREE3.MathUtils.lerp(0.55, 0.85, this.hk), 1, this.sk) * F;
+      if (this.reticle.visible) {
+        // always shown while aiming; smaller and dimmer without a target so the hover state stays readable
+        this.reticle.position.copy(end);
+        this.reticle.lookAt(head);
+        // smoothed state blend: hk = hover (0..1), sk = select (0..1); no hard switch between states
+        const hk = this.hk, sk = this.sk;
+        const sc = Math.max(6e-3, head.distanceTo(end) * 0.012) * THREE3.MathUtils.lerp(0.9, 1, hk) * THREE3.MathUtils.lerp(1, 0.7, sk);
+        this.reticle.scale.setScalar(sc);
+        this._c1.copy(THEME.ray).lerp(THEME.hover, hk).lerp(THEME.select, sk);
+        this.reticle.material.color.copy(this._c1);
+        this.reticle.material.opacity = THREE3.MathUtils.lerp(0.85, 0.95, hk) * F;
+      }
+    }
+    const pokeOn = a === g.poke && g.poke.hover;
+    this.pokeRing.visible = !!pokeOn;
+    if (pokeOn) {
+      const ps = g.pokeState;
+      const d = Math.max(0, ps.depth);
+      const p = g.poke.hoverPoint;
+      this.pokeRing.position.copy(p);
+      if (ps.q.normal && ps.target?.opts.poke === "surface") {
+        this.pokeRing.quaternion.setFromUnitVectors(_v12.set(0, 0, 1), ps.q.normal);
+        this.pokeRing.position.addScaledVector(ps.q.normal, 15e-4);
+      } else this.pokeRing.lookAt(head);
+      this.pokeRing.scale.setScalar(4e-3 + d * 0.35);
+      this.pokeRing.material.color.copy(ps.pressed ? THEME.select : THEME.accent);
+      this.pokeRing.material.opacity = ps.pressed ? 1 : 0.5 + 0.5 * (1 - d / 0.045);
+    }
+  }
+  dispose() {
+    this.root.removeFromParent();
+  }
+};
+var LongPressRings = class {
+  constructor(scene) {
+    this.pool = [];
+    this.scene = scene;
+    this.segments = 48;
+  }
+  _get(i) {
+    if (!this.pool[i]) {
+      const m = new THREE3.Mesh(
+        new THREE3.RingGeometry(0.014, 0.019, this.segments, 1, Math.PI / 2, -Math.PI * 2),
+        new THREE3.MeshBasicMaterial({ color: THEME.accent, transparent: true, opacity: 0.95, depthTest: false, side: THREE3.DoubleSide })
+      );
+      m.renderOrder = 40;
+      this.scene.add(m);
+      this.pool[i] = m;
+    }
+    return this.pool[i];
+  }
+  update(list, head) {
+    for (let i = 0; i < Math.max(list.length, this.pool.length); i++) {
+      const e = list[i];
+      if (!e) {
+        if (this.pool[i]) this.pool[i].visible = false;
+        continue;
+      }
+      const m = this._get(i);
+      m.visible = true;
+      m.position.copy(e.point);
+      m.lookAt(head);
+      m.geometry.setDrawRange(0, Math.floor(e.progress * this.segments) * 6);
+      m.material.color.copy(e.progress >= 1 ? THEME.select : THEME.accent);
+    }
+  }
+};
+
+// src/ui.js
+import * as THREE4 from "three";
+var FONT = '600 {s}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+function textTexture(text, { w = 256, h = 64, size = 28, color = "#ffffff", bg = null, align = "center" } = {}) {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const tex = new THREE4.CanvasTexture(c);
+  tex.colorSpace = THREE4.SRGBColorSpace;
+  tex.anisotropy = 4;
+  tex.userData.draw = (t, col = color, b = bg) => {
+    const g = c.getContext("2d");
+    g.clearRect(0, 0, w, h);
+    if (b && typeof b === "object") {
+      // sketch style: optional fill + white outline; radius \u2265 h/2 gives a capsule
+      const lw = b.lineWidth || 3;
+      roundRect(g, lw, lw, w - 2 * lw, h - 2 * lw, b.radius ?? h * 0.22);
+      if (b.fill) {
+        g.fillStyle = b.fill;
+        g.fill();
+      }
+      if (b.stroke) {
+        g.strokeStyle = b.stroke;
+        g.lineWidth = lw;
+        g.stroke();
+      }
+    } else if (b) {
+      g.fillStyle = b;
+      roundRect(g, 0, 0, w, h, h * 0.22);
+      g.fill();
+    }
+    g.fillStyle = col;
+    // shrink to fit: a capsule is much wider than it is tall, so long captions must not overflow
+    let fs = size, pad = Math.max(12, h * 0.55);
+    g.font = FONT.replace("{s}", fs);
+    while (fs > 8 && g.measureText(t).width > w - 2 * pad) {
+      fs -= 2;
+      g.font = FONT.replace("{s}", fs);
+    }
+    g.textAlign = align;
+    g.textBaseline = "middle";
+    g.fillText(t, align === "center" ? w / 2 : 12, h / 2 + 1);
+    tex.needsUpdate = true;
+  };
+  tex.userData.draw(text);
+  return tex;
+}
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+function roundedPanelTexture(w, h, { fill = "#000000", stroke = "rgba(255,255,255,0.8)" } = {}) {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const g = c.getContext("2d");
+  g.fillStyle = fill;
+  roundRect(g, 2, 2, w - 4, h - 4, Math.min(w, h) * 0.08);
+  g.fill();
+  g.strokeStyle = stroke;
+  g.lineWidth = 3;
+  g.stroke();
+  const t = new THREE4.CanvasTexture(c);
+  t.colorSpace = THREE4.SRGBColorSpace;
+  return t;
+}
+var UIButton = class {
+  constructor(im, label, { w = 0.06, h = 0.026, toggle = false, value = false, onClick = null, fontSize = 30, swatch = null, capsule = false } = {}) {
+    this.im = im;
+    this.swatch = swatch;
+    this.capsule = capsule;
+    this.label = label;
+    this.toggle = toggle;
+    this.value = value;
+    this.onClick = onClick;
+    this.root = new THREE4.Group();
+    this.root.name = `button:${label}`;
+    const depth = 0.01;
+    this.baseMat = new THREE4.MeshStandardMaterial({ color: 0, roughness: 0.6, emissive: 0 });
+    this.base = new THREE4.Mesh(new THREE4.BoxGeometry(w, h, depth), this.baseMat);
+    // not rendered: a square box behind a rounded pill would either show its corners or (when translucent)
+    // leak passthrough. It stays in the tree as the poke collider / travel geometry.
+    // NB: hide the MATERIAL, not the object - Interactable.isVisible walks the object tree, so an invisible
+    // object drops out of hit-testing entirely.
+    this.baseMat.visible = false;
+    // no renderOrder on UI pieces: renderOrder is GLOBAL, so a far panel's text would paint over a near
+    // panel's background. The layers are physically offset in z, so distance sorting gets it right.
+    this.root.add(this.base);
+    this.tex = textTexture(label, { w: 256, h: Math.round(256 * h / w), size: fontSize });
+    this.faceMat = new THREE4.MeshBasicMaterial({ map: this.tex, alphaTest: 0.5, alphaToCoverage: true });
+    this.face = new THREE4.Mesh(new THREE4.PlaneGeometry(w * 0.96, h * 0.9), this.faceMat);
+    this.face.userData.noHighlight = true;
+    this.face.userData.noCollider = true;
+    this.faceZ = depth / 2 + 8e-4;
+    this.face.position.z = this.faceZ;
+    this.root.add(this.face);
+    this.it = im.add(this.root, {
+      poke: "surface",
+      highlight: false,
+      onPokeDepth: (d) => {
+        this.face.position.z = this.faceZ - Math.min(d, depth * 0.8);
+      }
+    });
+    this.it.on("release", (e) => {
+      if (!e.cancelled) this._click(e);
+    });
+    this.it.on("statechange", () => this._paint());
+    this._paint();
+  }
+  _click(e) {
+    if (this.toggle) this.value = !this.value;
+    this._paint();
+    this.onClick?.(this.value, e);
+  }
+  setValue(v) {
+    this.value = v;
+    this._paint();
+  }
+  setLabel(l) {
+    this.label = l;
+    this._paint();
+  }
+  _paint() {
+    const lvl = this.it ? this.it._level : 0;
+    const on = this.toggle && this.value;
+    const text = this.toggle ? `${this.label}${on ? " \u25cf" : " \u25cb"}` : this.label;
+    // white-line sketch style: outline always; hover = heavier line + faint fill; pressed / toggled on = inverted
+    const radius = this.capsule ? this.tex.image.height / 2 : void 0;
+    if (this.swatch !== null) {
+      // colour swatch: the exact colour as the fill, white outline (heavier on hover / press)
+      this.tex.userData.draw("", "#ffffff", { fill: "#" + this.swatch.toString(16).padStart(6, "0"), stroke: lvl ? "#ffffff" : "rgba(255,255,255,0.7)", lineWidth: lvl ? 6 : 3, radius });
+      return;
+    }
+    const inverted = lvl === 2 || on;
+    // every state has an opaque fill: a hollow pill would show the passthrough feed through the UI
+    this.tex.userData.draw(text, inverted ? "#000000" : "#ffffff", {
+      stroke: inverted ? "#ffffff" : lvl === 1 ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.7)",
+      lineWidth: lvl === 1 ? 5 : 3,
+      fill: lvl === 2 ? "#ffffff" : on ? "#ffffff" : lvl === 1 ? "#2a2a2a" : "#000000",
+      radius
+    });
+  }
+};
+var UISlider = class {
+  constructor(im, label, { w = 0.13, value = 0.5, onChange = null } = {}) {
+    this.value = value;
+    this.onChange = onChange;
+    this.w = w;
+    this.root = new THREE4.Group();
+    const track = new THREE4.Mesh(new THREE4.BoxGeometry(w, 3e-3, 3e-3), new THREE4.MeshBasicMaterial({ color: 5592405 }));
+    this.fill = new THREE4.Mesh(new THREE4.BoxGeometry(1, 4e-3, 4e-3), new THREE4.MeshBasicMaterial({ color: 16777215 }));
+    this.root.add(track, this.fill);
+    this.knob = new THREE4.Mesh(
+      new THREE4.CylinderGeometry(9e-3, 9e-3, 8e-3, 24).rotateX(Math.PI / 2),
+      new THREE4.MeshBasicMaterial({ color: 16777215 })
+    );
+    this.root.add(this.knob);
+    this.labelTex = textTexture(label, { w: 256, h: 40, size: 24, align: "left", color: "#ffffff" });
+    const lab = new THREE4.Mesh(new THREE4.PlaneGeometry(w, w * 40 / 256), new THREE4.MeshBasicMaterial({ map: this.labelTex, transparent: true, depthWrite: false }));
+    lab.position.set(0, 0.016, 0);
+    this.root.add(lab);
+    this.label = label;
+    this.knob.name = `slider:${label}`;
+    this.it = im.add(this.knob, { poke: "surface", dragThreshold: 0 });
+    const toLocal = (p) => this.root.worldToLocal(p.clone());
+    const drag = (e) => this.set((toLocal(e.point).x + w / 2) / w);
+    this.it.on("press", drag).on("drag", drag).on("dragstart", drag);
+    this.set(value, true);
+  }
+  set(v, silent) {
+    this.value = THREE4.MathUtils.clamp(v, 0, 1);
+    const x = -this.w / 2 + this.value * this.w;
+    this.knob.position.x = x;
+    this.fill.scale.x = Math.max(1e-4, this.value * this.w);
+    this.fill.position.x = -this.w / 2 + this.value * this.w / 2;
+    this.labelTex.userData.draw(`${this.label}  ${Math.round(this.value * 100)}%`);
+    if (!silent) this.onChange?.(this.value);
+  }
+};
+var UIPanel = class {
+  constructor(title, { w = 0.16, h = 0.12 } = {}) {
+    this.w = w;
+    this.h = h;
+    this.root = new THREE4.Group();
+    const bg = new THREE4.Mesh(
+      new THREE4.PlaneGeometry(w, h),
+      new THREE4.MeshBasicMaterial({ map: roundedPanelTexture(512, Math.round(512 * h / w)), alphaTest: 0.5, alphaToCoverage: true })
+    );
+    bg.position.z = -6e-3;
+    this.root.add(bg);
+    if (title) {
+      const tt = textTexture(title, { w: 512, h: 64, size: 30, color: "#ffffff", align: "left" });
+      // text quads must not write depth: their transparent pixels would otherwise punch a see-through
+      // hole in the panel background whenever the sorter draws the background after them
+      const t = new THREE4.Mesh(new THREE4.PlaneGeometry(w * 0.92, w * 0.92 * 64 / 512), new THREE4.MeshBasicMaterial({ map: tt, transparent: true, depthWrite: false }));
+      t.position.z = 2e-3;
+      t.position.set(0, h / 2 - 0.013, 0);
+      this.root.add(t);
+    }
+  }
+  // place children in a grid below the title
+  layout(items, { cols = 2, top = 0.03, gapX = 6e-3, gapY = 6e-3, cellH = 0.026 } = {}) {
+    const cellW = (this.w - 0.016 - gapX * (cols - 1)) / cols;
+    items.forEach((it, i) => {
+      const r = Math.floor(i / cols), c = i % cols;
+      const span = it.span || 1;
+      it.root.position.set(
+        -this.w / 2 + 8e-3 + cellW / 2 + c * (cellW + gapX) + (span - 1) * (cellW + gapX) / 2,
+        this.h / 2 - top - cellH / 2 - r * (cellH + gapY),
+        0
+      );
+      this.root.add(it.root);
+    });
+  }
+};
+var HandMenu = class {
+  constructor(app2) {
+    this.app = app2;
+    this.panel = new UIPanel("VibeXR \u00b7 Menu", { w: 0.17, h: 0.204 });
+    this.root = this.panel.root;
+    this.root.visible = false;
+    this.root.scale.setScalar(1e-3);
+    app2.scene.add(this.root);
+    this.owner = null;
+    this.facingSince = /* @__PURE__ */ new Map();
+    this.awaySince = 0;
+    this.items = [];
+    this.worldItems = [];
+    this._target = new THREE4.Vector3();
+    this.openAmount = 0;
+  }
+  // buttons in a 2-column grid; optional full-width slider underneath
+  setItems(items, slider = null) {
+    for (const i of this.items) i.root.removeFromParent();
+    this.items = items;
+    this.panel.layout(items, { cols: 2, top: 0.028 });
+    if (slider) {
+      const rows = Math.ceil(items.length / 2);
+      slider.root.position.set(0, this.panel.h / 2 - 0.028 - rows * 0.032 - 0.018, 4e-3);
+      this.panel.root.add(slider.root);
+      this.items.push(slider);
+    }
+  }
+  _hands() {
+    return this.app.input.list().filter((s) => s.kind === "hand" && s.tracked);
+  }
+  update(dt, now) {
+    const head = this.app.input.head;
+    if (this.owner && this.owner.kind === "hand") {
+      const o = this.owner;
+      if (!o.tracked || !o.palmFacingHead) {
+        if (!this.awaySince) this.awaySince = now;
+        if (now - this.awaySince > 300) this._close();
+      } else this.awaySince = 0;
+    }
+    if (!this.owner || this.owner.kind !== "hand") {
+      for (const h of this._hands()) {
+        const hg = this.app.im.group(h);
+        const busy = h.select || hg && (hg.near.hover || hg.poke.hover || hg.selecting);
+        if (h.palmFacingHead && !busy) {
+          if (!this.facingSince.has(h)) this.facingSince.set(h, now);
+          if (now - this.facingSince.get(h) > 350 && !this.owner) {
+            const other = this._hands().find((x) => x !== h && x.handedness === "left" && this.facingSince.has(x) && now - this.facingSince.get(x) > 350);
+            this._open(other || h);
+          }
+        } else this.facingSince.delete(h);
+      }
+    }
+    for (const s of this.app.input.list()) {
+      if (s.kind === "controller" && s.buttonDown.b) {
+        if (this.owner === s) this._close();
+        else this._open(s);
+      }
+    }
+    if (this.owner && !this.owner.tracked && this.owner.kind === "controller") this._close();
+    const target = this.owner ? 1 : 0;
+    this.openAmount += (target - this.openAmount) * Math.min(1, dt * 14);
+    this.root.visible = this.openAmount > 0.02;
+    this.root.scale.setScalar(Math.max(1e-3, this.openAmount));
+    if (this.owner) {
+      const o = this.owner;
+      if (o.kind === "hand") {
+        this._target.copy(o.palmCenter).addScaledVector(o.palmNormal, 0.03);
+        this._target.y += 0.095;
+      } else {
+        this._target.copy(o.ray.origin);
+        this._target.y += 0.1;
+      }
+      if (this.openAmount < 0.3) this.root.position.copy(this._target);
+      else this.root.position.lerp(this._target, Math.min(1, dt * 18));
+      this.root.lookAt(head.x, head.y, head.z);
+    }
+  }
+  _open(src) {
+    if (this.owner === src) return;
+    if (this.owner) this._setBlocked(this.owner, false);
+    this.owner = src;
+    this.awaySince = 0;
+    this._setBlocked(src, true);
+    this.app.log(`menu open (${src.kind}-${src.handedness})`);
+  }
+  _close() {
+    if (!this.owner) return;
+    this._setBlocked(this.owner, false);
+    this.app.log("menu close");
+    this.owner = null;
+    this.facingSince.clear();
+  }
+  _setBlocked(src, v) {
+    const g = this.app.im.group(src);
+    if (g) g.blocked = v;
+  }
+};
+// 2D drawing surface on a thin board. Any interactor can draw: fingertip poke (width follows depth),
+// near pinch, far ray (pinch / trigger) and the desktop mouse. Strokes are colour-coded by method
+// unless a swatch is chosen. opts.multi lets both hands draw at once.
+var _sp = new THREE4.Vector3();
+var _spn = new THREE4.Vector3();
+var _spp = new THREE4.Vector3();
+var _spl = new THREE4.Plane();
+var _spr = new THREE4.Ray();
+var SketchBoard = class {
+  constructor(ctx, { w = 0.48, h = 0.36, px = 1024 } = {}) {
+    this.app = ctx.app;
+    this.w = w;
+    this.h = h;
+    this.root = new THREE4.Group();
+    this.root.name = "sketchboard";
+    // the root (pivot for dragging, facing and distance scaling) sits at the handle bar on the lower edge,
+    // so the bar stays under the pinch while the board scales or turns
+    this.board = new THREE4.Group();
+    this.board.position.y = h / 2 + 0.024;
+    this.root.add(this.board);
+    this.c = document.createElement("canvas");
+    this.c.width = px;
+    this.c.height = Math.round(px * h / w);
+    this.g = this.c.getContext("2d");
+    this.tex = new THREE4.CanvasTexture(this.c);
+    this.tex.colorSpace = THREE4.SRGBColorSpace;
+    this.tex.anisotropy = 4;
+    const depth = 0.01;
+    // one black panel behind the drawing surface AND the header row, so nothing floats outside the board
+    const headY = h / 2 + 0.028, panelH = h + 0.086;
+    this.panel = new THREE4.Mesh(
+      new THREE4.PlaneGeometry(w + 0.028, panelH),
+      new THREE4.MeshBasicMaterial({ map: roundedPanelTexture(512, Math.round(512 * panelH / (w + 0.028))), alphaTest: 0.5, alphaToCoverage: true })
+    );
+    this.panel.position.set(0, (panelH - h) / 2 - 0.014, -depth / 2 - 1e-3);
+    this.panel.userData.noCollider = this.panel.userData.noHighlight = true;
+    this.body = new THREE4.Mesh(new THREE4.BoxGeometry(w, h, depth), new THREE4.MeshStandardMaterial({ color: 0, roughness: 0.7 }));
+    this.body.name = "sketch";
+    this.body.material.visible = false;
+    this.board.add(this.panel, this.body);
+    this.face = new THREE4.Mesh(new THREE4.PlaneGeometry(w, h), new THREE4.MeshBasicMaterial({ map: this.tex, alphaTest: 0.5, alphaToCoverage: true }));
+    this.face.position.z = depth / 2 + 8e-4;
+    this.face.userData.noCollider = true;
+    this.face.userData.noHighlight = true;
+    this.board.add(this.face);
+    this.color = null;
+    this.strokes = /* @__PURE__ */ new Map();
+    this.strokeCount = 0;
+    this.it = ctx.add(this.body, { poke: "surface", dragThreshold: 0, multi: true, highlight: false });
+    this.it.on("press", (e) => this._begin(e)).on("drag", (e) => this._move(e)).on("release", (e) => this._end(e));
+    // header row, all one family: capsule caption, capsule swatches, capsule Clear - on the panel, not outside it
+    const y = headY, bh = 0.026;
+    const capW = 0.2, capTex = textTexture("Sketch \u00b7 poke \u00b7 pinch \u00b7 ray \u00b7 mouse", { w: 512, h: Math.round(512 * bh / capW), size: 44, color: "#ffffff" });
+    capTex.userData.draw("Sketch \u00b7 poke \u00b7 pinch \u00b7 ray \u00b7 mouse", "#ffffff", { fill: "#000000", stroke: "rgba(255,255,255,0.7)", lineWidth: 3, radius: Math.round(512 * bh / capW) / 2 });
+    this.caption = new THREE4.Mesh(new THREE4.PlaneGeometry(capW, bh), new THREE4.MeshBasicMaterial({ map: capTex, alphaTest: 0.5, alphaToCoverage: true }));
+    this.caption.position.set(-w / 2 + capW / 2, y, 2e-3);
+    this.caption.userData.noCollider = this.caption.userData.noHighlight = true;
+    this.board.add(this.caption);
+    const gap = 6e-3, autoW = 0.05, sw = 0.03;
+    let x = -w / 2 + capW + 0.012 + autoW / 2;
+    this.swatches = [];
+    const addSwatch = (col, label, bw) => {
+      const b = ctx.button(label, { w: bw, h: bh, fontSize: 26, swatch: col, capsule: true, onClick: () => this.setColor(col) });
+      b.col = col;
+      b.root.position.set(x, y, 0);
+      this.board.add(b.root);
+      this.swatches.push(b);
+      x += bw / 2 + gap;
+    };
+    addSwatch(null, "Auto", autoW);
+    x += sw / 2;
+    for (const col of [6091519, 16748488, 16114298, 16777215]) {
+      addSwatch(col, "", sw);
+      x += sw / 2;
+    }
+    const clr = ctx.button("Clear", { w: 0.062, h: bh, fontSize: 24, capsule: true, onClick: () => this.clear() });
+    clr.root.position.set(w / 2 - 0.031, y, 0);
+    this.board.add(clr.root);
+    // drag handle on the lower edge: pinch / trigger / mouse-drag it to move the whole board (translation only;
+    // the board re-faces the viewer (from its centre) while held and scales with distance), two hands
+    // change the user scale factor.
+    // The collider box is limited to the bar so the drawing surface stays a separate interactable.
+    const by = 0;
+    // a capsule, like the header pills
+    this.bar = new THREE4.Mesh(
+      new THREE4.CapsuleGeometry(9e-3, 0.182, 6, 20).rotateZ(Math.PI / 2),
+      new THREE4.MeshStandardMaterial({ color: 0, roughness: 0.5, emissive: 0 })
+    );
+    this.bar.position.set(0, by, 0);
+    this.bar.name = "sketch-handle";
+    this.root.add(this.bar);
+    this.barOutline = outlineHull(this.bar, hoverOutlineMaterial());
+    this.barOutline.visible = true;
+    this.barOutline.material.userData.px.value = 2;
+    this.barOutline.material.opacity = 0.75;
+    this.bar.add(this.barOutline);
+    this.handle = ctx.add(this.root, {
+      draggable: true,
+      translateOnly: true,
+      twoHand: true,
+      highlight: false,
+      box: new THREE4.Box3(new THREE4.Vector3(-0.1, by - 0.012, -0.012), new THREE4.Vector3(0.1, by + 0.012, 0.012))
+      // (collider stays a box around the capsule so the grab target is forgiving)
+    });
+    this.handle.on("statechange", (e) => {
+      this.barOutline.material.userData.px.value = e.level === 2 ? ICFG.outlinePxSelect : e.level === 1 ? ICFG.outlinePx : 2;
+      this.barOutline.material.opacity = e.level ? 1 : 0.75;
+    });
+    this.clear();
+    this.setColor(null);
+  }
+  setColor(col) {
+    this.color = col;
+    for (const b of this.swatches) b.root.scale.setScalar(b.col === col ? 1.18 : 1);
+  }
+  clear() {
+    const g = this.g, W = this.c.width, H = this.c.height;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = "#000000";
+    roundRect(g, 2, 2, W - 4, H - 4, 22);
+    g.fill();
+    g.strokeStyle = "rgba(255,255,255,0.10)";
+    g.lineWidth = 1;
+    for (let x = 64; x < W; x += 64) {
+      g.beginPath();
+      g.moveTo(x, 8);
+      g.lineTo(x, H - 8);
+      g.stroke();
+    }
+    for (let y = 64; y < H; y += 64) {
+      g.beginPath();
+      g.moveTo(8, y);
+      g.lineTo(W - 8, y);
+      g.stroke();
+    }
+    g.strokeStyle = "rgba(255,255,255,0.35)";
+    g.lineWidth = 2;
+    roundRect(g, 2, 2, W - 4, H - 4, 22);
+    g.stroke();
+    this.tex.needsUpdate = true;
+  }
+  // canvas pixel under an interactor: far rays are re-intersected with the face plane so the pen
+  // follows the ray across the board; everything else is the attach point projected onto the face
+  _point(e) {
+    const i = e.interactor, s = i.source;
+    this.face.updateMatrixWorld();
+    if (i.type === "far" && s.ray?.valid) {
+      _spn.set(0, 0, 1).transformDirection(this.face.matrixWorld);
+      _spl.setFromNormalAndCoplanarPoint(_spn, this.face.getWorldPosition(_spp));
+      _spr.set(s.ray.origin, s.ray.dir);
+      if (!_spr.intersectPlane(_spl, _sp)) return null;
+    } else _sp.copy(e.point);
+    this.face.worldToLocal(_sp);
+    const W = this.c.width, H = this.c.height;
+    const u = (_sp.x / this.w + 0.5) * W, v = (0.5 - _sp.y / this.h) * H;
+    if (u < -24 || v < -24 || u > W + 24 || v > H + 24) return null;
+    return [THREE4.MathUtils.clamp(u, 0, W), THREE4.MathUtils.clamp(v, 0, H)];
+  }
+  _style(e) {
+    const i = e.interactor, s = i.source;
+    let color = this.color;
+    if (color === null) color = i.type === "poke" ? 6091519 : i.type === "near" ? s.handedness === "left" ? 8368895 : 16757375 : s.kind === "mouse" ? 16114298 : 16777215;
+    let width = i.type === "near" ? 7 : i.type === "far" ? 4 : s.kind === "mouse" ? 4 : 6;
+    if (i.type === "poke") {
+      const depth = -(this.app.im.group(s)?.pokeState.depth ?? 0);
+      width = 5 + THREE4.MathUtils.clamp(depth / 0.012, 0, 1) * 8;
+    }
+    return { color: "#" + color.toString(16).padStart(6, "0"), width };
+  }
+  _dot(p, sty) {
+    const g = this.g;
+    g.fillStyle = sty.color;
+    g.beginPath();
+    g.arc(p[0], p[1], sty.width / 2, 0, Math.PI * 2);
+    g.fill();
+    this.tex.needsUpdate = true;
+  }
+  _begin(e) {
+    const p = this._point(e);
+    this.strokes.set(e.interactor, { last: p });
+    if (p) this._dot(p, this._style(e));
+  }
+  _move(e) {
+    const st = this.strokes.get(e.interactor);
+    if (!st) return;
+    const p = this._point(e);
+    if (!p) {
+      st.last = null;
+      return;
+    }
+    const sty = this._style(e), g = this.g;
+    if (st.last) {
+      g.strokeStyle = sty.color;
+      g.lineWidth = sty.width;
+      g.lineCap = "round";
+      g.lineJoin = "round";
+      g.beginPath();
+      g.moveTo(st.last[0], st.last[1]);
+      g.lineTo(p[0], p[1]);
+      g.stroke();
+      this.tex.needsUpdate = true;
+    } else this._dot(p, sty);
+    st.last = p;
+  }
+  _end(e) {
+    if (this.strokes.delete(e.interactor)) this.strokeCount++;
+  }
+};
+var LogPanel = class {
+  constructor({ w = 0.42, h = 0.3, lines = 12 } = {}) {
+    this.lines = [];
+    this.max = lines;
+    this.dirty = true;
+    this.last = 0;
+    this.c = document.createElement("canvas");
+    this.c.width = 768;
+    this.c.height = Math.round(768 * h / w);
+    this.tex = new THREE4.CanvasTexture(this.c);
+    this.tex.colorSpace = THREE4.SRGBColorSpace;
+    this.root = new THREE4.Mesh(new THREE4.PlaneGeometry(w, h), new THREE4.MeshBasicMaterial({ map: this.tex, alphaTest: 0.5, alphaToCoverage: true }));
+  }
+  push(text) {
+    const t = (performance.now() / 1e3).toFixed(1).padStart(6);
+    this.lines.unshift(`${t}  ${text}`);
+    if (this.lines.length > this.max) this.lines.length = this.max;
+    this.dirty = true;
+  }
+  clear() {
+    this.lines = [];
+    this.dirty = true;
+  }
+  update(now) {
+    if (!this.dirty || now - this.last < 80) return;
+    this.dirty = false;
+    this.last = now;
+    const g = this.c.getContext("2d"), W = this.c.width, H = this.c.height;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = "#000000";
+    roundRect(g, 2, 2, W - 4, H - 4, 24);
+    g.fill();
+    g.strokeStyle = "rgba(255,255,255,0.8)";
+    g.lineWidth = 3;
+    g.stroke();
+    g.fillStyle = "#ffffff";
+    g.font = FONT.replace("{s}", 30);
+    g.textBaseline = "top";
+    g.fillText("Interaction events", 28, 22);
+    g.font = "500 24px ui-monospace, Menlo, Consolas, monospace";
+    const lh = (H - 90) / this.max;
+    this.lines.forEach((l, i) => {
+      g.fillStyle = i === 0 ? "#ffffff" : `rgba(255,255,255,${1 - i / (this.max + 2)})`;
+      g.fillText(l, 28, 72 + i * lh);
+    });
+    this.tex.needsUpdate = true;
+  }
+};
+
+// src/world.js
+import * as THREE5 from "three";
+var WorldManager = class {
+  constructor(app2) {
+    this.app = app2;
+    this.worlds = /* @__PURE__ */ new Map();
+    this.current = null;
+    this.ctx = null;
+  }
+  register(world) {
+    this.worlds.set(world.id, world);
+    return this;
+  }
+  _makeCtx(world) {
+    const app2 = this.app;
+    const root = new THREE5.Group();
+    root.name = `world:${world.id}`;
+    app2.scene.add(root);
+    const owned = [];
+    const ctx = {
+      app: app2,
+      THREE: THREE5,
+      root,
+      world,
+      // register an interactable owned by this world
+      add: (obj, opts) => {
+        const it = app2.im.add(obj, opts);
+        owned.push(it);
+        return it;
+      },
+      button: (label, opts) => {
+        const b = new UIButton(app2.im, label, opts);
+        owned.push(b.it);
+        return b;
+      },
+      slider: (label, opts) => {
+        const s = new UISlider(app2.im, label, opts);
+        owned.push(s.it);
+        return s;
+      },
+      panel: (title, opts) => new UIPanel(title, opts),
+      // auto-sized text label; `height` is the world-space line height in metres
+      label: (text, { height = 0.02, color = "#ffffff" } = {}) => {
+        const g = document.createElement("canvas").getContext("2d");
+        g.font = "600 44px system-ui, sans-serif";
+        const cw = Math.ceil(g.measureText(text).width) + 40;
+        const tex = textTexture(text, { w: cw, h: 64, size: 44, color });
+        return new THREE5.Mesh(new THREE5.PlaneGeometry(height * cw / 64, height), new THREE5.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
+      },
+      log: (...a) => app2.log(a.join(" ")),
+      get session() {
+        return app2.sessionMode;
+      },
+      _owned: owned
+    };
+    return ctx;
+  }
+  async load(id) {
+    const w = this.worlds.get(id);
+    if (!w) throw new Error(`unknown world ${id}`);
+    this.unload();
+    const ctx = this._makeCtx(w);
+    this.ctx = ctx;
+    this.current = w;
+    try {
+      await w.init?.(ctx);
+      w.enter?.(ctx);
+    } catch (e) {
+      this.app.error(`world ${id} failed: ${e.message}`);
+      console.error(e);
+    }
+    this.app.onWorldChanged?.(w, ctx);
+    this.app.log(`world \u2192 ${w.title || w.id}`);
+  }
+  unload() {
+    if (!this.current) return;
+    const w = this.current, ctx = this.ctx;
+    try {
+      w.exit?.(ctx);
+    } catch (e) {
+      console.error(e);
+    }
+    for (const it of ctx._owned) this.app.im.remove(it);
+    ctx.root.removeFromParent();
+    ctx.root.traverse((o) => {
+      o.geometry?.dispose?.();
+      const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of mats) {
+        for (const k in m) if (m[k]?.isTexture) m[k].dispose();
+        m.dispose();
+      }
+    });
+    this.current = null;
+    this.ctx = null;
+  }
+  reload() {
+    if (this.current) return this.load(this.current.id);
+  }
+  update(dt, t) {
+    if (!this.current?.update) return;
+    try {
+      this.current.update(dt, t, this.ctx);
+    } catch (e) {
+      console.error(e);
+      this.app.error(`world update error: ${e.message}`);
+      this.current.update = null;
+    }
+  }
+};
+
+// src/worlds/playground.js
+import * as THREE6 from "three";
+import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
+import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+var COLORS = [8368895, 16757375, 10354608, 16748488, 16114298];
+var TABLE_TOP = 1.44;
+// table surface height (m); everything on the table is placed relative to it. Recalibrated on every
+// session start and every reset: TABLE_BELOW_HEAD under the headset (desktop preview keeps 1.44).
+var TABLE_BELOW_HEAD = 0.5;
+function calibratedTableTop(app2) {
+  if (!app2.sessionMode) return 1.44;
+  return THREE6.MathUtils.clamp(app2.input.head.y - TABLE_BELOW_HEAD, 0.55, 1.6);
+}
+var BOARD_SCALE_NEAR = 0.5;
+// m: inside this distance the sketch board keeps a fixed scale
+var BOARD_SCALE_K = 0.8;
+// linear slope of the distance scaling beyond that: scale ~ 1 + K * (d - near) / near, no upper clamp
+// (K = 1 is the constant-angular-size line; K = 0.8 lets the board read slightly smaller with distance - an
+//  intuitive depth cue - while staying legible, and the slope stays the same however far it goes)
+var Playground = {
+  id: "playground",
+  title: "Interaction Playground",
+  init(ctx) {
+    TABLE_TOP = calibratedTableTop(ctx.app);
+    ctx.app.log(`table at ${TABLE_TOP.toFixed(2)} m (head ${ctx.app.input.head.y.toFixed(2)} m)`);
+    const { root, THREE: T } = ctx;
+    const inAR = ctx.session === "ar";
+    root.add(new T.HemisphereLight(16777215, 2236962, 1.6));
+    const sun = new T.DirectionalLight(16777215, 1.4);
+    sun.position.set(1, 3, 2);
+    root.add(sun);
+    // radial floor: rings every 0.5 m out to 4 m (1 m rings brighter), 8 faint spokes, distance labels on the
+    // forward spoke. Centred on the floor origin = where the session started.
+    const pts = [], cols = [], c1 = new T.Color(5592405), c2 = new T.Color(2236962);
+    const push = (a, b, c) => { pts.push(a.x, a.y, a.z, b.x, b.y, b.z); cols.push(c.r, c.g, c.b, c.r, c.g, c.b); };
+    for (let r = 0.5; r <= 4.001; r += 0.5) {
+      const n = Math.round(48 + r * 24), col = Math.abs(r - Math.round(r)) < 1e-3 ? c1 : c2;
+      for (let k = 0; k < n; k++) {
+        const a0 = k / n * Math.PI * 2, a1 = (k + 1) / n * Math.PI * 2;
+        push(new T.Vector3(Math.cos(a0) * r, 0, Math.sin(a0) * r), new T.Vector3(Math.cos(a1) * r, 0, Math.sin(a1) * r), col);
+      }
+    }
+    for (let k = 0; k < 8; k++) {
+      const a = k / 8 * Math.PI * 2;
+      push(new T.Vector3(Math.cos(a) * 0.3, 0, Math.sin(a) * 0.3), new T.Vector3(Math.cos(a) * 4, 0, Math.sin(a) * 4), c2);
+    }
+    const fg = new T.BufferGeometry();
+    fg.setAttribute("position", new T.Float32BufferAttribute(pts, 3));
+    fg.setAttribute("color", new T.Float32BufferAttribute(cols, 3));
+    const grid = new T.LineSegments(fg, new T.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.6 }));
+    grid.position.y = 1e-3;
+    root.add(grid);
+    this.grid = grid;
+    this.floorLabels = [];
+    for (let r = 1; r <= 4; r++) {
+      const l = ctx.label(`${r} m`, { height: 0.06, color: "#ffffff" });
+      l.position.set(0.09, 2e-3, -r - 0.04);
+      l.rotation.x = -Math.PI / 2;
+      l.material.opacity = 0.7;
+      root.add(l);
+      this.floorLabels.push(l);
+    }
+    this.app = ctx.app;
+    const ring = new T.Mesh(new T.RingGeometry(0.28, 0.3, 64).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 16777215, transparent: true, opacity: 0.35 }));
+    ring.position.y = 2e-3;
+    root.add(ring);
+    // desk in the same white-line sketch style: opaque black base (legibility of what sits on it) + white rims
+    const baseMat = () => new T.MeshBasicMaterial({ color: 0 });
+    // rims drawn with the fat-line pipeline so the width is a real pixel count (plain GL lines are always 1 px)
+    const rims = (geo, opacity, px) => {
+      const eg = new T.EdgesGeometry(geo, 30);
+      const lg = new LineSegmentsGeometry().setPositions(Array.from(eg.attributes.position.array));
+      const lm = new LineMaterial({ color: 16777215, linewidth: px, transparent: true, opacity, worldUnits: false });
+      const l = new LineSegments2(lg, lm);
+      l.userData.noCollider = l.userData.noHighlight = true;
+      l.computeLineDistances();
+      l.onBeforeRender = (renderer, scene, camera) => {
+        const vp = camera.viewport;
+        if (vp) lm.resolution.set(vp.z, vp.w);
+        else renderer.getSize(lm.resolution);
+      };
+      eg.dispose();
+      return l;
+    };
+    const PLATE_H = 0.05;
+    const table = new T.Mesh(new T.CylinderGeometry(0.34, 0.34, PLATE_H, 64), baseMat());
+    table.position.set(0, TABLE_TOP - PLATE_H / 2, -0.5);
+    root.add(table);
+    const tableRims = rims(table.geometry, 0.9, 4);
+    tableRims.position.copy(table.position);
+    root.add(tableRims);
+    const tl = ctx.label("Pinch / ray-grab \u00b7 two hands: rotate + scale \u00b7 tap: color \u00b7 hold: spin \u00b7 stays on the table", { height: 0.018 });
+    tl.position.set(0, TABLE_TOP + 0.02, -0.19);
+    tl.rotation.x = -Math.PI / 2.6;
+    root.add(tl);
+    this.spinners = [];
+    [-0.14, 0, 0.14].forEach((x, i) => {
+      const m = new T.Mesh(new T.BoxGeometry(0.07, 0.07, 0.07), new T.MeshStandardMaterial({ color: COLORS[i], roughness: 0.4, emissive: 0 }));
+      m.position.set(x, TABLE_TOP + 0.04, -0.5);
+      m.name = `cube-${i + 1}`;
+      root.add(m);
+      let ci = i;
+      const it = ctx.add(m, {
+        draggable: true,
+        twoHand: true,
+        // never below the table top - applies to drags and two-hand transforms
+        constrain: ({ position, scale }) => {
+          position.y = Math.max(position.y, TABLE_TOP + 0.035 * scale.y);
+        }
+      });
+      it.on("tap", () => {
+        ci = (ci + 1) % COLORS.length;
+        m.material.color.setHex(COLORS[ci]);
+      });
+      it.on("longpress", () => {
+        m.userData.spin = !m.userData.spin;
+      });
+      this.spinners.push(m);
+    });
+    const orb = new T.Mesh(new T.IcosahedronGeometry(0.045, 2), new T.MeshStandardMaterial({ color: 13215999, roughness: 0.3, emissive: 0, flatShading: true }));
+    orb.position.set(0.36, TABLE_TOP + 0.24, -0.42);
+    orb.name = "orb";
+    root.add(orb);
+    const oit = ctx.add(orb, { precise: true });
+    oit.on("tap", () => {
+      orb.userData.bounce = 1;
+    });
+    oit.on("longpress", () => {
+      orb.userData.burst = 1;
+      orb.material.color.setHSL(Math.random(), 0.7, 0.7);
+    });
+    const ol = ctx.label("tap: bounce \u00b7 hold: burst", { height: 0.016 });
+    ol.position.set(0.36, TABLE_TOP + 0.32, -0.42);
+    root.add(ol);
+    this.orb = orb;
+    const bell = new T.Mesh(new T.SphereGeometry(0.028, 24, 16), new T.MeshStandardMaterial({ color: 16114298, roughness: 0.3, emissive: 0 }));
+    bell.position.set(0.36, TABLE_TOP + 0.12, -0.36);
+    bell.name = "bell";
+    root.add(bell);
+    const bit = ctx.add(bell, { poke: "volume", near: false });
+    bit.on("press", () => {
+      bell.userData.ring = 1;
+    });
+    const bl = ctx.label("poke me (fingertip / controller nose)", { height: 0.013 });
+    bl.position.set(0.36, TABLE_TOP + 0.07, -0.33);
+    bl.rotation.x = -0.5;
+    root.add(bl);
+    this.bell = bell;
+    this.far = [];
+    [[-1.2, 1.5, -3], [0, 1.9, -3.4], [1.2, 1.4, -3]].forEach((p, i) => {
+      const m = new T.Mesh(new T.SphereGeometry(0.16, 32, 20), new T.MeshStandardMaterial({ color: COLORS[(i + 2) % 5], roughness: 0.35, emissive: 0 }));
+      m.position.set(...p);
+      m.name = `far-${i + 1}`;
+      const halo = new T.Mesh(new T.SphereGeometry(0.17, 24, 16), new T.MeshBasicMaterial({ color: 6091519, wireframe: true, transparent: true, opacity: 0 }));
+      halo.userData.noCollider = true;
+      halo.userData.noHighlight = true;
+      halo.visible = false;
+      m.add(halo);
+      m.userData.halo = halo;
+      root.add(m);
+      const it = ctx.add(m, { draggable: true, twoHand: true, precise: true });
+      it.on("tap", () => {
+        m.userData.pulse = 1;
+      });
+      this.far.push(m);
+    });
+    const fl = ctx.label("far: ray-pinch / trigger \u00b7 drag to move \u00b7 thumbstick / wheel: push \u00b7 pull", { height: 0.07 });
+    fl.position.set(0, 2.35, -3.4);
+    root.add(fl);
+    const panel = ctx.panel("UI \u00b7 poke, pinch or ray", { w: 0.22, h: 0.15 });
+    panel.root.position.set(-0.5, TABLE_TOP + 0.06, -0.36);
+    panel.root.lookAt(0, TABLE_TOP + 0.3, 0.3);
+    root.add(panel.root);
+    let count = 0;
+    const counter = ctx.button("Count: 0", { onClick: () => counter.setLabel(`Count: ${++count}`) });
+    const toggle = ctx.button("Toggle", { toggle: true, onClick: (v) => {
+      this.spinners.forEach((s) => s.userData.spin = v);
+    } });
+    const reset = ctx.button("Reset scene", { onClick: () => ctx.app.worlds.reload() });
+    const clear = ctx.button("Clear log", { onClick: () => ctx.app.logPanel.clear() });
+    const slider = ctx.slider("Cube size", { w: 0.19, value: 0.5, onChange: (v) => this.spinners.forEach((s) => s.scale.setScalar(0.5 + v)) });
+    slider.span = 2;
+    panel.layout([counter, toggle, reset, clear], { cols: 2, top: 0.03 });
+    slider.root.position.set(0, -0.05, 4e-3);
+    panel.root.add(slider.root);
+    const board = new SketchBoard(ctx, { w: 0.48, h: 0.36 });
+    board.root.position.set(-0.78, TABLE_TOP + 0.196, -0.5);
+    board.root.lookAt(0, TABLE_TOP + 0.3, 0.3);
+    root.add(board.root);
+    this.board = board;
+    const log = ctx.app.logPanel.root;
+    log.position.set(0.72, TABLE_TOP + 0.38, -0.78);
+    log.lookAt(0, TABLE_TOP + 0.46, 0.1);
+    root.add(log);
+  },
+  update(dt, t) {
+    const a = this.app.sessionMode === "ar" ? this.app.vst.opacity : 1;
+    this.grid.material.opacity = 0.15 + 0.45 * a;
+    for (const l of this.floorLabels) l.material.opacity = 0.2 + 0.5 * a;
+    // The sketch board only adapts while its handle is held (drag or two-hand scale); released, it keeps both
+    // its orientation and its scale. While held:
+    //  - it re-faces the viewer, the direction computed from the PANEL CENTRE to the head (not from the handle
+    //    pivot below it), applied about the pivot so the grab point stays under the pinch;
+    //  - distance scaling: fixed inside BOARD_SCALE_NEAR, beyond it linear in distance with slope BOARD_SCALE_K
+    //    (K = 0.8: slightly smaller with distance as a depth cue, still legible; no upper clamp), relative to
+    //    the designed size at the initial placement distance. A two-hand scale edits the user factor instead.
+    const head = this.app.input.head, bd = this.board;
+    const dist = Math.max(BOARD_SCALE_NEAR, bd.root.position.distanceTo(head));
+    if (!bd.refDist) bd.refDist = dist;
+    if (bd.handle.selections.length) {
+      const c = bd.it.worldCenter(new THREE6.Vector3());
+      bd.root.lookAt(bd.root.position.clone().add(head.clone().sub(c)));
+      const lin = (d) => 1 + BOARD_SCALE_K * (d - BOARD_SCALE_NEAR) / BOARD_SCALE_NEAR;
+      const comp = lin(dist) / lin(bd.refDist);
+      if (this.app.im.twoHand.has(bd.handle)) bd.userScale = THREE6.MathUtils.clamp(bd.root.scale.x / comp, 0.3, 3);
+      else bd.root.scale.setScalar(THREE6.MathUtils.clamp(bd.userScale ?? 1, 0.3, 3) * comp);
+    }
+    for (const s of this.spinners) if (s.userData.spin) s.rotation.y += dt * 1.5;
+    for (const m of this.far) {
+      const h = m.userData.halo, p = m.userData.pulse || 0;
+      if (p) m.userData.pulse = Math.max(0, p - dt * 1.8);
+      h.visible = p > 0;
+      h.scale.setScalar(1 + (1 - p) * 0.6);
+      h.material.opacity = p * 0.8;
+    }
+    const o = this.orb;
+    if (o.userData.bounce) {
+      o.userData.bounce = Math.max(0, o.userData.bounce - dt * 2);
+      o.position.y = TABLE_TOP + 0.24 + Math.sin(o.userData.bounce * Math.PI) * 0.06;
+    }
+    if (o.userData.burst) {
+      o.userData.burst = Math.max(0, o.userData.burst - dt * 1.5);
+      o.scale.setScalar(1 + o.userData.burst * 0.8);
+      o.rotation.y += dt * 8 * o.userData.burst;
+    }
+    const b = this.bell;
+    if (b.userData.ring) {
+      b.userData.ring = Math.max(0, b.userData.ring - dt * 3);
+      b.scale.setScalar(1 + 0.3 * b.userData.ring);
+    }
+  },
+  exit(ctx) {
+    ctx.app.logPanel.root.removeFromParent();
+  }
+};
+
+// src/main.js
+var VERSION = "0.8.22";
+var App = class {
+  constructor() {
+    if (window.__HAND_L) setHandAssetsBase64(window.__HAND_L, window.__HAND_R);
+    else if (window.__HAND_URL) loadHandAssets(window.__HAND_URL).catch((e) => this.log(`hand mesh unavailable (${e.message}) - joints only`));
+    this.renderer = new THREE7.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
+    this.renderer.setSize(innerWidth, innerHeight);
+    this.renderer.xr.enabled = true;
+    this.renderer.xr.setReferenceSpaceType("local-floor");
+    document.body.appendChild(this.renderer.domElement);
+    this.scene = new THREE7.Scene();
+    this.bg = new THREE7.Color(0);
+    this.scene.background = this.bg;
+    this.camera = new THREE7.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 100);
+    this.camera.position.set(0, 1.95, 0.7);
+    this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    this.controls.target.set(0, 1.6, -0.5);
+    this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE7.MOUSE.DOLLY, RIGHT: THREE7.MOUSE.ROTATE };
+    this.controls.update();
+    this.input = new InputSystem();
+    this.im = new InteractionManager();
+    this.visuals = /* @__PURE__ */ new Map();
+    this.rings = new LongPressRings(this.scene);
+    this.logPanel = new LogPanel();
+    this.menu = new HandMenu(this);
+    this.worlds = new WorldManager(this);
+    this.sessionMode = null;
+    this.settings = { handMesh: true, handJoints: false, ray: true };
+    this.vst = { supported: false, opacity: 0, target: 0, last: 0.85 };
+    this.backdrop = new THREE7.Mesh(
+      new THREE7.SphereGeometry(60, 48, 24),
+      new THREE7.MeshBasicMaterial({ color: 0, side: THREE7.BackSide, transparent: true, opacity: 0, depthWrite: false, fog: false })
+    );
+    this.backdrop.renderOrder = -100;
+    this.backdrop.visible = false;
+    this.backdrop.userData.noCollider = true;
+    this.scene.add(this.backdrop);
+    this.events = [];
+    this.sfx = new Sfx();
+    this.renderer.domElement.addEventListener("pointerdown", () => this.sfx.ensure(), { passive: true });
+    this.input.onAdd = (s) => this._addSource(s);
+    this.input.onRemove = (s) => this._removeSource(s);
+    this.mouse = new MouseSource(this.camera, this.renderer.domElement);
+    this._addSource(this.mouse);
+    Interactable.onAny = (e) => this._onEvent(e);
+    this._buildMenu();
+    this.worlds.register(Playground);
+    addEventListener("resize", () => {
+      if (this.renderer.xr.isPresenting) return;
+      this.camera.aspect = innerWidth / innerHeight;
+      this.camera.updateProjectionMatrix();
+      this.renderer.setSize(innerWidth, innerHeight);
+    });
+    this.last = performance.now();
+    this.renderer.setAnimationLoop((t, f) => this._loop(t, f));
+  }
+  // - sources -
+  _addSource(s) {
+    const g = this.im.addSource(s);
+    const device = s.kind === "hand" ? new HandVisual(s, this.scene, { showMesh: this.settings.handMesh, showJoints: this.settings.handJoints }) : s.kind === "controller" ? new ControllerVisual(s, this.scene) : null;
+    const iv = new InteractorVisual(g, this.scene);
+    iv.showRay = this.settings.ray;
+    this.visuals.set(s, { device, iv });
+    if (s.kind !== "mouse") this.log(`+ ${s.kind} ${s.handedness}`);
+  }
+  _removeSource(s) {
+    this.im.removeSource(s);
+    const v = this.visuals.get(s);
+    v?.device?.dispose();
+    v?.iv.dispose();
+    this.visuals.delete(s);
+    if (this.menu.owner === s) this.menu._close();
+    this.log(`- ${s.kind} ${s.handedness}`);
+  }
+  // - menu -
+  _buildMenu() {
+    const b = (label, opts) => new UIButton(this.im, label, { w: 0.075, h: 0.026, fontSize: 26, ...opts });
+    this.menuButtons = {
+      vst: b("VST", { toggle: true, value: true, onClick: (v) => this.setVST(v) }),
+      reset: b("Reset world", { onClick: () => this.worlds.reload() }),
+      mesh: b("Hand outline", { toggle: true, value: true, onClick: (v) => {
+        this.settings.handMesh = v;
+        for (const x of this.visuals.values()) if (x.device instanceof HandVisual) x.device.showMesh = v;
+      } }),
+      joints: b("Joints", { toggle: true, value: false, onClick: (v) => {
+        this.settings.handJoints = v;
+        for (const x of this.visuals.values()) if (x.device instanceof HandVisual) x.device.showJoints = v;
+      } }),
+      ray: b("Ray", { toggle: true, value: true, onClick: (v) => {
+        this.settings.ray = v;
+        for (const x of this.visuals.values()) x.iv.showRay = v;
+      } }),
+      gain: b("Depth gain", { toggle: true, value: ICFG.farGain.enabled, onClick: (v) => {
+        ICFG.farGain.enabled = v;
+        this.log(`depth gain ${v ? "on" : "off"}`);
+      } }),
+      clear: b("Clear log", { onClick: () => this.logPanel.clear() }),
+      exit: b("Exit XR", { onClick: () => this.renderer.xr.getSession()?.end() })
+    };
+    this.opacitySlider = new UISlider(this.im, "Background", { w: 0.15, value: 0, onChange: (v) => this.setOpacity(v) });
+    const m = this.menuButtons;
+    this.menu.setItems([m.vst, m.gain, m.mesh, m.joints, m.ray, m.reset, m.clear, m.exit], this.opacitySlider);
+  }
+  // - VST / background opacity -
+  setOpacity(v, fromSlider = true) {
+    if (!this.vst.supported) v = 1;
+    this.vst.target = THREE7.MathUtils.clamp(v, 0, 1);
+    if (this.vst.target > 0.02) this.vst.last = this.vst.target;
+    this.menuButtons.vst.setValue(this.vst.target < 0.99);
+    if (!fromSlider) this.opacitySlider.set(this.vst.target, true);
+  }
+  setVST(on) {
+    if (!this.vst.supported) {
+      this.menuButtons.vst.setValue(false);
+      this.log("VST not available (VR session)");
+      return;
+    }
+    this.setOpacity(on ? 0 : 1, false);
+    this.log(`VST ${on ? "on" : "off"}`);
+  }
+  _updateBackdrop(dt) {
+    const v = this.vst;
+    v.opacity += (v.target - v.opacity) * Math.min(1, dt * 8);
+    if (Math.abs(v.target - v.opacity) < 2e-3) v.opacity = v.target;
+    const inAR = this.sessionMode === "ar";
+    this.backdrop.visible = inAR && v.opacity > 1e-3;
+    this.backdrop.material.opacity = v.opacity;
+    this.backdrop.position.copy(this.input.head);
+  }
+  // - sessions -
+  async enterXR(mode) {
+    if (!navigator.xr) return this.error("WebXR is not available in this browser.");
+    const type = mode === "ar" ? "immersive-ar" : "immersive-vr";
+    try {
+      const ok = await navigator.xr.isSessionSupported(type);
+      if (!ok) return this.error(`${type} is not supported on this device.`);
+      const session = await navigator.xr.requestSession(type, {
+        optionalFeatures: ["local-floor", "hand-tracking", "bounded-floor"]
+      });
+      const feats = session.enabledFeatures;
+      let floor = feats ? feats.includes("local-floor") : true;
+      this.sessionMode = mode;
+      this.vst.supported = mode === "ar";
+      this.scene.background = mode === "ar" ? null : this.bg;
+      this.renderer.setClearColor(0, mode === "ar" ? 0 : 1);
+      session.addEventListener("end", () => this._onSessionEnd());
+      this.renderer.xr.setReferenceSpaceType(floor ? "local-floor" : "local");
+      try {
+        await this.renderer.xr.setSession(session);
+      } catch (e) {
+        if (!floor) throw e;
+        floor = false;
+        this.renderer.xr.setReferenceSpaceType("local");
+        await this.renderer.xr.setSession(session);
+      }
+      if (!floor) {
+        const base = this.renderer.xr.getReferenceSpace();
+        this.renderer.xr.setReferenceSpace(base.getOffsetReferenceSpace(new XRRigidTransform({ x: 0, y: -1.6, z: 0 })));
+        this._checkFloor = true;
+        this.log("local-floor unavailable \u2192 using local + 1.6 m");
+      }
+      try {
+        this.renderer.xr.setFoveation(1);
+      } catch (_) {
+      }
+      this.sfx.ensure();
+      this.mouse.tracked = false;
+      this.im.group(this.mouse).blocked = true;
+      if (mode === "ar") this.setOpacity(0, false);
+      else this.setOpacity(1, false);
+      this.menuButtons.vst.setLabel(mode === "ar" ? "VST" : "VST n/a");
+      overlay.hide();
+      this.log(`session ${type}`);
+      await this.worlds.reload();
+      this._calibrate = 10; // rebuild once the real head pose is known (table height calibration)
+    } catch (e) {
+      this.error(`Could not start ${type}: ${e.message}`);
+    }
+  }
+  _onSessionEnd() {
+    this.input.clear();
+    this.sessionMode = null;
+    this.vst.supported = false;
+    this.backdrop.visible = false;
+    this.scene.background = this.bg;
+    this.renderer.setClearColor(0, 1);
+    this.im.group(this.mouse).blocked = false;
+    overlay.show();
+    this.log("session ended");
+    this.worlds.reload();
+  }
+  // - loop -
+  _loop(t, frame) {
+    const now = performance.now();
+    const dt = Math.min(1 / 30, (now - this.last) / 1e3);
+    this.last = now;
+    if (frame) {
+      this.input.update(frame, this.renderer.xr.getReferenceSpace(), now);
+      if (this._calibrate && frame.getViewerPose(this.renderer.xr.getReferenceSpace()) && --this._calibrate <= 0) {
+        this._calibrate = 0;
+        this.worlds.reload(); // playground re-reads the head height -> table = head - TABLE_BELOW_HEAD
+      }
+      if (this._checkFloor && this.input.head.lengthSq() > 0) {
+        this._checkFloor = false;
+        if (this.input.head.y < 0.5) {
+          const base = this.renderer.xr.getReferenceSpace();
+          this.renderer.xr.setReferenceSpace(base.getOffsetReferenceSpace(new XRRigidTransform({ x: 0, y: 3.2, z: 0 })));
+        }
+      }
+    } else {
+      this.mouse.update(now);
+      this.input.head.copy(this.camera.position);
+      this.controls.update();
+    }
+    this._updateBackdrop(dt);
+    this.menu.update(dt, now);
+    this.im.update(dt, now, this.input.head);
+    for (const v of this.visuals.values()) {
+      v.device?.update();
+      v.iv.update(this.input.head, dt);
+    }
+    this.rings.update(this.im.longPressProgress(), this.input.head);
+    this.worlds.update(dt, now / 1e3);
+    this.logPanel.update(now);
+    this.renderer.render(this.scene, this.camera);
+  }
+  // - logging -
+  _onEvent(e) {
+    if (e.type === "statechange" || e.type === "drag") return;
+    if (e.type === "press") this.sfx.click();
+    const i = e.interactor;
+    const src = i ? `${i.type}/${i.source.kind === "hand" ? "hand" : i.source.kind === "controller" ? "ctrl" : i.source.kind === "pointer" ? "ptr" : "mouse"}-${i.source.handedness[0]}` : "";
+    const name = e.target.object.name || "object";
+    let extra = "";
+    if (e.type === "scale") extra = ` \u00d7${e.ratio.toFixed(2)}`;
+    if (e.type === "rotate") extra = ` ${THREE7.MathUtils.radToDeg(e.angle).toFixed(0)}\u00b0`;
+    if (e.type === "dragend" && e.peakGain && i?.type === "far") extra = `  gain\u2264${e.peakGain.toFixed(1)} d ${e.startDistance.toFixed(1)}\u2192${e.distance.toFixed(1)}m`;
+    this.events.push({ type: e.type, name, via: src, t: performance.now() });
+    if (this.events.length > 400) this.events.splice(0, 100);
+    if (e.type === "scale" || e.type === "rotate") {
+      this._lastXform = `${e.type} ${name}${extra}`;
+      return;
+    }
+    if (e.type === "transformend" && this._lastXform) this.log(this._lastXform);
+    this.log(`${e.type.padEnd(10)} ${name}  ${src}${e.type === "dragend" ? extra : ""}`);
+  }
+  log(msg) {
+    this.logPanel.push(msg);
+    overlay.status(msg);
+  }
+  error(msg) {
+    this.log(`\u26a0 ${msg}`);
+    overlay.error(msg);
+  }
+};
+// Crisp select click: a 60 ms triangle ping (1.8 -> 1.1 kHz) plus a 10 ms high-passed noise transient.
+// The AudioContext is created / resumed on user gestures (Enter button, first pointer down) and on session start.
+var Sfx = class {
+  constructor() {
+    this.ctx = null;
+    this.noise = null;
+  }
+  ensure() {
+    if (!this.ctx) {
+      try {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const len = Math.round(this.ctx.sampleRate * 0.1), buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate), d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        this.noise = buf;
+      } catch (_) {
+        return null;
+      }
+    }
+    if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+    return this.ctx;
+  }
+  // finger snap: a sharp band-passed noise crack (~2.6 kHz) with a bright edge (> 6 kHz) over a very short
+  // low "thump" (220 -> 90 Hz); everything is gone within ~90 ms
+  click(gain = 0.3) {
+    const c = this.ensure();
+    if (!c || c.state !== "running") return;
+    const t = c.currentTime;
+    const burst = (type, freq, q, g0, dur) => {
+      const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = this.noise;
+      f.type = type;
+      f.frequency.value = freq;
+      if (q) f.Q.value = q;
+      g.gain.setValueAtTime(g0, t);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      src.connect(f).connect(g).connect(c.destination);
+      src.start(t);
+      src.stop(t + dur + 0.01);
+    };
+    burst("bandpass", 2600, 0.9, gain * 1.6, 0.07);
+    burst("highpass", 6000, 0, gain * 0.9, 0.025);
+    const osc = c.createOscillator(), og = c.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(90, t + 0.06);
+    og.gain.setValueAtTime(gain * 0.8, t);
+    og.gain.exponentialRampToValueAtTime(1e-4, t + 0.08);
+    osc.connect(og).connect(c.destination);
+    osc.start(t);
+    osc.stop(t + 0.09);
+  }
+
+};
+var overlay = (() => {
+  const el = document.getElementById("overlay");
+  const st = document.getElementById("status");
+  const er = document.getElementById("error");
+  return {
+    hide() {
+      el.classList.add("hidden");
+    },
+    show() {
+      el.classList.remove("hidden");
+    },
+    status(m) {
+      if (st) st.textContent = m;
+    },
+    error(m) {
+      if (er) {
+        er.textContent = m;
+        er.hidden = false;
+      }
+    }
+  };
+})();
+var app = new App();
+window.VXR = { app, THREE: THREE7, ICFG, VERSION, dev: { HandVisual, outlineMaterial } };
+document.getElementById("ver").textContent = `v${VERSION}`;
+await app.worlds.load("playground");
+var arBtn = document.getElementById("enter-ar");
+var vrBtn = document.getElementById("enter-vr");
+vrBtn.onclick = () => app.enterXR("vr");
+arBtn.onclick = () => app.enterXR("ar");
+(async () => {
+  if (!navigator.xr) {
+    vrBtn.disabled = arBtn.disabled = true;
+    overlay.status("WebXR not available - desktop preview (left-click = ray pinch, wheel while dragging = push / pull, right-drag = orbit)");
+    return;
+  }
+  const [vr, ar] = await Promise.all(["immersive-vr", "immersive-ar"].map((m) => navigator.xr.isSessionSupported(m).catch(() => false)));
+  vrBtn.disabled = !vr;
+  arBtn.disabled = !ar;
+  if (!ar && vr) arBtn.textContent = "Enter (VR only)", arBtn.disabled = false, arBtn.onclick = () => app.enterXR("vr");
+  overlay.status(vr || ar ? "Ready" : "No immersive mode on this device - desktop preview");
+})();
+export {
+  VERSION
+};
+</script>
