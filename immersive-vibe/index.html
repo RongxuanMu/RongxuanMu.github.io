@@ -5441,6 +5441,7 @@ function offerStandalone(){
 }
 if (IS_EMBEDDED) offerStandalone();
 await app.worlds.load("gallery");
+if (IS_EMBEDDED) offerStandalone();
 async function configureXRButtons() {
   if (IS_EMBEDDED) return;
   vrBtn.onclick = () => app.enterXR("vr");
