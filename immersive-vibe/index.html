@@ -1,4 +1,4 @@
-<!-- Immersive Vibe v0.5.1 (built on VibeXR Interaction Framework v0.8.7) - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
+<!-- Immersive Vibe v0.5.0 (built on VibeXR Interaction Framework v0.8.22) - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   v0.8.7: far grab has no minimum distance (no jump when ray-pinching something close); far cone narrowed to
           2\u00b0 diameter (1\u00b0 half-angle); idle cursor more visible (brighter ring + centre dot) and the cursor /
@@ -66,18 +66,18 @@
 -->
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Immersive Vibe — Rongxuan Mu</title>
 <style>
-:root{color-scheme:dark;--paper:#eeefe5;--lime:#e6fb88;--muted:#a3adb7}*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#090f18;color:var(--paper);font-family:Inter,Arial,sans-serif}canvas{display:block}#overlay{position:fixed;inset:0;z-index:3;overflow:auto;background:radial-gradient(ellipse at 73% 45%,#142b3440,transparent 55%),#090f18}#overlay.hidden{display:none}.card{position:relative;min-height:100%;max-width:1440px;margin:auto;padding:38px 6vw 28px;display:flex;flex-direction:column}.masthead{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #ffffff26;padding-bottom:22px;font-size:11px;letter-spacing:.17em;text-transform:uppercase}.mark{display:flex;align-items:center;gap:10px}.mark:before{content:'';display:block;width:13px;height:13px;border:1px solid var(--lime);border-radius:50%;box-shadow:inset 0 0 0 3px #090f18;background:var(--lime)}.edition{color:var(--muted)}.hero{position:relative;display:grid;grid-template-columns:1.1fr 1fr;align-items:center;flex:1;gap:2vw;padding:34px 0 26px}.eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--lime);margin:0 0 27px}h1{font-weight:400;font-size:clamp(64px,8vw,116px);line-height:.9;letter-spacing:-.075em;margin:0 0 28px}h1 em{font-family:Georgia,serif;font-weight:400;color:var(--lime)}.sub{font-size:clamp(15px,1.5vw,20px);line-height:1.65;color:var(--muted);max-width:370px;margin:0 0 30px}.row{display:flex;gap:10px;flex-wrap:wrap}button{font:500 13px Arial,sans-serif;cursor:pointer;border:1px solid #ffffff30;padding:16px 23px;border-radius:100px;background:var(--lime);color:#111916;transition:background .2s,opacity .2s}button.alt{background:transparent;color:var(--paper)}button:focus-visible,a:focus-visible{outline:2px solid var(--lime);outline-offset:5px}button:disabled{opacity:.35;cursor:not-allowed}#sound{display:inline-flex;align-items:center;gap:8px;padding:9px 0;border:0;background:none;color:var(--muted);font-size:11px;margin-top:13px}#sound:before{content:'◉';color:var(--lime)}#status{font-size:11px;line-height:1.6;color:var(--muted);max-width:390px;margin-top:14px}#error{font-size:12px;color:#ffb4a8;max-width:400px;margin-top:10px}.artwork{position:relative;aspect-ratio:1;min-width:0}.artwork svg{width:100%;height:100%;overflow:visible}.art-caption{position:absolute;bottom:1%;left:15%;right:4%;display:flex;justify-content:space-between;color:#73888d;font-size:9px;letter-spacing:.12em;text-transform:uppercase}.worlds{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #ffffff26;border-bottom:1px solid #ffffff26;padding:20px 0;gap:20px}.worlds article{display:flex;gap:11px;align-items:baseline}.worlds small{font-size:9px;color:var(--lime)}.worlds h2{font-size:12px;font-weight:400;margin:0 0 7px}.worlds p{font-size:10px;color:#788992;margin:0}.footer{display:flex;justify-content:space-between;gap:20px;padding-top:22px;color:#87979d;font-size:10px;line-height:1.6}.footer a{color:var(--paper);text-decoration:none}#ver{display:none}@media(min-width:1500px){.hero{padding:70px 0}}@media(max-width:700px){.card{padding:22px 7vw}.masthead{font-size:9px}.hero{grid-template-columns:1fr;padding-top:40px;gap:15px}.hero-copy{z-index:1}h1{font-size:76px}.artwork{position:absolute;width:66%;right:-8%;top:8px;opacity:.22;pointer-events:none}.sub{max-width:290px}.worlds{grid-template-columns:1fr 1fr;gap:20px}.footer{font-size:9px}.edition{max-width:120px;text-align:right}.hero-copy{padding-bottom:15px}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+:root{color-scheme:dark;--night:#171d2f;--cream:#f4f0e4;--yellow:#f4ef34;--blue:#76a4ee;--muted:#afb4c4}*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:var(--night);color:var(--cream);font-family:Arial,Helvetica,sans-serif}canvas{display:block}#overlay{position:fixed;inset:0;z-index:3;overflow:auto;background:radial-gradient(circle at 76% 40%,#302e6270 0,transparent 44%),var(--night)}#overlay.hidden{display:none}.card{position:relative;min-height:100%;max-width:1440px;margin:auto;padding:34px 5.5vw 27px;display:flex;flex-direction:column}.masthead{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid #f4f0e42b;padding-bottom:18px;font-size:10px;letter-spacing:.19em;text-transform:uppercase}.mark{display:flex;align-items:center;gap:11px}.mark:before{content:'';display:block;width:16px;height:16px;border:1px solid var(--yellow);border-radius:50%;background:repeating-radial-gradient(circle,var(--yellow) 0 1px,transparent 1px 3px)}.edition{color:var(--blue)}.hero{position:relative;display:grid;grid-template-columns:1.02fr 1fr;align-items:center;flex:1;gap:2vw;padding:32px 0 22px}.hero-copy{position:relative;z-index:1}.eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--yellow);margin:0 0 26px}h1{font-weight:400;font-size:clamp(68px,8.4vw,122px);line-height:.84;letter-spacing:-.075em;margin:0 0 29px}h1 em{font-family:Georgia,serif;font-weight:400;color:var(--yellow)}.sub{font:italic clamp(20px,2vw,30px)/1.25 Georgia,serif;color:var(--cream);max-width:430px;margin:0 0 28px}.entry-note{font-size:9px;letter-spacing:.17em;text-transform:uppercase;color:var(--blue);margin:0 0 11px}.row{display:flex;gap:10px;flex-wrap:wrap}button{font:600 12px Arial,sans-serif;letter-spacing:.04em;cursor:pointer;border:1px solid var(--yellow);padding:16px 24px;border-radius:100px;background:var(--yellow);color:var(--night);transition:transform .2s,opacity .2s}button:hover:not(:disabled){transform:translateY(-2px)}button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:5px}button:disabled{opacity:.35;cursor:not-allowed}#sound{display:inline-flex;align-items:center;gap:8px;padding:9px 0;border:0;background:none;color:var(--muted);font-size:10px;margin-top:10px;letter-spacing:0}#sound:before{content:'◉';color:var(--yellow)}#status{font-size:10px;line-height:1.6;color:var(--muted);max-width:430px;margin-top:8px}#error{font-size:12px;color:#ffb4a8;max-width:430px;margin-top:8px}.artwork{position:relative;aspect-ratio:1;min-width:0}.artwork svg{width:100%;height:100%;overflow:visible}.artwork .field path{stroke-dasharray:1 7;stroke-linecap:round;stroke-width:2.25}.art-caption{position:absolute;bottom:-1%;left:12%;right:1%;display:flex;justify-content:space-between;color:#949bb8;font-size:9px;letter-spacing:.12em;text-transform:uppercase}.worlds{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #f4f0e42b;border-bottom:1px solid #f4f0e42b;padding:18px 0;gap:18px}.worlds article{display:flex;gap:11px;align-items:baseline}.worlds small{font-size:9px;color:var(--yellow)}.worlds h2{font-size:11px;font-weight:600;margin:0 0 6px;letter-spacing:.03em}.worlds p{font-size:10px;color:#949bb8;margin:0}.footer{display:flex;justify-content:space-between;gap:20px;padding-top:20px;color:#949bb8;font-size:9px;line-height:1.55;text-transform:uppercase;letter-spacing:.08em}.footer a{color:var(--cream);text-decoration:none}#ver{display:none}@media(min-width:1500px){.hero{padding:65px 0}}@media(max-width:700px){.card{padding:22px 7vw}.masthead{font-size:8px}.edition{max-width:120px;text-align:right}.hero{grid-template-columns:1fr;padding-top:38px;gap:10px}.hero-copy{padding-bottom:10px}h1{font-size:74px}.sub{font-size:21px}.artwork{position:absolute;width:76%;right:-18%;top:5%;opacity:.28;pointer-events:none}.worlds{grid-template-columns:1fr 1fr;gap:18px}.footer{font-size:8px}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 <div id="overlay">
  <main class="card">
-  <header class="masthead"><span class="mark">Rongxuan Mu</span><span class="edition">An interactive WebXR gallery</span></header>
+  <header class="masthead"><span class="mark">Rongxuan Mu / Interactive Art</span><span class="edition">Immersive WebXR Gallery · 2026</span></header>
   <section class="hero">
-   <div class="hero-copy"><p class="eyebrow">Art beyond the frame</p><h1>Immersive<br><em>Vibe.</em></h1><p class="sub">Step into a painting.<br>Move its light. Leave your mark.</p>
-    <div class="row"><button id="enter-ar" disabled>Enter gallery ↗</button><button id="enter-vr" class="alt" disabled>Enter in VR</button></div>
+   <div class="hero-copy"><p class="eyebrow">Art beyond the frame</p><h1>Immersive<br><em>Vibe.</em></h1><p class="sub">Step into a painting.<br>Make it move.</p><p class="entry-note">Experience with an XR headset</p>
+    <div class="row"><button id="enter-ar" disabled>Enter gallery ↗</button></div>
     <button id="sound" aria-pressed="true">Sound on · ambient &amp; interaction</button>
     <div id="status" role="status" aria-live="polite">Preparing the gallery…</div><div id="error" role="alert" hidden></div>
    </div>
-   <div class="artwork" aria-hidden="true"><svg viewBox="0 0 600 600"><defs><radialGradient id="orb"><stop stop-color="#284551"/><stop offset=".6" stop-color="#162c37"/><stop offset="1" stop-color="#0b151e"/></radialGradient><linearGradient id="ribbon" x2="1" y2="1"><stop stop-color="#e7fb88"/><stop offset=".45" stop-color="#88bdae"/><stop offset="1" stop-color="#3a747d"/></linearGradient><clipPath id="circle"><circle cx="300" cy="285" r="227"/></clipPath></defs><circle cx="300" cy="285" r="228" fill="url(#orb)"/><g clip-path="url(#circle)" fill="none" stroke="url(#ribbon)" stroke-width=".8">
+   <div class="artwork" aria-hidden="true"><svg viewBox="0 0 600 600"><defs><linearGradient id="ribbon" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#f4ef34"/><stop offset=".46" stop-color="#76a4ee"/><stop offset="1" stop-color="#b78dd8"/></linearGradient></defs><circle cx="300" cy="285" r="205" fill="#202743" stroke="#f4f0e4" stroke-opacity=".12"/><g class="field" fill="none" stroke="url(#ribbon)">
 <path d="M322.5,285.0 L324.0,287.6 L325.0,290.1 L325.5,292.3 L325.4,294.4 L324.6,296.1 L323.1,297.4 L321.1,298.4 L318.6,299.0 L315.9,299.3 L313.1,299.4 L310.4,299.2 L307.8,299.0 L305.5,298.7 L303.5,298.4 L301.7,298.3 L300.0,298.2 L298.3,298.3 L296.5,298.4 L294.5,298.7 L292.2,299.0 L289.6,299.2 L286.9,299.4 L284.1,299.3 L281.4,299.0 L278.9,298.4 L276.9,297.4 L275.4,296.1 L274.6,294.4 L274.5,292.3 L275.0,290.1 L276.0,287.6 L277.5,285.0 L279.2,282.4 L280.9,279.9 L282.5,277.7 L283.8,275.6 L284.9,273.9 L285.7,272.6 L286.3,271.6 L286.8,271.0 L287.3,270.7 L288.1,270.6 L289.1,270.8 L290.6,271.0 L292.5,271.3 L294.7,271.6 L297.3,271.7 L300.0,271.8 L302.7,271.7 L305.3,271.6 L307.5,271.3 L309.4,271.0 L310.9,270.8 L311.9,270.6 L312.7,270.7 L313.2,271.0 L313.7,271.6 L314.3,272.6 L315.1,273.9 L316.2,275.6 L317.5,277.7 L319.1,279.9 L320.8,282.4 L322.5,285.0" opacity="0.25"/>
 <path d="M327.5,287.1 L329.1,290.2 L330.1,293.1 L330.4,295.7 L329.9,297.9 L328.6,299.7 L326.6,301.1 L323.9,302.0 L320.8,302.6 L317.4,302.7 L314.0,302.6 L310.8,302.3 L307.8,301.9 L305.1,301.5 L302.8,301.2 L300.7,301.0 L298.6,301.0 L296.5,301.1 L294.3,301.3 L291.7,301.5 L288.9,301.8 L285.7,302.0 L282.4,302.0 L279.0,301.8 L275.8,301.2 L273.0,300.2 L270.8,298.8 L269.3,296.9 L268.6,294.6 L268.8,292.0 L269.7,289.1 L271.2,286.0 L273.2,282.9 L275.4,279.8 L277.5,276.9 L279.5,274.3 L281.1,272.1 L282.4,270.3 L283.4,268.9 L284.2,268.0 L285.0,267.4 L285.8,267.3 L286.9,267.4 L288.4,267.7 L290.4,268.1 L292.9,268.5 L295.8,268.8 L299.0,269.0 L302.3,269.0 L305.5,268.9 L308.4,268.7 L311.0,268.5 L313.0,268.2 L314.6,268.0 L315.6,268.0 L316.3,268.2 L316.8,268.8 L317.3,269.8 L318.0,271.2 L318.9,273.1 L320.2,275.4 L321.8,278.0 L323.7,280.9 L325.7,284.0 L327.5,287.1" opacity="0.26"/>
 <path d="M332.5,290.0 L334.0,293.5 L334.9,296.7 L334.9,299.5 L334.0,301.9 L332.1,303.7 L329.4,305.0 L326.1,305.8 L322.3,306.2 L318.3,306.1 L314.3,305.8 L310.6,305.4 L307.2,304.8 L304.2,304.3 L301.6,304.0 L299.1,303.7 L296.7,303.7 L294.3,303.8 L291.5,304.1 L288.5,304.3 L285.0,304.6 L281.3,304.6 L277.3,304.5 L273.4,303.9 L269.8,303.0 L266.8,301.5 L264.4,299.5 L263.0,297.1 L262.6,294.1 L263.2,290.9 L264.6,287.3 L266.7,283.7 L269.2,280.0 L271.8,276.5 L274.4,273.3 L276.8,270.5 L278.7,268.1 L280.3,266.3 L281.5,265.0 L282.5,264.2 L283.5,263.8 L284.7,263.9 L286.2,264.2 L288.3,264.6 L290.9,265.2 L294.0,265.7 L297.6,266.0 L301.4,266.3 L305.3,266.3 L309.0,266.2 L312.3,265.9 L315.0,265.7 L317.1,265.4 L318.6,265.4 L319.6,265.5 L320.2,266.1 L320.6,267.0 L321.1,268.5 L321.8,270.5 L322.9,272.9 L324.4,275.9 L326.3,279.1 L328.4,282.7 L330.5,286.3 L332.5,290.0" opacity="0.26"/>
@@ -112,9 +112,9 @@
 <path d="M198.6,380.8 L183.0,370.9 L171.2,362.0 L163.4,354.1 L159.6,346.9 L159.3,340.2 L161.5,333.3 L165.0,326.0 L168.6,317.6 L171.2,307.8 L171.9,296.2 L170.5,282.8 L166.9,267.5 L161.8,250.5 L156.0,232.2 L150.8,213.1 L147.5,193.9 L147.1,175.3 L150.6,158.0 L158.3,142.8 L170.4,130.1 L186.3,120.6 L205.1,114.5 L225.6,111.9 L246.7,112.8 L267.0,116.9 L285.8,123.7 L302.4,132.7 L316.8,143.3 L329.3,154.9 L340.4,166.7 L351.2,178.3 L362.4,189.2 L375.1,199.1 L389.5,208.0 L406.0,215.9 L424.1,223.1 L443.1,229.8 L461.9,236.7 L479.1,244.0 L493.4,252.4 L503.6,262.2 L508.7,273.8 L508.4,287.2 L502.7,302.5 L492.2,319.5 L477.9,337.8 L461.0,356.9 L443.0,376.1 L425.2,394.7 L408.5,412.0 L393.6,427.2 L380.8,439.9 L369.7,449.4 L359.8,455.5 L350.1,458.1 L339.8,457.2 L327.9,453.1 L313.8,446.3 L297.3,437.3 L278.6,426.7 L258.3,415.1 L237.4,403.3 L217.1,391.7 L198.6,380.8" opacity="0.43"/>
 <path d="M183.6,377.7 L169.0,367.7 L158.5,358.8 L152.3,350.9 L150.2,343.5 L151.4,336.4 L155.0,329.0 L159.6,320.8 L163.9,311.3 L167.0,300.2 L168.0,287.3 L166.7,272.4 L163.4,255.7 L158.6,237.5 L153.6,218.2 L149.4,198.5 L147.5,179.0 L148.8,160.5 L154.2,143.8 L164.0,129.5 L178.0,118.2 L195.6,110.3 L215.6,106.0 L237.1,105.4 L258.5,108.2 L278.8,114.1 L297.2,122.6 L313.3,133.0 L327.1,144.8 L339.0,157.1 L349.8,169.5 L360.5,181.3 L372.0,192.3 L385.1,202.3 L400.2,211.2 L417.3,219.1 L435.9,226.5 L455.2,233.6 L473.8,241.0 L490.4,249.2 L503.5,258.7 L512.1,269.8 L515.4,282.7 L513.0,297.6 L505.1,314.3 L492.6,332.5 L476.6,351.8 L458.4,371.5 L439.3,391.0 L420.8,409.5 L403.7,426.2 L388.6,440.5 L375.6,451.8 L364.2,459.7 L353.7,464.0 L343.2,464.6 L331.7,461.8 L318.4,455.9 L302.7,447.4 L284.7,437.0 L264.7,425.2 L243.4,412.9 L221.9,400.5 L201.6,388.7 L183.6,377.7" opacity="0.44"/>
 <path d="M168.6,374.1 L155.2,364.2 L146.2,355.3 L141.7,347.3 L141.3,339.7 L144.2,332.1 L149.1,323.9 L154.7,314.7 L159.8,304.1 L163.3,291.6 L164.5,277.3 L163.4,261.0 L160.4,242.9 L156.2,223.6 L151.9,203.5 L149.0,183.3 L148.6,163.8 L151.8,145.7 L159.2,129.8 L171.0,116.8 L186.9,107.0 L206.0,100.9 L227.3,98.6 L249.3,100.0 L271.0,104.7 L291.1,112.4 L309.0,122.5 L324.4,134.3 L337.5,147.0 L348.8,160.0 L359.3,172.8 L370.0,184.8 L381.8,195.9 L395.4,205.8 L411.1,214.7 L428.8,222.7 L447.8,230.3 L467.1,237.9 L485.3,246.1 L501.0,255.3 L512.9,265.9 L519.7,278.4 L520.9,292.7 L516.3,309.0 L506.4,327.1 L491.9,346.4 L474.2,366.5 L454.7,386.7 L434.8,406.2 L415.7,424.3 L398.3,440.2 L383.0,453.2 L369.7,463.0 L357.9,469.1 L346.8,471.4 L335.3,470.0 L322.6,465.3 L307.9,457.6 L290.8,447.5 L271.3,435.7 L250.0,423.0 L227.9,410.0 L206.1,397.2 L185.9,385.2 L168.6,374.1" opacity="0.44"/>
-</g><circle cx="300" cy="285" r="245" fill="none" stroke="#8aab9f" stroke-opacity=".18" stroke-dasharray="1 9"/><circle cx="300" cy="285" r="267" fill="none" stroke="#8aab9f" stroke-opacity=".1"/><circle cx="511" cy="165" r="4" fill="#e7fb88"/></svg><div class="art-caption"><span>Gesture / pigment / presence</span><span>01 — 04</span></div></div>
+</g><circle cx="300" cy="285" r="245" fill="none" stroke="#76a4ee" stroke-opacity=".35" stroke-dasharray="1 9" stroke-linecap="round"/><circle cx="300" cy="285" r="267" fill="none" stroke="#f4ef34" stroke-opacity=".18"/><circle cx="505" cy="155" r="5" fill="#f4ef34"/></svg><div class="art-caption"><span>Gesture / pigment / presence</span><span>01 — 04</span></div></div>
   </section>
-  <section class="worlds" aria-label="Four interactive worlds"><article><small>01</small><div><h2>The Starry Night</h2><p>Stir the sky</p></div></article><article><small>02</small><div><h2>Impression, Sunrise</h2><p>Touch the light</p></div></article><article><small>03</small><div><h2>Rivers and Mountains</h2><p>Part the mist</p></div></article><article><small>04</small><div><h2>Living Ink</h2><p>Write with movement</p></div></article></section>
+  <section class="worlds" aria-label="Four interactive worlds"><article><small>01</small><div><h2>The Starry Night</h2><p>Stir the sky</p></div></article><article><small>02</small><div><h2>Impression, Sunrise</h2><p>Touch the light</p></div></article><article><small>03</small><div><h2>Rivers and Mountains</h2><p>Part the mist</p></div></article><article><small>04</small><div><h2>Spatial Yellowtail</h2><p>Draw a moving trail</p></div></article></section>
   <footer class="footer"><span>Created by <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank" rel="noopener">Rongxuan Mu ↗</a><br>Independent developer &amp; artist</span><span>Headset required<br>Hands, controllers &amp; gaze pointers</span></footer><div id="ver"></div>
  </main>
 </div>
@@ -456,16 +456,23 @@ var MouseSource = class extends Source {
 
 // src/interaction.js
 import * as THREE2 from "three";
+import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 var ICFG = {
-  nearRadiusHand: 0.035,
-  nearRadiusController: 0.045,
+  nearRadiusHand: 0.05,
+  nearRadiusController: 0.06,
   nearExitScale: 1.6,
   // hover hysteresis: keep a near target until 1.6\u00d7 the radius
+  outlinePx: 4,
+  // thickness of the white hover outline, in CSS pixels on desktop / eye-buffer pixels in XR (~0.1 deg either way)
+  outlinePxSelect: 7,
+  // ...and while pressed / held
+  nearCentroidWeight: 0.5,
+  // near ranking: score = surface distance + weight x centroid distance; the lowest score is the one hovered target
   farExitScale: 1.25,
   // far hover hysteresis: the current far target is kept until 1.25\u00d7 the cone angle (1\u00b0 \u2192 1.25\u00b0, i.e. 2.5\u00b0 diameter max)
   selectGraceMs: 160,
   // a pinch that closes just after hover was lost still grabs it
-  pokeHover: 0.045,
+  pokeHover: 0.06,
   // m in front of a surface where poke hover starts
   pokePress: 8e-3,
   // penetration to fire press
@@ -518,10 +525,10 @@ var ICFG = {
     // gain at or below vLow
     speedMax: 2.5,
     // gain at or above vHigh
-    vLow: 0.15,
-    // m/s of hand speed along the aim ray
-    vHigh: 0.8,
-    // m/s
+    vLow: 0.6,
+    // m/s of hand speed along the aim ray below which there is no speed gain
+    vHigh: 1.8,
+    // m/s at which the full speed gain applies (only genuinely fast pushes / pulls)
     smoothing: 14,
     // no minimum hold distance: a far grab keeps the exact distance it was picked at (no jump on close targets)
     // 1/s, how fast the speed gain follows (avoids jumps)
@@ -540,6 +547,55 @@ var _rc = new THREE2.Raycaster();
 var _cp = new THREE2.Vector3();
 var _cq = new THREE2.Quaternion();
 var _cs = new THREE2.Vector3();
+// White hover outline: an inverted hull (back faces) pushed outward in SCREEN space, away from the object's
+// projected centre, by a fixed number of pixels - so the line is the same thickness at any distance or object
+// scale and never tears at corners (expanding a box along its split face normals opened gaps at every corner).
+// The direction is normalised in PIXEL space (not NDC, which is anisotropic), so the push is exactly N px.
+// The hull still uses a merged-vertex copy so the silhouette is watertight.
+function outlineGeometry(geo) {
+  if (geo.userData.vxrHull) return geo.userData.vxrHull;
+  let g = geo;
+  try {
+    g = mergeVertices(geo.clone());
+    g.computeVertexNormals();
+  } catch (_) {
+    g = geo;
+  }
+  geo.userData.vxrHull = g;
+  return g;
+}
+function hoverOutlineMaterial() {
+  const m = new THREE2.MeshBasicMaterial({ color: 16777215, side: THREE2.BackSide, transparent: true, opacity: 0.9, depthWrite: false });
+  m.userData.px = { value: ICFG.outlinePx };
+  m.userData.viewport = { value: new THREE2.Vector2(1024, 1024) };
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uOutlinePx = m.userData.px;
+    sh.uniforms.uViewport = m.userData.viewport;
+    sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\n" + sh.vertexShader.replace(
+      "#include <project_vertex>",
+      "#include <project_vertex>\n vec4 vxrC = projectionMatrix * modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );\n vec2 vxrD = ( gl_Position.xy / gl_Position.w - vxrC.xy / vxrC.w ) * uViewport;\n if ( length( vxrD ) > 1e-6 ) gl_Position.xy += normalize( vxrD ) * uOutlinePx * 2.0 * gl_Position.w / uViewport;"
+    );
+  };
+  m.customProgramCacheKey = () => "vxr-hover-outline";
+  return m;
+}
+// the clip-space offset needs the pixel size of the viewport being drawn (per eye in XR)
+function outlineHull(sourceMesh, mat) {
+  const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);
+  hull.userData.isOutline = hull.userData.noCollider = hull.userData.noHighlight = true;
+  // no renderOrder: the hull sits at the object's own depth, so plain distance sorting puts it in front of
+  // whatever is behind the object and behind whatever is in front of it.
+  hull.frustumCulled = false;
+  hull.visible = false;
+  hull.onBeforeRender = (renderer, scene, camera) => {
+    const vp = camera.viewport;
+    // XR: this eye's viewport in render-target pixels. Desktop: CSS pixels (not the device-pixel buffer),
+    // so the thickness matches what the label says on a HiDPI screen.
+    if (vp) mat.userData.viewport.value.set(vp.z, vp.w);
+    else renderer.getSize(mat.userData.viewport.value);
+  };
+  return hull;
+}
 var Interactable = class _Interactable {
   /**
    * @param {THREE.Object3D} object
@@ -565,7 +621,8 @@ var Interactable = class _Interactable {
     this.hoverers = /* @__PURE__ */ new Set();
     this.selections = [];
     this.localBox = opts.box ? opts.box.clone() : computeLocalBox(object);
-    this._highlight = null;
+    this._outline = null;
+    this._outlineMat = null;
     this._level = 0;
     object.userData.interactable = this;
   }
@@ -660,24 +717,25 @@ var Interactable = class _Interactable {
     this._level = level;
     this.emit("statechange", { level });
     if (!this.opts.highlight) return;
-    if (!this._highlight) {
-      this._highlight = [];
+    if (!this._outline) {
+      // build the hulls once: one per mesh, parented to that mesh at identity so it follows every transform
+      this._outline = [];
+      this._outlineMat = hoverOutlineMaterial();
+      const parts = [];
       this.object.traverse((o) => {
-        if (o.isMesh && o.material && o.material.emissive && !o.userData.noHighlight) {
-          this._highlight.push({ m: o.material, base: o.material.emissive.clone(), bi: o.material.emissiveIntensity });
-        }
+        if (o.isMesh && o.geometry && !o.userData.noHighlight && !o.userData.noCollider && !o.userData.isOutline) parts.push(o);
       });
-    }
-    for (const h of this._highlight) {
-      if (level === 0) {
-        h.m.emissive.copy(h.base);
-        h.m.emissiveIntensity = h.bi;
-      } else {
-        h.m.emissive.setHex(level === 1 ? 3824256 : 6990079);
-        h.m.emissiveIntensity = level === 1 ? 0.6 : 1;
+      for (const o of parts) {
+        const hull = outlineHull(o, this._outlineMat);
+        o.add(hull);
+        this._outline.push(hull);
       }
     }
+    for (const h of this._outline) h.visible = level > 0;
+    this._outlineMat.userData.px.value = level === 2 ? ICFG.outlinePxSelect : ICFG.outlinePx;
+    this._outlineMat.opacity = level === 2 ? 1 : 0.85;
   }
+
 };
 function computeLocalBox(object) {
   object.updateMatrixWorld(true);
@@ -828,11 +886,19 @@ var InteractionManager = class {
     this._setHover(g.poke, null);
     let nearT = null, nearD = Infinity;
     if (!farOnly) {
+      // near hover = the direct-interaction region. Exactly one target: candidates within the radius are ranked
+      // by surface distance + nearCentroidWeight x centroid distance (intention: the object whose body the hand
+      // is closest to wins ties at equal surface distance); the current target keeps a hysteresis radius.
+      // Whether the ray shows follows from this alone: near target hovered -> ray hidden, none -> ray shown.
       const r = src.kind === "hand" ? ICFG.nearRadiusHand : ICFG.nearRadiusController;
+      let nearScore = Infinity;
       for (const it of this._candidates((it2) => it2.opts.near && it2.opts.poke !== "volume")) {
         const d = it.distanceTo(src.nearPoint);
         const lim = it === g.near.hover ? r * ICFG.nearExitScale : r;
-        if (d < lim && d < nearD) {
+        if (d >= lim) continue;
+        const score = d + ICFG.nearCentroidWeight * it.worldCenter(_v1).distanceTo(src.nearPoint);
+        if (score < nearScore) {
+          nearScore = score;
           nearD = d;
           nearT = it;
         }
@@ -1288,11 +1354,13 @@ function setWorldMatrix(o, m) {
 import * as THREE3 from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 var THEME = {
-  left: new THREE3.Color(8368895),
-  right: new THREE3.Color(16757375),
-  accent: new THREE3.Color(6091519),
+  left: new THREE3.Color(16777215),
+  right: new THREE3.Color(16777215),
+  accent: new THREE3.Color(16777215),
+  hover: new THREE3.Color(16777215),
+  // everything interaction-related is white: ray, cursor, hover glow, poke / long-press rings
   select: new THREE3.Color(16777215),
-  ray: new THREE3.Color(14674175)
+  ray: new THREE3.Color(16777215)
 };
 var _v12 = new THREE3.Vector3();
 var _v22 = new THREE3.Vector3();
@@ -1364,12 +1432,8 @@ var HandVisual = class {
     this.bones.frustumCulled = false;
     this.bones.renderOrder = 9;
     this.root.add(this.bones);
-    this.pinchDot = new THREE3.Mesh(
-      new THREE3.SphereGeometry(1, 16, 12),
-      new THREE3.MeshBasicMaterial({ color: THEME.accent, transparent: true, opacity: 0, depthWrite: false, depthTest: false })
-    );
-    this.pinchDot.renderOrder = 11;
-    this.root.add(this.pinchDot);
+    // (no pinch indicator ball: the near cursor is the direct-interaction affordance and the ray the far one,
+    //  so only one affordance is visible at a time)
     this.mesh = null;
     this.meshBones = [];
     this._meshTried = false;
@@ -1443,9 +1507,6 @@ var HandVisual = class {
       this.bones.setMatrixAt(b, _m);
     }
     this.bones.instanceMatrix.needsUpdate = true;
-    this.pinchDot.position.copy(s.pinchPoint);
-    this.pinchDot.scale.setScalar(4e-3 + 6e-3 * pv);
-    this.pinchDot.material.opacity = s.select ? 0.95 : pv > 0.3 ? pv * 0.5 : 0;
     if (this.mesh) {
       this.mesh.visible = this.showMesh;
       if (this.showMesh) for (const { bone, j } of this.meshBones) {
@@ -1472,9 +1533,9 @@ var ControllerVisual = class {
     this.nose = new THREE3.Mesh(new THREE3.SphereGeometry(6e-3, 16, 12), new THREE3.MeshBasicMaterial({ color: 16777215 }));
     this.root.add(this.nose);
     const dotG = new THREE3.SphereGeometry(45e-4, 12, 8);
-    this.btnA = new THREE3.Mesh(dotG, new THREE3.MeshBasicMaterial({ color: 3358805 }));
-    this.btnB = new THREE3.Mesh(dotG, new THREE3.MeshBasicMaterial({ color: 3358805 }));
-    this.stick = new THREE3.Mesh(new THREE3.SphereGeometry(5e-3, 12, 8), new THREE3.MeshBasicMaterial({ color: 14674175 }));
+    this.btnA = new THREE3.Mesh(dotG, new THREE3.MeshBasicMaterial({ color: 5592405 }));
+    this.btnB = new THREE3.Mesh(dotG, new THREE3.MeshBasicMaterial({ color: 5592405 }));
+    this.stick = new THREE3.Mesh(new THREE3.SphereGeometry(5e-3, 12, 8), new THREE3.MeshBasicMaterial({ color: 16777215 }));
     this.root.add(this.btnA, this.btnB, this.stick);
     this._c = new THREE3.Color();
   }
@@ -1497,8 +1558,8 @@ var ControllerVisual = class {
     const top = ry * 0.92;
     this.btnA.position.set(-6e-3, top, 0.012 + rz * 0.2);
     this.btnB.position.set(6e-3, top, 0 + rz * 0.2);
-    this.btnA.material.color.set(s.buttons.a ? THEME.accent : 3358805);
-    this.btnB.material.color.set(s.buttons.b ? THEME.accent : 3358805);
+    this.btnA.material.color.set(s.buttons.a ? THEME.accent : 5592405);
+    this.btnB.material.color.set(s.buttons.b ? THEME.accent : 5592405);
     this.stick.position.set(s.stick.x * 8e-3, top + 2e-3, 0.03 + s.stick.y * 8e-3);
   }
   dispose() {
@@ -1533,18 +1594,7 @@ var InteractorVisual = class {
     );
     this.reticle.renderOrder = 30;
     this.root.add(this.reticle);
-    this.reticleDot = new THREE3.Mesh(
-      new THREE3.CircleGeometry(0.3, 24),
-      new THREE3.MeshBasicMaterial({ color: THEME.ray, transparent: true, opacity: 0.9, depthTest: false, side: THREE3.DoubleSide })
-    );
-    this.reticleDot.renderOrder = 31;
-    this.reticle.add(this.reticleDot);
-    this.nearCursor = new THREE3.Mesh(
-      new THREE3.SphereGeometry(1, 16, 12),
-      new THREE3.MeshBasicMaterial({ color: THEME.accent, transparent: true, opacity: 0.35, depthWrite: false })
-    );
-    this.nearCursor.renderOrder = 25;
-    this.root.add(this.nearCursor);
+    // (no near cursor sphere: direct-interaction hover shows on the object itself)
     this.pokeRing = new THREE3.Mesh(
       new THREE3.RingGeometry(0.75, 1, 40),
       new THREE3.MeshBasicMaterial({ color: THEME.accent, transparent: true, opacity: 0.9, depthTest: false, side: THREE3.DoubleSide })
@@ -1620,20 +1670,10 @@ var InteractorVisual = class {
         const hk = this.hk, sk = this.sk;
         const sc = Math.max(6e-3, head.distanceTo(end) * 0.012) * THREE3.MathUtils.lerp(0.9, 1, hk) * THREE3.MathUtils.lerp(1, 0.7, sk);
         this.reticle.scale.setScalar(sc);
-        this._c1.copy(THEME.ray).lerp(THEME.accent, hk).lerp(THEME.select, sk);
+        this._c1.copy(THEME.ray).lerp(THEME.hover, hk).lerp(THEME.select, sk);
         this.reticle.material.color.copy(this._c1);
         this.reticle.material.opacity = THREE3.MathUtils.lerp(0.85, 0.95, hk) * F;
-        // centre dot: clearly visible while nothing is hovered, fades out as the ring lights up on hover
-        this.reticleDot.material.color.copy(this._c1);
-        this.reticleDot.material.opacity = 0.9 * (1 - hk) * F;
       }
-    }
-    const nearOn = a === g.near;
-    this.nearCursor.visible = nearOn && F > 0.01;
-    if (nearOn) {
-      this.nearCursor.position.copy(s.nearPoint);
-      this.nearCursor.scale.setScalar(g.near.selecting ? 7e-3 : 0.011);
-      this.nearCursor.material.opacity = (g.near.selecting ? 0.8 : 0.3) * F;
     }
     const pokeOn = a === g.poke && g.poke.hover;
     this.pokeRing.visible = !!pokeOn;
@@ -1693,7 +1733,7 @@ var LongPressRings = class {
 // src/ui.js
 import * as THREE4 from "three";
 var FONT = '600 {s}px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-function textTexture(text, { w = 256, h = 64, size = 28, color = "#eaf2ff", bg = null, align = "center" } = {}) {
+function textTexture(text, { w = 256, h = 64, size = 28, color = "#ffffff", bg = null, align = "center" } = {}) {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -1703,13 +1743,32 @@ function textTexture(text, { w = 256, h = 64, size = 28, color = "#eaf2ff", bg =
   tex.userData.draw = (t, col = color, b = bg) => {
     const g = c.getContext("2d");
     g.clearRect(0, 0, w, h);
-    if (b) {
+    if (b && typeof b === "object") {
+      // sketch style: optional fill + white outline; radius \u2265 h/2 gives a capsule
+      const lw = b.lineWidth || 3;
+      roundRect(g, lw, lw, w - 2 * lw, h - 2 * lw, b.radius ?? h * 0.22);
+      if (b.fill) {
+        g.fillStyle = b.fill;
+        g.fill();
+      }
+      if (b.stroke) {
+        g.strokeStyle = b.stroke;
+        g.lineWidth = lw;
+        g.stroke();
+      }
+    } else if (b) {
       g.fillStyle = b;
       roundRect(g, 0, 0, w, h, h * 0.22);
       g.fill();
     }
     g.fillStyle = col;
-    g.font = FONT.replace("{s}", size);
+    // shrink to fit: a capsule is much wider than it is tall, so long captions must not overflow
+    let fs = size, pad = Math.max(12, h * 0.55);
+    g.font = FONT.replace("{s}", fs);
+    while (fs > 8 && g.measureText(t).width > w - 2 * pad) {
+      fs -= 2;
+      g.font = FONT.replace("{s}", fs);
+    }
     g.textAlign = align;
     g.textBaseline = "middle";
     g.fillText(t, align === "center" ? w / 2 : 12, h / 2 + 1);
@@ -1727,7 +1786,7 @@ function roundRect(g, x, y, w, h, r) {
   g.arcTo(x, y, x + w, y, r);
   g.closePath();
 }
-function roundedPanelTexture(w, h, { fill = "rgba(14,20,34,0.82)", stroke = "rgba(140,190,255,0.35)" } = {}) {
+function roundedPanelTexture(w, h, { fill = "#000000", stroke = "rgba(255,255,255,0.8)" } = {}) {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = h;
@@ -1743,8 +1802,10 @@ function roundedPanelTexture(w, h, { fill = "rgba(14,20,34,0.82)", stroke = "rgb
   return t;
 }
 var UIButton = class {
-  constructor(im, label, { w = 0.06, h = 0.026, toggle = false, value = false, onClick = null, fontSize = 30 } = {}) {
+  constructor(im, label, { w = 0.06, h = 0.026, toggle = false, value = false, onClick = null, fontSize = 30, swatch = null, capsule = false } = {}) {
     this.im = im;
+    this.swatch = swatch;
+    this.capsule = capsule;
     this.label = label;
     this.toggle = toggle;
     this.value = value;
@@ -1752,14 +1813,19 @@ var UIButton = class {
     this.root = new THREE4.Group();
     this.root.name = `button:${label}`;
     const depth = 0.01;
-    this.baseMat = new THREE4.MeshStandardMaterial({ color: 1779256, roughness: 0.6, transparent: true, opacity: 0.92, emissive: 0 });
+    this.baseMat = new THREE4.MeshStandardMaterial({ color: 0, roughness: 0.6, emissive: 0 });
     this.base = new THREE4.Mesh(new THREE4.BoxGeometry(w, h, depth), this.baseMat);
-    this.base.renderOrder = 1;
+    // not rendered: a square box behind a rounded pill would either show its corners or (when translucent)
+    // leak passthrough. It stays in the tree as the poke collider / travel geometry.
+    // NB: hide the MATERIAL, not the object - Interactable.isVisible walks the object tree, so an invisible
+    // object drops out of hit-testing entirely.
+    this.baseMat.visible = false;
+    // no renderOrder on UI pieces: renderOrder is GLOBAL, so a far panel's text would paint over a near
+    // panel's background. The layers are physically offset in z, so distance sorting gets it right.
     this.root.add(this.base);
     this.tex = textTexture(label, { w: 256, h: Math.round(256 * h / w), size: fontSize });
-    this.faceMat = new THREE4.MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false });
+    this.faceMat = new THREE4.MeshBasicMaterial({ map: this.tex, alphaTest: 0.5, alphaToCoverage: true });
     this.face = new THREE4.Mesh(new THREE4.PlaneGeometry(w * 0.96, h * 0.9), this.faceMat);
-    this.face.renderOrder = 2;
     this.face.userData.noHighlight = true;
     this.face.userData.noCollider = true;
     this.faceZ = depth / 2 + 8e-4;
@@ -1767,6 +1833,7 @@ var UIButton = class {
     this.root.add(this.face);
     this.it = im.add(this.root, {
       poke: "surface",
+      highlight: false,
       onPokeDepth: (d) => {
         this.face.position.z = this.faceZ - Math.min(d, depth * 0.8);
       }
@@ -1794,11 +1861,21 @@ var UIButton = class {
     const lvl = this.it ? this.it._level : 0;
     const on = this.toggle && this.value;
     const text = this.toggle ? `${this.label}${on ? " \u25cf" : " \u25cb"}` : this.label;
-    this.tex.userData.draw(
-      text,
-      lvl === 2 ? "#0b1220" : "#eaf2ff",
-      lvl === 2 ? "#5cf2ff" : on ? "rgba(92,242,255,0.28)" : lvl === 1 ? "rgba(120,170,255,0.25)" : null
-    );
+    // white-line sketch style: outline always; hover = heavier line + faint fill; pressed / toggled on = inverted
+    const radius = this.capsule ? this.tex.image.height / 2 : void 0;
+    if (this.swatch !== null) {
+      // colour swatch: the exact colour as the fill, white outline (heavier on hover / press)
+      this.tex.userData.draw("", "#ffffff", { fill: "#" + this.swatch.toString(16).padStart(6, "0"), stroke: lvl ? "#ffffff" : "rgba(255,255,255,0.7)", lineWidth: lvl ? 6 : 3, radius });
+      return;
+    }
+    const inverted = lvl === 2 || on;
+    // every state has an opaque fill: a hollow pill would show the passthrough feed through the UI
+    this.tex.userData.draw(text, inverted ? "#000000" : "#ffffff", {
+      stroke: inverted ? "#ffffff" : lvl === 1 ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.7)",
+      lineWidth: lvl === 1 ? 5 : 3,
+      fill: lvl === 2 ? "#ffffff" : on ? "#ffffff" : lvl === 1 ? "#2a2a2a" : "#000000",
+      radius
+    });
   }
 };
 var UISlider = class {
@@ -1807,18 +1884,17 @@ var UISlider = class {
     this.onChange = onChange;
     this.w = w;
     this.root = new THREE4.Group();
-    const track = new THREE4.Mesh(new THREE4.BoxGeometry(w, 4e-3, 4e-3), new THREE4.MeshBasicMaterial({ color: 4214890 }));
-    this.fill = new THREE4.Mesh(new THREE4.BoxGeometry(1, 45e-4, 45e-4), new THREE4.MeshBasicMaterial({ color: THEME.accent }));
+    const track = new THREE4.Mesh(new THREE4.BoxGeometry(w, 3e-3, 3e-3), new THREE4.MeshBasicMaterial({ color: 5592405 }));
+    this.fill = new THREE4.Mesh(new THREE4.BoxGeometry(1, 4e-3, 4e-3), new THREE4.MeshBasicMaterial({ color: 16777215 }));
     this.root.add(track, this.fill);
     this.knob = new THREE4.Mesh(
       new THREE4.CylinderGeometry(9e-3, 9e-3, 8e-3, 24).rotateX(Math.PI / 2),
-      new THREE4.MeshStandardMaterial({ color: 15397631, emissive: 0, roughness: 0.4 })
+      new THREE4.MeshBasicMaterial({ color: 16777215 })
     );
     this.root.add(this.knob);
-    this.labelTex = textTexture(label, { w: 256, h: 40, size: 24, align: "left" });
+    this.labelTex = textTexture(label, { w: 256, h: 40, size: 24, align: "left", color: "#ffffff" });
     const lab = new THREE4.Mesh(new THREE4.PlaneGeometry(w, w * 40 / 256), new THREE4.MeshBasicMaterial({ map: this.labelTex, transparent: true, depthWrite: false }));
     lab.position.set(0, 0.016, 0);
-    lab.renderOrder = 2;
     this.root.add(lab);
     this.label = label;
     this.knob.name = `slider:${label}`;
@@ -1845,18 +1921,17 @@ var UIPanel = class {
     this.root = new THREE4.Group();
     const bg = new THREE4.Mesh(
       new THREE4.PlaneGeometry(w, h),
-      new THREE4.MeshBasicMaterial({ map: roundedPanelTexture(512, Math.round(512 * h / w)), transparent: true, depthWrite: false })
+      new THREE4.MeshBasicMaterial({ map: roundedPanelTexture(512, Math.round(512 * h / w)), alphaTest: 0.5, alphaToCoverage: true })
     );
     bg.position.z = -6e-3;
-    bg.renderOrder = 0;
     this.root.add(bg);
     if (title) {
-      const tt = textTexture(title, { w: 512, h: 64, size: 30, color: "#9fc4ff", align: "left" });
+      const tt = textTexture(title, { w: 512, h: 64, size: 30, color: "#ffffff", align: "left" });
       // text quads must not write depth: their transparent pixels would otherwise punch a see-through
       // hole in the panel background whenever the sorter draws the background after them
       const t = new THREE4.Mesh(new THREE4.PlaneGeometry(w * 0.92, w * 0.92 * 64 / 512), new THREE4.MeshBasicMaterial({ map: tt, transparent: true, depthWrite: false }));
+      t.position.z = 2e-3;
       t.position.set(0, h / 2 - 0.013, 0);
-      t.renderOrder = 2;
       this.root.add(t);
     }
   }
@@ -1878,7 +1953,7 @@ var UIPanel = class {
 var HandMenu = class {
   constructor(app2) {
     this.app = app2;
-    this.panel = new UIPanel("VibeXR \u00b7 Menu", { w: 0.17, h: 0.236 });
+    this.panel = new UIPanel("VibeXR \u00b7 Menu", { w: 0.17, h: 0.204 });
     this.root = this.panel.root;
     this.root.visible = false;
     this.root.scale.setScalar(1e-3);
@@ -2001,13 +2076,20 @@ var SketchBoard = class {
     this.tex.colorSpace = THREE4.SRGBColorSpace;
     this.tex.anisotropy = 4;
     const depth = 0.01;
-    this.body = new THREE4.Mesh(new THREE4.BoxGeometry(w, h, depth), new THREE4.MeshStandardMaterial({ color: 1779256, roughness: 0.7, transparent: true, opacity: 0.95 }));
+    // one black panel behind the drawing surface AND the header row, so nothing floats outside the board
+    const headY = h / 2 + 0.028, panelH = h + 0.086;
+    this.panel = new THREE4.Mesh(
+      new THREE4.PlaneGeometry(w + 0.028, panelH),
+      new THREE4.MeshBasicMaterial({ map: roundedPanelTexture(512, Math.round(512 * panelH / (w + 0.028))), alphaTest: 0.5, alphaToCoverage: true })
+    );
+    this.panel.position.set(0, (panelH - h) / 2 - 0.014, -depth / 2 - 1e-3);
+    this.panel.userData.noCollider = this.panel.userData.noHighlight = true;
+    this.body = new THREE4.Mesh(new THREE4.BoxGeometry(w, h, depth), new THREE4.MeshStandardMaterial({ color: 0, roughness: 0.7 }));
     this.body.name = "sketch";
-    this.board.add(this.body);
-    this.body.renderOrder = 1;
-    this.face = new THREE4.Mesh(new THREE4.PlaneGeometry(w, h), new THREE4.MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false }));
+    this.body.material.visible = false;
+    this.board.add(this.panel, this.body);
+    this.face = new THREE4.Mesh(new THREE4.PlaneGeometry(w, h), new THREE4.MeshBasicMaterial({ map: this.tex, alphaTest: 0.5, alphaToCoverage: true }));
     this.face.position.z = depth / 2 + 8e-4;
-    this.face.renderOrder = 2;
     this.face.userData.noCollider = true;
     this.face.userData.noHighlight = true;
     this.board.add(this.face);
@@ -2016,44 +2098,63 @@ var SketchBoard = class {
     this.strokeCount = 0;
     this.it = ctx.add(this.body, { poke: "surface", dragThreshold: 0, multi: true, highlight: false });
     this.it.on("press", (e) => this._begin(e)).on("drag", (e) => this._move(e)).on("release", (e) => this._end(e));
-    // toolbar above the board: Auto (colour by method), 4 swatches, Clear
-    const y = h / 2 + 0.026;
-    const swatches = [[null, "Auto"], [6091519, ""], [16748488, ""], [16114298, ""], [16777215, ""]];
-    this.swatches = swatches.map(([col, label], k) => {
-      const b = ctx.button(label, { w: 0.05, h: 0.024, fontSize: 22, onClick: () => this.setColor(col) });
+    // header row, all one family: capsule caption, capsule swatches, capsule Clear - on the panel, not outside it
+    const y = headY, bh = 0.026;
+    const capW = 0.2, capTex = textTexture("Sketch \u00b7 poke \u00b7 pinch \u00b7 ray \u00b7 mouse", { w: 512, h: Math.round(512 * bh / capW), size: 44, color: "#ffffff" });
+    capTex.userData.draw("Sketch \u00b7 poke \u00b7 pinch \u00b7 ray \u00b7 mouse", "#ffffff", { fill: "#000000", stroke: "rgba(255,255,255,0.7)", lineWidth: 3, radius: Math.round(512 * bh / capW) / 2 });
+    this.caption = new THREE4.Mesh(new THREE4.PlaneGeometry(capW, bh), new THREE4.MeshBasicMaterial({ map: capTex, alphaTest: 0.5, alphaToCoverage: true }));
+    this.caption.position.set(-w / 2 + capW / 2, y, 2e-3);
+    this.caption.userData.noCollider = this.caption.userData.noHighlight = true;
+    this.board.add(this.caption);
+    const gap = 6e-3, autoW = 0.05, sw = 0.03;
+    let x = -w / 2 + capW + 0.012 + autoW / 2;
+    this.swatches = [];
+    const addSwatch = (col, label, bw) => {
+      const b = ctx.button(label, { w: bw, h: bh, fontSize: 26, swatch: col, capsule: true, onClick: () => this.setColor(col) });
       b.col = col;
-      if (col !== null) b.baseMat.color.setHex(col);
-      b.root.position.set(-w / 2 + 0.04 + k * 0.058, y, 0);
+      b.root.position.set(x, y, 0);
       this.board.add(b.root);
-      return b;
-    });
-    const clr = ctx.button("Clear", { w: 0.07, h: 0.024, fontSize: 22, onClick: () => this.clear() });
-    clr.root.position.set(w / 2 - 0.045, y, 0);
+      this.swatches.push(b);
+      x += bw / 2 + gap;
+    };
+    addSwatch(null, "Auto", autoW);
+    x += sw / 2;
+    for (const col of [6091519, 16748488, 16114298, 16777215]) {
+      addSwatch(col, "", sw);
+      x += sw / 2;
+    }
+    const clr = ctx.button("Clear", { w: 0.062, h: bh, fontSize: 24, capsule: true, onClick: () => this.clear() });
+    clr.root.position.set(w / 2 - 0.031, y, 0);
     this.board.add(clr.root);
     // drag handle on the lower edge: pinch / trigger / mouse-drag it to move the whole board (translation only;
     // the board re-faces the viewer (from its centre) while held and scales with distance), two hands
     // change the user scale factor.
     // The collider box is limited to the bar so the drawing surface stays a separate interactable.
     const by = 0;
-    this.bar = new THREE4.Mesh(new THREE4.BoxGeometry(0.2, 0.016, 0.012), new THREE4.MeshStandardMaterial({ color: 3624530, roughness: 0.5, emissive: 0 }));
+    // a capsule, like the header pills
+    this.bar = new THREE4.Mesh(
+      new THREE4.CapsuleGeometry(9e-3, 0.182, 6, 20).rotateZ(Math.PI / 2),
+      new THREE4.MeshStandardMaterial({ color: 0, roughness: 0.5, emissive: 0 })
+    );
     this.bar.position.set(0, by, 0);
     this.bar.name = "sketch-handle";
     this.root.add(this.bar);
-    const grip = new THREE4.Mesh(new THREE4.BoxGeometry(0.06, 0.004, 0.002), new THREE4.MeshBasicMaterial({ color: 10858479 }));
-    grip.position.set(0, by, 0.007);
-    grip.userData.noCollider = true;
-    grip.userData.noHighlight = true;
-    this.root.add(grip);
+    this.barOutline = outlineHull(this.bar, hoverOutlineMaterial());
+    this.barOutline.visible = true;
+    this.barOutline.material.userData.px.value = 2;
+    this.barOutline.material.opacity = 0.75;
+    this.bar.add(this.barOutline);
     this.handle = ctx.add(this.root, {
       draggable: true,
       translateOnly: true,
       twoHand: true,
       highlight: false,
       box: new THREE4.Box3(new THREE4.Vector3(-0.1, by - 0.012, -0.012), new THREE4.Vector3(0.1, by + 0.012, 0.012))
+      // (collider stays a box around the capsule so the grab target is forgiving)
     });
     this.handle.on("statechange", (e) => {
-      this.bar.material.emissive.setHex(e.level === 2 ? 6990079 : e.level === 1 ? 3824256 : 0);
-      this.bar.material.emissiveIntensity = e.level === 2 ? 1 : 0.6;
+      this.barOutline.material.userData.px.value = e.level === 2 ? ICFG.outlinePxSelect : e.level === 1 ? ICFG.outlinePx : 2;
+      this.barOutline.material.opacity = e.level ? 1 : 0.75;
     });
     this.clear();
     this.setColor(null);
@@ -2065,10 +2166,10 @@ var SketchBoard = class {
   clear() {
     const g = this.g, W = this.c.width, H = this.c.height;
     g.clearRect(0, 0, W, H);
-    g.fillStyle = "rgba(10,14,24,0.92)";
+    g.fillStyle = "#000000";
     roundRect(g, 2, 2, W - 4, H - 4, 22);
     g.fill();
-    g.strokeStyle = "rgba(140,190,255,0.12)";
+    g.strokeStyle = "rgba(255,255,255,0.10)";
     g.lineWidth = 1;
     for (let x = 64; x < W; x += 64) {
       g.beginPath();
@@ -2082,15 +2183,10 @@ var SketchBoard = class {
       g.lineTo(W - 8, y);
       g.stroke();
     }
-    g.strokeStyle = "rgba(140,190,255,0.3)";
-    g.lineWidth = 3;
+    g.strokeStyle = "rgba(255,255,255,0.35)";
+    g.lineWidth = 2;
     roundRect(g, 2, 2, W - 4, H - 4, 22);
     g.stroke();
-    g.fillStyle = "#9fc4ff";
-    g.font = FONT.replace("{s}", 26);
-    g.textBaseline = "top";
-    g.textAlign = "left";
-    g.fillText("Sketch \u00b7 poke \u00b7 pinch \u00b7 ray \u00b7 mouse   (Auto = colour by method: cyan poke, hand tint pinch, white ray, yellow mouse)", 20, 14);
     this.tex.needsUpdate = true;
   }
   // canvas pixel under an interactor: far rays are re-intersected with the face plane so the pen
@@ -2171,7 +2267,7 @@ var LogPanel = class {
     this.c.height = Math.round(768 * h / w);
     this.tex = new THREE4.CanvasTexture(this.c);
     this.tex.colorSpace = THREE4.SRGBColorSpace;
-    this.root = new THREE4.Mesh(new THREE4.PlaneGeometry(w, h), new THREE4.MeshBasicMaterial({ map: this.tex, transparent: true }));
+    this.root = new THREE4.Mesh(new THREE4.PlaneGeometry(w, h), new THREE4.MeshBasicMaterial({ map: this.tex, alphaTest: 0.5, alphaToCoverage: true }));
   }
   push(text) {
     const t = (performance.now() / 1e3).toFixed(1).padStart(6);
@@ -2189,20 +2285,20 @@ var LogPanel = class {
     this.last = now;
     const g = this.c.getContext("2d"), W = this.c.width, H = this.c.height;
     g.clearRect(0, 0, W, H);
-    g.fillStyle = "rgba(10,14,24,0.85)";
+    g.fillStyle = "#000000";
     roundRect(g, 2, 2, W - 4, H - 4, 24);
     g.fill();
-    g.strokeStyle = "rgba(140,190,255,0.3)";
+    g.strokeStyle = "rgba(255,255,255,0.8)";
     g.lineWidth = 3;
     g.stroke();
-    g.fillStyle = "#9fc4ff";
+    g.fillStyle = "#ffffff";
     g.font = FONT.replace("{s}", 30);
     g.textBaseline = "top";
     g.fillText("Interaction events", 28, 22);
     g.font = "500 24px ui-monospace, Menlo, Consolas, monospace";
     const lh = (H - 90) / this.max;
     this.lines.forEach((l, i) => {
-      g.fillStyle = i === 0 ? "#5cf2ff" : `rgba(234,242,255,${1 - i / (this.max + 2)})`;
+      g.fillStyle = i === 0 ? "#ffffff" : `rgba(255,255,255,${1 - i / (this.max + 2)})`;
       g.fillText(l, 28, 72 + i * lh);
     });
     this.tex.needsUpdate = true;
@@ -2251,7 +2347,7 @@ var WorldManager = class {
       },
       panel: (title, opts) => new UIPanel(title, opts),
       // auto-sized text label; `height` is the world-space line height in metres
-      label: (text, { height = 0.02, color = "#cfe0ff" } = {}) => {
+      label: (text, { height = 0.02, color = "#ffffff" } = {}) => {
         const g = document.createElement("canvas").getContext("2d");
         g.font = "600 44px system-ui, sans-serif";
         const cw = Math.ceil(g.measureText(text).width) + 40;
@@ -4376,7 +4472,7 @@ function buildQianli(THREE, root, app) {
     N: MTN_N + TREE_N + MIST_N + WAVE_N + contour.n
   };
 }
-var GALLERY_VERSION = "0.5.1";
+var GALLERY_VERSION = "0.5.0";
 
 
 // ---------------------------------------------------------------------------
@@ -5036,93 +5132,109 @@ class GalleryAudio {
   dispose() { this.nodes.forEach(n=>{try{n.stop();}catch{}}); this.nodes=[]; void this.ctx?.close(); }
 }
 
-// A tactile ink surface sharing the framework's near/poke/far projection rules.
-class InkSurface {
-  constructor(ctx) {
-    const T=ctx.THREE; this.app=ctx.app; this.w=1.18; this.h=.68;
-    this.root=new T.Group(); this.root.name='living-ink-paper'; this.c=document.createElement('canvas'); this.c.width=2048; this.c.height=1180; this.g=this.c.getContext('2d');
-    this.tex=new T.CanvasTexture(this.c); this.tex.colorSpace=T.SRGBColorSpace;
-    this.tex.anisotropy=Math.min(4,ctx.app.renderer.capabilities.getMaxAnisotropy());
-    this.body=new T.Mesh(new T.BoxGeometry(this.w+.028,this.h+.028,.012),new T.MeshBasicMaterial({color:0x827053}));
-    this.face=new T.Mesh(new T.PlaneGeometry(this.w,this.h),new T.MeshBasicMaterial({map:this.tex})); this.face.position.z=.007;
-    this.face.userData.noCollider=true; this.face.userData.noHighlight=true; this.body.add(this.face); this.root.add(this.body);
-    this.active=new Map(); this.history=[]; this.color='#172320'; this.guide=true; this.dirty=true; this.lastUpload=0;
-    this.it=ctx.add(this.body,{poke:'surface',dragThreshold:0,multi:true,highlight:false});
-    this.it.on('press',e=>this.begin(e)).on('drag',e=>this.move(e)).on('release',e=>this.end(e));
-    // The paper texture is made once and reused by undo / clear.
-    this.paper=document.createElement('canvas'); this.paper.width=this.c.width; this.paper.height=this.c.height;
-    const g=this.paper.getContext('2d'); g.fillStyle='#e8dfc7';g.fillRect(0,0,2048,1180);
-    let seed=911; const rand=()=>((seed=(1664525*seed+1013904223)>>>0)/4294967296);
-    for(let i=0;i<20000;i++){g.fillStyle=`rgba(86,68,34,${rand()*.07})`;g.fillRect(rand()*2048,rand()*1180,.5+rand()*2,1+rand()*4);}
-    this.redraw();
+// A spatial interpretation of Golan Levin's Processing Yellowtail study.
+// Draw in the air, release, and the finished mark continually travels along
+// the three-dimensional track recorded by the hand or controller.
+class YellowtailStroke {
+  constructor(ctx, color, index) {
+    const T=ctx.THREE; this.T=T; this.root=new T.Group(); this.points=[];
+    this.color=new T.Color(color); this.phase=(index*.173)%1; this.speed=.075+(index%5)*.012;
+    this.closed=false; this.released=false; this.count=52; this.age=0;
+    this.guideGeometry=new T.BufferGeometry();this.guidePositions=new Float32Array(180*3);
+    this.guideGeometry.setAttribute('position',new T.BufferAttribute(this.guidePositions,3).setUsage(T.DynamicDrawUsage));
+    this.guideGeometry.setDrawRange(0,0);
+    this.guideMaterial=new T.LineBasicMaterial({color:this.color,transparent:true,opacity:.86,depthWrite:false});
+    this.guide=new T.Line(this.guideGeometry,this.guideMaterial);this.guide.frustumCulled=false;this.root.add(this.guide);
+    const geometry=new T.SphereGeometry(.014,8,6);
+    const material=new T.MeshBasicMaterial({color:this.color,transparent:true,opacity:.92,depthWrite:false});
+    this.trail=new T.InstancedMesh(geometry,material,this.count);this.trail.visible=false;this.trail.frustumCulled=false;
+    this.trail.instanceMatrix.setUsage(T.DynamicDrawUsage);this.root.add(this.trail);
+    this.curve=null;this.length=0;
   }
-  _point(e) { return SketchBoard.prototype._point.call(this,e); }
-  pressure(e) {
-    if(e.interactor.type==='poke') return THREE7.MathUtils.clamp(-(this.app.im.group(e.interactor.source)?.pokeState.depth||0)/.012,0,1);
-    return THREE7.MathUtils.clamp(e.interactor.source.selectValue||e.interactor.source.pinchValue||.6,.1,1);
+  add(p) {
+    if(this.points.length && this.points[this.points.length-1].distanceToSquared(p)<.00012)return;
+    this.points.push(p.clone());
+    if(this.points.length>180)this.points.shift();
+    for(let i=0;i<this.points.length;i++){const q=this.points[i],j=i*3;this.guidePositions[j]=q.x;this.guidePositions[j+1]=q.y;this.guidePositions[j+2]=q.z;}
+    this.guideGeometry.setDrawRange(0,this.points.length);this.guideGeometry.attributes.position.needsUpdate=true;this.guideGeometry.computeBoundingSphere();
   }
-  begin(e) {
-    const p=this._point(e); if(!p) return;
-    if(this.history.length>=64){this.history.shift(); this.redraw();}
-    const point={x:p[0],y:p[1],w:7+this.pressure(e)*15};
-    const stroke={color:this.color,points:[point],lastAt:performance.now()};
-    this.history.push(stroke); this.active.set(e.interactor,stroke); this.dab(point,point,stroke.color); this.app.audio.click('ink');
+  finish() {
+    if(this.points.length<4)return false;
+    const T=this.T,first=this.points[0],last=this.points[this.points.length-1];
+    this.closed=this.points.length>12&&first.distanceTo(last)<.11;
+    if(this.closed)this.points[this.points.length-1]=first.clone();
+    this.curve=new T.CatmullRomCurve3(this.points,this.closed,'centripetal',.42);
+    this.length=this.curve.getLength();this.released=true;this.trail.visible=true;
+    this.guideMaterial.opacity=.13;return true;
   }
-  move(e) {
-    const s=this.active.get(e.interactor); if(!s) return;
-    const p=this._point(e), now=performance.now();
-    if(!p){s.gap=true;return;}
-    const last=s.points[s.points.length-1], dx=p[0]-last.x,dy=p[1]-last.y, distance=Math.hypot(dx,dy);
-    if(distance<1.3) return;
-    if(s.points.length>=1024) { this.active.delete(e.interactor); return; }
-    const speed=distance/Math.max(8,now-s.lastAt), target=(6+this.pressure(e)*24)/(1+speed*.4);
-    const point={x:p[0],y:p[1],w:last.w*.55+Math.max(2.5,target)*.45,break:!!s.gap};
-    this.dab(s.gap?point:last,point,s.color); s.points.push(point); s.lastAt=now;s.gap=false;
-  }
-  end(e) { this.active.delete(e.interactor); }
-  dab(a,b,color) {
-    const g=this.g,dist=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.min(90,Math.max(1,Math.ceil(dist/2)));
-    g.fillStyle=color;
-    for(let i=0;i<=steps;i++){
-      const t=i/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t,w=a.w+(b.w-a.w)*t;
-      g.globalAlpha=.09;g.beginPath();g.ellipse(x,y,w*.68,w*.55,-.55,0,Math.PI*2);g.fill();
-      g.globalAlpha=.78;g.beginPath();g.ellipse(x,y,w*.46,w*.35,-.55,0,Math.PI*2);g.fill();
+  update(dt, globalSpeed, paused) {
+    if(!this.released||!this.curve)return;
+    this.age+=dt;if(!paused)this.phase=(this.phase+dt*this.speed*globalSpeed)%1;
+    const T=this.T,dummy=YellowtailStroke._dummy||(YellowtailStroke._dummy=new T.Object3D());
+    const up=YellowtailStroke._up||(YellowtailStroke._up=new T.Vector3(0,1,0));
+    const p=new T.Vector3(),tangent=new T.Vector3();
+    const span=Math.min(.58,Math.max(.24,.3/Math.max(.25,this.length)));
+    for(let i=0;i<this.count;i++){
+      const u=i/(this.count-1),raw=this.phase-u*span;
+      let t=((raw%1)+1)%1;
+      if(!this.closed)t=1-Math.abs(1-2*t);
+      this.curve.getPointAt(t,p);this.curve.getTangentAt(t,tangent).normalize();
+      dummy.position.copy(p);dummy.quaternion.setFromUnitVectors(up,tangent);
+      const taper=.28+.72*Math.sin(Math.PI*u),pulse=.82+.18*Math.sin(this.age*3+i*.31);
+      dummy.scale.set(taper*pulse,.8+1.45*taper,taper*pulse);dummy.updateMatrix();
+      this.trail.setMatrixAt(i,dummy.matrix);
     }
-    g.globalAlpha=.22;g.strokeStyle=color;g.lineWidth=.9;
-    for(let j=-2;j<=2;j++){g.beginPath();g.moveTo(a.x+j*a.w*.16,a.y-a.w*.1);g.lineTo(b.x+j*b.w*.16,b.y-b.w*.1);g.stroke();}
-    g.globalAlpha=1; this.dirty=true;
+    this.trail.instanceMatrix.needsUpdate=true;
   }
-  redraw() {
-    const g=this.g;g.globalAlpha=1;g.drawImage(this.paper,0,0);
-    if(this.guide){g.strokeStyle='rgba(117,94,64,.22)';g.lineWidth=2;g.setLineDash([5,10]);for(let x=172;x<2048;x+=340){g.beginPath();g.moveTo(x,65);g.lineTo(x,1115);g.stroke();}for(let y=250;y<1180;y+=340){g.beginPath();g.moveTo(64,y);g.lineTo(1984,y);g.stroke();}g.setLineDash([]);}
-    g.fillStyle='#8e4937';g.font='24px Georgia,serif';g.fillText('L I V I N G   I N K',65,65);
-    for(const s of this.history){for(let i=0;i<s.points.length;i++){const b=s.points[i],a=i&&!b.break?s.points[i-1]:b;this.dab(a,b,s.color);}}
-    this.dirty=true;
-  }
-  undo(){this.active.clear();this.history.pop();this.redraw();}
-  clear(){this.active.clear();this.history=[];this.redraw();}
-  update(t){if(this.dirty && t-this.lastUpload>=1/30){this.tex.needsUpdate=true;this.lastUpload=t;this.dirty=false;}}
+  dispose(){this.root.removeFromParent();this.guideGeometry.dispose();this.guideMaterial.dispose();this.trail.geometry.dispose();this.trail.material.dispose();}
 }
+
 var LivingInk={
-  id:'living-ink',title:'Living Ink',
+  id:'living-ink',title:'Spatial Yellowtail',
   init(ctx){
     const {root,THREE:T,app}=ctx;enterArtWorld(this,ctx);setImmersive(app,true);
-    this.surface=new InkSurface(ctx);root.add(this.surface.root);this.recentre(ctx);
-    const dome=new T.Mesh(new T.SphereGeometry(40,32,16),new T.MeshBasicMaterial({color:0x111e21,side:T.BackSide}));root.add(dome);
-    const floor=new T.Mesh(new T.CircleGeometry(12,64),new T.MeshBasicMaterial({color:0x172728}));floor.rotation.x=-Math.PI/2;root.add(floor);
-    const halo=new T.Mesh(new T.RingGeometry(1.5,1.506,96),new T.MeshBasicMaterial({color:0xb4a176,transparent:true,opacity:.25,side:T.DoubleSide}));halo.rotation.x=-Math.PI/2;halo.position.y=.005;root.add(halo);
-    this.title=ctx.label('Living Ink', {height:.045,color:'#ded4b6'});this.title.position.set(0,.46,0);this.surface.root.add(this.title);
-    const hint=ctx.label('Pinch + move, hold a trigger, or touch the paper. Slow down for a fuller stroke.',{height:.015,color:'#9aab9f'});hint.position.set(0,-.41,0);this.surface.root.add(hint);
-    const note=ctx.label('Palm up for ink, undo & clear · 64 strokes per sheet',{height:.012,color:'#708c81'});note.position.set(0,-.44,0);this.surface.root.add(note);
+    this.strokes=[];this.held=new Map();this.speed=1;this.paused=false;this.palette=['#f4ef34','#76a4ee','#f4f0e4','#c48ce6','#6ee7d2'];this.nextColor=0;
+    const dome=new T.Mesh(new T.SphereGeometry(38,32,16),new T.MeshBasicMaterial({color:0x171d2f,side:T.BackSide}));root.add(dome);
+    const floor=new T.Mesh(new T.CircleGeometry(14,64),new T.MeshBasicMaterial({color:0x111629}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.05;root.add(floor);
+    const rings=new T.Group();for(let i=1;i<=6;i++){const r=new T.Mesh(new T.RingGeometry(i*1.1,i*1.1+.006,96),new T.MeshBasicMaterial({color:i%2?0x76a4ee:0xf4ef34,transparent:true,opacity:.1,side:T.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.y=-1.045;rings.add(r);}root.add(rings);
+    const head=headPos(app,new T.Vector3()),q=app.renderer.xr.isPresenting?app.renderer.xr.getCamera().quaternion:app.camera.quaternion;
+    const f=new T.Vector3(0,0,-1).applyQuaternion(q);f.y=0;if(f.lengthSq()<.01)f.set(0,0,-1);f.normalize();
+    this.title=ctx.label('SPATIAL YELLOWTAIL',{height:.052,color:'#f4ef34'});this.title.position.copy(head).addScaledVector(f,1.45);this.title.position.y+=.64;this.title.quaternion.copy(q);root.add(this.title);
+    this.hint=ctx.label('Pinch or hold the trigger to draw in space. Release to set the stroke in motion.',{height:.017,color:'#f4f0e4'});this.hint.position.copy(head).addScaledVector(f,1.44);this.hint.position.y+=.54;this.hint.quaternion.copy(q);root.add(this.hint);
+    ownSky(app,true);
   },
-  recentre(ctx){const T=ctx.THREE,p=headPos(ctx.app,new T.Vector3()),q=ctx.app.renderer.xr.isPresenting?ctx.app.renderer.xr.getCamera().quaternion:ctx.app.camera.quaternion;const f=new T.Vector3(0,0,-1).applyQuaternion(q);f.y=0;if(f.lengthSq()<.01)f.set(0,0,-1);f.normalize();this.surface.root.position.copy(p).addScaledVector(f,.9);this.surface.root.position.y-=.16;this.surface.root.rotation.y=Math.atan2(f.x,f.z)+Math.PI;},
-  menuItems(ctx){const s=this.surface,b=(label,fn)=>ctx.button(label,{w:.075,h:.026,fontSize:22,onClick:fn});return [b('Ink',()=>{s.color='#172320';}),b('Cinnabar',()=>{s.color='#974334';}),b('Gold',()=>{s.color='#927131';}),b('Undo',()=>s.undo()),b('Clear',()=>s.clear()),ctx.button('Guides',{w:.075,h:.026,fontSize:22,toggle:true,value:s.guide,onClick:v=>{s.guide=v;s.redraw();}}),b('Recentre',()=>this.recentre(ctx))];},
-  update(dt,t,ctx){this.surface.update(t);ownSky(ctx.app,true);},
-  exit(ctx){this.surface.active.clear();this.surface.history=[];exitArtWorld(this,ctx);this.surface=null;}
+  pointFor(ctx,src,stroke){
+    const T=ctx.THREE;
+    if(src.kind==='hand'&&src.nearPoint)return src.nearPoint.clone();
+    const depth=stroke?.depth||.72;
+    if(src.ray?.valid)return src.ray.origin.clone().addScaledVector(src.ray.dir,depth);
+    return headPos(ctx.app,new T.Vector3()).add(new T.Vector3(0,0,-depth));
+  },
+  begin(ctx,src){
+    if(this.strokes.length>=12){const old=this.strokes.shift();old.dispose();}
+    const stroke=new YellowtailStroke(ctx,this.palette[this.nextColor++%this.palette.length],this.nextColor);
+    stroke.depth=src.kind==='hand' ? .16 : .72;ctx.root.add(stroke.root);stroke.add(this.pointFor(ctx,src,stroke));this.strokes.push(stroke);ctx.app.audio.click('ink');return stroke;
+  },
+  finish(src,stroke){if(!stroke.finish()){const i=this.strokes.indexOf(stroke);if(i>=0)this.strokes.splice(i,1);stroke.dispose();}},
+  clear(){for(const stroke of this.strokes)stroke.dispose();this.strokes=[];this.held?.clear();},
+  addDemo(ctx){
+    if(!ctx)return;const T=ctx.THREE,stroke=new YellowtailStroke(ctx,this.palette[this.nextColor++%this.palette.length],this.nextColor);
+    const head=headPos(ctx.app,new T.Vector3());for(let i=0;i<92;i++){const a=i/91*Math.PI*2;stroke.add(new T.Vector3(Math.cos(a)*.42,Math.sin(a*2)*.16,Math.sin(a)*.28).add(head).add(new T.Vector3(0,0,-1)));}
+    ctx.root.add(stroke.root);stroke.finish();this.strokes.push(stroke);
+  },
+  menuItems(ctx){
+    const b=(label,fn)=>ctx.button(label,{w:.09,h:.026,fontSize:21,onClick:fn});
+    return [b('Slower',()=>this.speed=Math.max(.25,this.speed*.75)),b('Faster',()=>this.speed=Math.min(3,this.speed*1.3)),ctx.button('Pause',{w:.09,h:.026,fontSize:21,toggle:true,value:false,onClick:v=>this.paused=v}),b('Clear',()=>this.clear())];
+  },
+  update(dt,t,ctx){
+    freeSelects(ctx.app,src=>this.begin(ctx,src),(src,stroke)=>stroke.add(this.pointFor(ctx,src,stroke)),(src,stroke)=>this.finish(src,stroke),this.held);
+    for(const stroke of this.strokes)stroke.update(dt,this.speed,this.paused);ownSky(ctx.app,true);
+  },
+  exit(ctx){this.clear();exitArtWorld(this,ctx);this.title=this.hint=null;}
 };
 
 // src/main.js
-var VERSION = "0.8.7";
+var VERSION = "0.8.22";
 var App = class {
   constructor() {
     if (window.__HAND_L) setHandAssetsBase64(window.__HAND_L, window.__HAND_R);
@@ -5424,40 +5536,20 @@ function syncSoundButton(){const b=document.getElementById('sound');b.setAttribu
 document.getElementById('sound').onclick=()=>{app.audio.setEnabled(!app.audio.enabled);syncSoundButton();};
 document.getElementById("ver").textContent = `gallery v${GALLERY_VERSION} · framework v${VERSION}`;
 app.onWorldChanged = (w,c)=>{setWorldMenu(app,w,c);app.audio.setWorld(w.id);};
-var arBtn = document.getElementById("enter-ar");
-var vrBtn = document.getElementById("enter-vr");
-const STANDALONE_URL = "https://rongxuanmu.github.io/immersive-vibe/";
-const IS_EMBEDDED = window.self !== window.top;
-function openStandalone(){
-  const opened = window.open(STANDALONE_URL, "_blank", "noopener");
-  if (!opened) overlay.error(`Open ${STANDALONE_URL} directly in the headset browser.`);
-}
-function offerStandalone(){
-  arBtn.disabled = true;
-  vrBtn.disabled = false;
-  vrBtn.textContent = "Open VR-ready page ↗";
-  vrBtn.onclick = openStandalone;
-  overlay.status("CodePen preview blocks WebXR. Open the VR-ready page in a new tab.");
-}
-if (IS_EMBEDDED) offerStandalone();
 await app.worlds.load("gallery");
-if (IS_EMBEDDED) offerStandalone();
-async function configureXRButtons() {
-  if (IS_EMBEDDED) return;
-  vrBtn.onclick = () => app.enterXR("vr");
-  arBtn.onclick = () => app.enterXR("ar");
+var arBtn = document.getElementById("enter-ar");
+arBtn.onclick = () => app.enterXR(app.preferredXRMode || "vr");
+(async () => {
   if (!navigator.xr) {
-    vrBtn.disabled = arBtn.disabled = true;
-    overlay.status("WebXR is unavailable here. Open this URL in a WebXR-compatible headset browser.");
+    arBtn.disabled = true;
+    overlay.status("Open this page in a WebXR-compatible headset browser.");
     return;
   }
   const [vr, ar] = await Promise.all(["immersive-vr", "immersive-ar"].map((m) => navigator.xr.isSessionSupported(m).catch(() => false)));
-  vrBtn.disabled = !vr;
-  arBtn.disabled = !ar;
-  if (!ar && vr) arBtn.textContent = "Enter gallery ↗", arBtn.disabled = false, arBtn.onclick = () => app.enterXR("vr");
-  overlay.status(vr || ar ? "Ready. Put on your headset and enter the gallery." : "Headset required. Open this page in your headset browser.");
-}
-await configureXRButtons();
+  app.preferredXRMode = ar ? "ar" : vr ? "vr" : null;
+  arBtn.disabled = !app.preferredXRMode;
+  overlay.status(app.preferredXRMode ? "Ready. Put on your headset and enter the gallery." : "No immersive session is available in this browser.");
+})();
 
 if(new URLSearchParams(location.search).get('qa')==='1'){
  const panel=document.createElement('div');panel.id='qa';panel.style='position:fixed;bottom:8px;left:8px;z-index:20;display:flex;gap:6px;flex-wrap:wrap;max-width:95vw';
@@ -5465,17 +5557,11 @@ if(new URLSearchParams(location.search).get('qa')==='1'){
  add('Cover',()=>overlay.show());add('Gallery',()=>{overlay.hide();void app.worlds.load('gallery');});
  ART.forEach(a=>add(a.title,()=>{overlay.hide();void app.worlds.load(a.id);}));
  for(const mode of ['scroll','globe','immersive'])add(mode,()=>{if(app.worlds.current?.qj)app.worlds.current.qj.setMode(mode);});
- add('Stroke test',()=>{
- const s=app.worlds.current?.surface;if(!s)return;
- const src={kind:'controller',selectValue:.75,ray:{valid:true,origin:new THREE7.Vector3(),dir:new THREE7.Vector3()}};
- const i={type:'far',source:src},e={interactor:i};s.face.updateMatrixWorld(true);
- const point=(x,y)=>{const p=s.face.localToWorld(new THREE7.Vector3(x,y,.01));src.ray.origin.copy(p).add(new THREE7.Vector3(0,0,.6).transformDirection(s.face.matrixWorld).multiplyScalar(.6));src.ray.dir.copy(p).sub(src.ray.origin).normalize();};
- point(-.25,.13);s.begin(e);for(let k=1;k<70;k++){point(-.25+k*.007,.13-Math.sin(k/70*Math.PI)*.23);s.move(e);}s.end(e);
- });
- add('Undo',()=>app.worlds.current?.surface?.undo());add('Clear',()=>app.worlds.current?.surface?.clear());
+ add('Stroke test',()=>app.worlds.current?.addDemo?.(app.worlds.ctx));
+ add('Clear',()=>app.worlds.current?.clear?.());
  add('Audio test',()=>{app.audio.setActive(!app.audio.active);app.audio.click();});
  const stats=document.createElement('output');stats.id='qa-stats';stats.style='font:10px monospace;color:white;align-self:center';panel.append(stats);
- setInterval(()=>{stats.textContent=JSON.stringify({world:app.worlds.current?.id,geometries:app.renderer.info.memory.geometries,textures:app.renderer.info.memory.textures,draws:app.renderer.info.render.calls,strokes:app.worlds.current?.surface?.history.length,audio:app.audio.ctx?.state,points:app.worlds.current?.surface?.history.reduce((n,s)=>n+s.points.length,0),failed:!!app.worlds._failed});},1000);
+ setInterval(()=>{stats.textContent=JSON.stringify({world:app.worlds.current?.id,geometries:app.renderer.info.memory.geometries,textures:app.renderer.info.memory.textures,draws:app.renderer.info.render.calls,strokes:app.worlds.current?.strokes?.length,audio:app.audio.ctx?.state,points:app.worlds.current?.strokes?.reduce((n,s)=>n+s.points.length,0),failed:!!app.worlds._failed});},1000);
  document.body.append(panel);
 }
 
