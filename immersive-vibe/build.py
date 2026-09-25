@@ -85,6 +85,8 @@ s=s.replace('const ball = new T.Mesh(new T.SphereGeometry(0.12, 48, 32), mat);',
       organicGeo.computeVertexNormals();organicGeo.computeBoundingSphere();
       const ball = new T.Mesh(organicGeo, mat);''')
 s=s.replace('new T.SphereGeometry(0.128, 32, 20)', 'organicGeo.clone().scale(1.065,1.065,1.065)')
+# Hide idle far affordances; targeting and free-space gestures remain active.
+s=s.replace('const farOn = a === g.far && this.showRay;', 'const farOn = a === g.far && this.showRay && s.ray.valid && !!(g.far.hover || g.far.selecting);')
 # Prevent asynchronous world-load races, release world menu resources and retain cached previews.
 a=s.index('  async load(id) {',s.index('var WorldManager'));b=s.index('  unload() {',a)
 s=s[:a]+'''  async load(id) {
