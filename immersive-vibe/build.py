@@ -52,9 +52,22 @@ s=s.replace('WebXR not available - desktop preview (left-click = ray pinch, whee
 s=s.replace('No immersive mode on this device - desktop preview','Headset required. Open this page in your headset browser.')
 s=s.replace('"Ready" :','"Ready. Put on your headset and enter the gallery." :')
 s=s.replace('"Enter (VR only)"','"Enter gallery ↗"')
-# Four portals in a comfortable arc, labels remain readable.
-s=s.replace('const n = ART.length, gap = 0.62;', 'const n = ART.length, gap = 0.52;')
-s=s.replace('const x = (i - (n - 1) / 2) * gap, z = -0.85;', 'const x = (i - (n - 1) / 2) * gap, z = -0.95 + Math.abs(i-(n-1)/2)*.08;')
+# An uneven spatial cluster with bounded jitter keeps portals distinct and reachable.
+s=s.replace('const n = ART.length, gap = 0.62;', """const portalSpots = [
+      [-.64,.40,-1.05],[-.23,.16,-.72],[.22,.57,-1.19],[.66,.25,-.88]
+    ];""")
+s=s.replace('const x = (i - (n - 1) / 2) * gap, z = -0.85;', """const spot=portalSpots[i];
+      const x=spot[0]+(Math.random()-.5)*.06;
+      const y=top+spot[1]+(Math.random()-.5)*.04;
+      const z=spot[2]+(Math.random()-.5)*.06;""")
+s=s.replace('ball.position.set(x, top + 0.26, z)', 'ball.position.set(x, y, z)')
+s=s.replace('title.position.set(x, top + 0.45, z)', 'title.position.set(x, y + .20, z)')
+s=s.replace('by.position.set(x, top + 0.415, z)', 'by.position.set(x, y + .165, z)')
+s=s.replace('s.ball.position.y = s.base.y + br * 0.022 + br2 * 0.004;', """s.ball.position.set(
+          s.base.x+Math.sin(t*.31+s.phase)*.015,
+          s.base.y+br*.022+br2*.004,
+          s.base.z+Math.sin(t*.23+s.phase*1.4)*.012);
+        s.labels.forEach((label,j)=>label.position.copy(s.ball.position).add(new T.Vector3(0,j===0?.20:.165,0)));""".replace('new T.Vector3','new ctx.THREE.Vector3'))
 s=s.replace('ctx.label(a.title, { height: 0.03','ctx.label(a.title, { height: 0.025')
 s=s.replace('`${a.byline}  \\u00b7  tap to enter`, { height: 0.016','`${a.byline}`, { height: 0.011')
 s=s.replace('  { id: "qianli-jiangshan", title:', '  { id:"living-ink", title:"Living Ink", byline:"Rongxuan Mu · a study in movement", glsl:`vec3 art(vec3 p,vec3 n,float t){float ink=fbm(p*8.);float brush=sin(p.x*12.+p.y*5.+fbm(p*4.)*8.);vec3 paper=vec3(.88,.84,.73);return mix(paper,vec3(.055,.11,.1),smoothstep(.3,.55,brush)*smoothstep(.35,.55,ink));}` },\n  { id: "qianli-jiangshan", title:')

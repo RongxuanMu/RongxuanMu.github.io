@@ -4685,9 +4685,14 @@ var Gallery = {
     this.entering = null;
     this.time = 0;
     setImmersive(app, false);      // the hall is your room
-    const n = ART.length, gap = 0.52;
+    const portalSpots = [
+      [-.64,.40,-1.05],[-.23,.16,-.72],[.22,.57,-1.19],[.66,.25,-.88]
+    ];
     ART.forEach((a, i) => {
-      const x = (i - (n - 1) / 2) * gap, z = -0.95 + Math.abs(i-(n-1)/2)*.08;
+      const spot=portalSpots[i];
+      const x=spot[0]+(Math.random()-.5)*.06;
+      const y=top+spot[1]+(Math.random()-.5)*.04;
+      const z=spot[2]+(Math.random()-.5)*.06;
       const tex = previewTexture(app, T, a);
       const mat = new T.MeshBasicMaterial({ map: tex, toneMapped: false });
       const organicGeo=new T.SphereGeometry(0.12,48,32);
@@ -4699,7 +4704,7 @@ var Gallery = {
       }
       organicGeo.computeVertexNormals();organicGeo.computeBoundingSphere();
       const ball = new T.Mesh(organicGeo, mat);
-      ball.position.set(x, top + 0.26, z); ball.name = `preview-${a.id}`;
+      ball.position.set(x, y, z); ball.name = `preview-${a.id}`;
       ball.userData.noHighlight = true;
       root.add(ball);
       // hover: a soft shell around the globe, additive and view-independent
@@ -4710,9 +4715,9 @@ var Gallery = {
       halo.userData.noCollider = true; halo.userData.noHighlight = true;
       ball.add(halo);
       const title = ctx.label(a.title, { height: 0.025, color: "#f6d76b" });
-      title.position.set(x, top + 0.45, z); root.add(title);
+      title.position.set(x, y + .20, z); root.add(title);
       const by = ctx.label(`${a.byline}`, { height: 0.011, color: "#cfe0ff" });
-      by.position.set(x, top + 0.415, z); root.add(by);
+      by.position.set(x, y + .165, z); root.add(by);
       const it = ctx.add(ball, {});
       const st = { a, ball, mat, halo, it, hover: 0, hovering: false, base: ball.position.clone(), labels: [title, by], phase: i * 1.7 };
       it.on("hoverenter", () => { st.hovering = true; });
@@ -4739,7 +4744,11 @@ var Gallery = {
       if (!this.entering) {
         // breathing: a slow rise and fall with a small swell in the same rhythm
         const br = Math.sin(t * 0.9 + s.phase), br2 = Math.sin(t * 1.8 + s.phase * 1.3);
-        s.ball.position.y = s.base.y + br * 0.022 + br2 * 0.004;
+        s.ball.position.set(
+          s.base.x+Math.sin(t*.31+s.phase)*.015,
+          s.base.y+br*.022+br2*.004,
+          s.base.z+Math.sin(t*.23+s.phase*1.4)*.012);
+        s.labels.forEach((label,j)=>label.position.copy(s.ball.position).add(new ctx.THREE.Vector3(0,j===0?.20:.165,0)));
         s.ball.scale.setScalar((1 + br * 0.018) * (1 + 0.06 * s.hover));
       }
       for (const l of s.labels) if (head) l.lookAt(head.x, l.position.y, head.z);
@@ -5164,16 +5173,22 @@ class YellowtailStroke {
 var LivingInk={
   id:'living-ink',title:'Living Ink',
   init(ctx){
-    const {root,THREE:T,app}=ctx;enterArtWorld(this,ctx);setImmersive(app,true);
+    const {root,THREE:T,app}=ctx;enterArtWorld(this,ctx);setImmersive(app,false);
+    this.environment=new T.Group();root.add(this.environment);
     this.strokes=[];this.held=new Map();this.speed=1;this.paused=false;this.palette=['#f4ef34','#76a4ee','#f4f0e4','#c48ce6','#6ee7d2'];this.nextColor=0;
-    const dome=new T.Mesh(new T.SphereGeometry(38,32,16),new T.MeshBasicMaterial({color:0x171d2f,side:T.BackSide}));root.add(dome);
-    const floor=new T.Mesh(new T.CircleGeometry(14,64),new T.MeshBasicMaterial({color:0x111629}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.05;root.add(floor);
-    const rings=new T.Group();for(let i=1;i<=6;i++){const r=new T.Mesh(new T.RingGeometry(i*1.1,i*1.1+.006,96),new T.MeshBasicMaterial({color:i%2?0x76a4ee:0xf4ef34,transparent:true,opacity:.1,side:T.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.y=-1.045;rings.add(r);}root.add(rings);
+    const dome=new T.Mesh(new T.SphereGeometry(38,32,16),new T.MeshBasicMaterial({color:0x171d2f,side:T.BackSide}));this.environment.add(dome);
+    const floor=new T.Mesh(new T.CircleGeometry(14,64),new T.MeshBasicMaterial({color:0x111629}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.05;this.environment.add(floor);
+    const rings=new T.Group();for(let i=1;i<=6;i++){const r=new T.Mesh(new T.RingGeometry(i*1.1,i*1.1+.006,96),new T.MeshBasicMaterial({color:i%2?0x76a4ee:0xf4ef34,transparent:true,opacity:.1,side:T.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.y=-1.045;rings.add(r);}this.environment.add(rings);
     const head=headPos(app,new T.Vector3()),q=app.renderer.xr.isPresenting?app.renderer.xr.getCamera().quaternion:app.camera.quaternion;
     const f=new T.Vector3(0,0,-1).applyQuaternion(q);f.y=0;if(f.lengthSq()<.01)f.set(0,0,-1);f.normalize();
     this.title=ctx.label('SPATIAL YELLOWTAIL',{height:.052,color:'#f4ef34'});this.title.position.copy(head).addScaledVector(f,1.45);this.title.position.y+=.64;this.title.quaternion.copy(q);root.add(this.title);
     this.hint=ctx.label('Pinch or hold the trigger to draw in space. Release to set the stroke in motion.',{height:.017,color:'#f4f0e4'});this.hint.position.copy(head).addScaledVector(f,1.44);this.hint.position.y+=.54;this.hint.quaternion.copy(q);root.add(this.hint);
-    ownSky(app,true);
+    this.syncEnvironment(app);
+  },
+  syncEnvironment(app){
+    // In AR the framework backdrop controls room visibility via the hand menu.
+    this.environment.visible=app.sessionMode!=='ar';
+    if(this.environment.visible)ownSky(app,true);
   },
   pointFor(ctx,src,stroke){
     const T=ctx.THREE;
@@ -5201,9 +5216,9 @@ var LivingInk={
   update(dt,t,ctx){
     freeSelects(ctx.app,src=>this.begin(ctx,src),(src,stroke)=>stroke.add(this.pointFor(ctx,src,stroke)),(src,stroke)=>this.finish(src,stroke),this.held);
     for(const stroke of this.strokes)stroke.update(dt,this.speed,this.paused);
-    this.strokes=this.strokes.filter(stroke=>{if(!stroke.expired)return true;stroke.dispose();return false;});ownSky(ctx.app,true);
+    this.strokes=this.strokes.filter(stroke=>{if(!stroke.expired)return true;stroke.dispose();return false;});this.syncEnvironment(ctx.app);
   },
-  exit(ctx){this.clear();exitArtWorld(this,ctx);this.title=this.hint=null;}
+  exit(ctx){this.clear();exitArtWorld(this,ctx);this.title=this.hint=this.environment=null;}
 };
 
 // src/main.js

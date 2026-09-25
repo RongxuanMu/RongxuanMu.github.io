@@ -57,16 +57,22 @@ class YellowtailStroke {
 var LivingInk={
   id:'living-ink',title:'Living Ink',
   init(ctx){
-    const {root,THREE:T,app}=ctx;enterArtWorld(this,ctx);setImmersive(app,true);
+    const {root,THREE:T,app}=ctx;enterArtWorld(this,ctx);setImmersive(app,false);
+    this.environment=new T.Group();root.add(this.environment);
     this.strokes=[];this.held=new Map();this.speed=1;this.paused=false;this.palette=['#f4ef34','#76a4ee','#f4f0e4','#c48ce6','#6ee7d2'];this.nextColor=0;
-    const dome=new T.Mesh(new T.SphereGeometry(38,32,16),new T.MeshBasicMaterial({color:0x171d2f,side:T.BackSide}));root.add(dome);
-    const floor=new T.Mesh(new T.CircleGeometry(14,64),new T.MeshBasicMaterial({color:0x111629}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.05;root.add(floor);
-    const rings=new T.Group();for(let i=1;i<=6;i++){const r=new T.Mesh(new T.RingGeometry(i*1.1,i*1.1+.006,96),new T.MeshBasicMaterial({color:i%2?0x76a4ee:0xf4ef34,transparent:true,opacity:.1,side:T.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.y=-1.045;rings.add(r);}root.add(rings);
+    const dome=new T.Mesh(new T.SphereGeometry(38,32,16),new T.MeshBasicMaterial({color:0x171d2f,side:T.BackSide}));this.environment.add(dome);
+    const floor=new T.Mesh(new T.CircleGeometry(14,64),new T.MeshBasicMaterial({color:0x111629}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.05;this.environment.add(floor);
+    const rings=new T.Group();for(let i=1;i<=6;i++){const r=new T.Mesh(new T.RingGeometry(i*1.1,i*1.1+.006,96),new T.MeshBasicMaterial({color:i%2?0x76a4ee:0xf4ef34,transparent:true,opacity:.1,side:T.DoubleSide}));r.rotation.x=-Math.PI/2;r.position.y=-1.045;rings.add(r);}this.environment.add(rings);
     const head=headPos(app,new T.Vector3()),q=app.renderer.xr.isPresenting?app.renderer.xr.getCamera().quaternion:app.camera.quaternion;
     const f=new T.Vector3(0,0,-1).applyQuaternion(q);f.y=0;if(f.lengthSq()<.01)f.set(0,0,-1);f.normalize();
     this.title=ctx.label('SPATIAL YELLOWTAIL',{height:.052,color:'#f4ef34'});this.title.position.copy(head).addScaledVector(f,1.45);this.title.position.y+=.64;this.title.quaternion.copy(q);root.add(this.title);
     this.hint=ctx.label('Pinch or hold the trigger to draw in space. Release to set the stroke in motion.',{height:.017,color:'#f4f0e4'});this.hint.position.copy(head).addScaledVector(f,1.44);this.hint.position.y+=.54;this.hint.quaternion.copy(q);root.add(this.hint);
-    ownSky(app,true);
+    this.syncEnvironment(app);
+  },
+  syncEnvironment(app){
+    // In AR the framework backdrop controls room visibility via the hand menu.
+    this.environment.visible=app.sessionMode!=='ar';
+    if(this.environment.visible)ownSky(app,true);
   },
   pointFor(ctx,src,stroke){
     const T=ctx.THREE;
@@ -94,7 +100,7 @@ var LivingInk={
   update(dt,t,ctx){
     freeSelects(ctx.app,src=>this.begin(ctx,src),(src,stroke)=>stroke.add(this.pointFor(ctx,src,stroke)),(src,stroke)=>this.finish(src,stroke),this.held);
     for(const stroke of this.strokes)stroke.update(dt,this.speed,this.paused);
-    this.strokes=this.strokes.filter(stroke=>{if(!stroke.expired)return true;stroke.dispose();return false;});ownSky(ctx.app,true);
+    this.strokes=this.strokes.filter(stroke=>{if(!stroke.expired)return true;stroke.dispose();return false;});this.syncEnvironment(ctx.app);
   },
-  exit(ctx){this.clear();exitArtWorld(this,ctx);this.title=this.hint=null;}
+  exit(ctx){this.clear();exitArtWorld(this,ctx);this.title=this.hint=this.environment=null;}
 };
