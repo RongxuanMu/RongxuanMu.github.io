@@ -5278,16 +5278,37 @@ class YellowtailStroke {
     this.drift=this.points.at(-1).clone().sub(this.points[0]);
     if(this.drift.length()<.12)this.drift.copy(this.steps.at(-1)).normalize().multiplyScalar(.3);
     else this.drift.setLength(.25);
-    this.drift.divideScalar(this.steps.length);return true;
+    this.drift.divideScalar(this.steps.length);
+    // Parameterize the complete gesture by metres, not captured point count.
+    this.original=this.points.map(p=>p.clone());this.arc=[0];
+    for(let i=1;i<this.original.length;i++)this.arc.push(this.arc.at(-1)+this.original[i].distanceTo(this.original[i-1]));
+    this.length=this.arc.at(-1);this.cycle=[new T.Vector3()];this.cycleArc=[0];
+    for(const step of this.steps){
+      const delta=step.clone().add(this.drift);
+      if(delta.length()<1e-8)continue;
+      this.cycle.push(this.cycle.at(-1).clone().add(delta));this.cycleArc.push(this.cycleArc.at(-1)+delta.length());
+    }
+    this.cycleLength=this.cycleArc.at(-1);
+    if(this.cycleLength<1e-8){this.released=false;return false;}
+    return true;
+  }
+  samplePath(distance,out){
+    let path=this.original,arc=this.arc,d=distance,cycles=0;
+    if(distance>=this.length){
+      d=distance-this.length;cycles=Math.floor(d/this.cycleLength);d-=cycles*this.cycleLength;
+      path=this.cycle;arc=this.cycleArc;
+    }
+    let lo=0,hi=arc.length-1;
+    while(lo+1<hi){const mid=(lo+hi)>>1;if(arc[mid]<=d)lo=mid;else hi=mid;}
+    out.lerpVectors(path[lo],path[hi],(d-arc[lo])/(arc[hi]-arc[lo]));
+    if(path===this.cycle)out.addScaledVector(path.at(-1),cycles).add(this.original.at(-1));
   }
   update(dt,speed,paused){
     if(!this.released||paused||this.expired)return;
-    this.progress+=dt*speed*55;
-    while(this.progress>=1&&!this.expired){
-      this.progress--;this.travel.copy(this.steps[this.stepIndex++%this.steps.length]).add(this.drift);
-      const next=this.points.at(-1).clone().add(this.travel);this.points.shift();this.points.push(next);this.distance+=this.travel.length();
-      if(this.distance>=6)this.expired=true;
-    }
+    // All strokes advance at 0.65 m/s at the default speed, independent of length.
+    this.distance=Math.min(6,this.distance+Math.max(0,dt)*Math.max(0,speed)*.65);
+    for(let i=0;i<this.points.length;i++)this.samplePath(this.arc[i]+this.distance,this.points[i]);
+    this.expired=this.distance>=6;
     this.material.opacity=1-this.T.MathUtils.smoothstep(this.distance,3.5,6);this.render();
   }
   dispose(){this.root.removeFromParent();this.geometry.dispose();this.material.dispose();}
