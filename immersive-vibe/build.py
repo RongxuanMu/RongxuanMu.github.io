@@ -31,7 +31,7 @@ a=s.index('<style>');b=s.index('<script type="importmap">')
 s=s[:a]+cover+'\n'+s[b:]
 a=s.index('<div id="overlay">',s.index('<script type="importmap">'));b=s.index('<script type="module">',a)
 s=s[:a]+s[b:]
-s=s.replace('var GALLERY_VERSION = "0.4";','var GALLERY_VERSION = "0.5.0";')
+s=s.replace('var GALLERY_VERSION = "0.4";','var GALLERY_VERSION = "0.6.0";')
 s=s.replace('// src/main.js\nvar VERSION', (P/'src/transition.js').read_text()+'\n'+(P/'src/audio.js').read_text()+'\n'+(P/'src/ink.js').read_text()+'\n// src/main.js\nvar VERSION')
 s=s.replace('this.worlds = new WorldManager(this);','this.worlds = new WorldManager(this);\n    this.audio = new GalleryAudio();\n    this.transition = new GalleryTransition(this);\n    document.addEventListener("visibilitychange",()=>{this.audio.sync(); if(!document.hidden && this.audio.active) void this.audio.unlock();});\n    window.addEventListener("pagehide",()=>this.audio.setActive(false));')
 s=s.replace('this.worlds.register(QianliJiangshan);','this.worlds.register(QianliJiangshan);\n    this.worlds.register(LivingInk);')
@@ -52,6 +52,7 @@ s=s.replace('WebXR not available - desktop preview (left-click = ray pinch, whee
 s=s.replace('No immersive mode on this device - desktop preview','Headset required. Open this page in your headset browser.')
 s=s.replace('"Ready" :','"Ready. Put on your headset and enter the gallery." :')
 s=s.replace('"Enter (VR only)"','"Enter gallery ↗"')
+s=s.replace('`gallery v${GALLERY_VERSION} · framework v${VERSION}`', '`Gallery v${GALLERY_VERSION}`')
 # An uneven spatial cluster with bounded jitter keeps portals distinct and reachable.
 s=s.replace('const n = ART.length, gap = 0.62;', """const portalSpots = [
       [-.64,.40,-1.05],[-.23,.16,-.72],[.22,.57,-1.19],[.66,.25,-.88]
