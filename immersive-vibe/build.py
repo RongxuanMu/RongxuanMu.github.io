@@ -32,8 +32,8 @@ s=s[:a]+cover+'\n'+s[b:]
 a=s.index('<div id="overlay">',s.index('<script type="importmap">'));b=s.index('<script type="module">',a)
 s=s[:a]+s[b:]
 s=s.replace('var GALLERY_VERSION = "0.4";','var GALLERY_VERSION = "0.5.0";')
-s=s.replace('// src/main.js\nvar VERSION', (P/'src/audio.js').read_text()+'\n'+(P/'src/ink.js').read_text()+'\n// src/main.js\nvar VERSION')
-s=s.replace('this.worlds = new WorldManager(this);','this.worlds = new WorldManager(this);\n    this.audio = new GalleryAudio();\n    document.addEventListener("visibilitychange",()=>{this.audio.sync(); if(!document.hidden && this.audio.active) void this.audio.unlock();});\n    window.addEventListener("pagehide",()=>this.audio.setActive(false));')
+s=s.replace('// src/main.js\nvar VERSION', (P/'src/transition.js').read_text()+'\n'+(P/'src/audio.js').read_text()+'\n'+(P/'src/ink.js').read_text()+'\n// src/main.js\nvar VERSION')
+s=s.replace('this.worlds = new WorldManager(this);','this.worlds = new WorldManager(this);\n    this.audio = new GalleryAudio();\n    this.transition = new GalleryTransition(this);\n    document.addEventListener("visibilitychange",()=>{this.audio.sync(); if(!document.hidden && this.audio.active) void this.audio.unlock();});\n    window.addEventListener("pagehide",()=>this.audio.setActive(false));')
 s=s.replace('this.worlds.register(QianliJiangshan);','this.worlds.register(QianliJiangshan);\n    this.worlds.register(LivingInk);')
 s=s.replace('home: b("Home", { onClick:', 'sound: b("Sound", { toggle:true, value:true, onClick:v=>{this.audio.setEnabled(v);syncSoundButton();} }),\n      home: b("Home", { onClick:')
 s=s.replace('[m.home, m.vst, m.gain,','[m.home, m.sound, m.vst, m.gain,')
@@ -43,7 +43,7 @@ s=s.replace('const session = await navigator.xr.requestSession(type, {','const s
 s=s.replace('this.mouse.tracked = false;','this.audio.setActive(true);\n      session.addEventListener("visibilitychange",()=>this.audio.setActive(session.visibilityState==="visible"));\n      this.mouse.tracked = false;')
 s=s.replace('this.error(`Could not start ${type}: ${e.message}`);\n    }','this.audio.setActive(false);\n      if(pendingSession) await pendingSession.end().catch(()=>{});\n      this.error(`Could not start ${type}: ${e.message}`);\n    } finally { this._entering=false; }')
 s=s.replace('_onSessionEnd() {','_onSessionEnd() {\n    this.audio.setActive(false);\n    this._calibrate=0;')
-s=s.replace('if (e.type === "statechange" || e.type === "drag") return;', 'if(e.type === "press") this.audio.click();\n    if (e.type === "statechange" || e.type === "drag") return;')
+s=s.replace('if (e.type === "statechange" || e.type === "drag") return;', 'if(e.type === "press" && e.interactor?.source.kind !== "hand") this.audio.click();\n    if (e.type === "statechange" || e.type === "drag") return;')
 s=s.replace('app.onWorldChanged = (w, c) => setWorldMenu(app, w, c);','app.onWorldChanged = (w,c)=>{setWorldMenu(app,w,c);app.audio.setWorld(w.id);};')
 s=s.replace('document.getElementById("ver").textContent', '''function syncSoundButton(){const b=document.getElementById('sound');b.setAttribute('aria-pressed',String(app.audio.enabled));b.textContent=app.audio.enabled?'Sound on · ambient & interaction':'Sound off';app.menuButtons.sound.setValue(app.audio.enabled);}
 document.getElementById('sound').onclick=()=>{app.audio.setEnabled(!app.audio.enabled);syncSoundButton();};
@@ -87,17 +87,23 @@ s=s.replace('const ball = new T.Mesh(new T.SphereGeometry(0.12, 48, 32), mat);',
 s=s.replace('new T.SphereGeometry(0.128, 32, 20)', 'organicGeo.clone().scale(1.065,1.065,1.065)')
 # Hide idle far affordances; targeting and free-space gestures remain active.
 s=s.replace('const farOn = a === g.far && this.showRay;', 'const farOn = a === g.far && this.showRay && s.ray.valid && !!(g.far.hover || g.far.selecting);')
+# The world swap happens behind the veil; avoid input into outgoing/new menus mid-transition.
+s=s.replace('this.im.update(dt, now, this.input.head);', 'if(!this.worlds._loading)this.im.update(dt, now, this.input.head);')
+s=s.replace('v.iv.update(this.input.head, dt);', 'v.iv.update(this.input.head, dt); if(this.worlds._loading)v.iv.root.visible=false;')
+s=s.replace('this.renderer.render(this.scene, this.camera);', 'this.transition.update(now);\n    this.renderer.render(this.scene, this.camera);')
 # Prevent asynchronous world-load races, release world menu resources and retain cached previews.
 a=s.index('  async load(id) {',s.index('var WorldManager'));b=s.index('  unload() {',a)
 s=s[:a]+'''  async load(id) {
     if(this._loading){this._queued=id;return;}
     this._loading=true;
+    const transition=this.current && this.app.transition;
     try {
       const w=this.worlds.get(id);if(!w)throw new Error(`unknown world ${id}`);
+      if(transition)await transition.fade(1,320);
       this.unload();const ctx=this._makeCtx(w);this.ctx=ctx;this.current=w;this._failed=false;
       try {await w.init?.(ctx);w.enter?.(ctx);this.app.onWorldChanged?.(w,ctx);this.app.log(`world → ${w.title||id}`);}
       catch(e){console.error(e);this.unload();this.app.error(`Could not open ${w.title||id}. Returning to the gallery.`);if(id!=="gallery")this._queued="gallery";}
-    } finally {this._loading=false;const next=this._queued;this._queued=null;if(next)await this.load(next);}
+    } finally {if(transition)await transition.fade(0,650);this._loading=false;const next=this._queued;this._queued=null;if(next)await this.load(next);}
   }
 '''+s[b:]
 s=s.replace('    ctx.root.removeFromParent();\n    ctx.root.traverse', '''    // Menu buttons are reparented outside the world root; reclaim them as well.

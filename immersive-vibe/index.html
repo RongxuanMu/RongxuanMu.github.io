@@ -2330,12 +2330,14 @@ var WorldManager = class {
   async load(id) {
     if(this._loading){this._queued=id;return;}
     this._loading=true;
+    const transition=this.current && this.app.transition;
     try {
       const w=this.worlds.get(id);if(!w)throw new Error(`unknown world ${id}`);
+      if(transition)await transition.fade(1,320);
       this.unload();const ctx=this._makeCtx(w);this.ctx=ctx;this.current=w;this._failed=false;
       try {await w.init?.(ctx);w.enter?.(ctx);this.app.onWorldChanged?.(w,ctx);this.app.log(`world → ${w.title||id}`);}
       catch(e){console.error(e);this.unload();this.app.error(`Could not open ${w.title||id}. Returning to the gallery.`);if(id!=="gallery")this._queued="gallery";}
-    } finally {this._loading=false;const next=this._queued;this._queued=null;if(next)await this.load(next);}
+    } finally {if(transition)await transition.fade(0,650);this._loading=false;const next=this._queued;this._queued=null;if(next)await this.load(next);}
   }
   unload() {
     if (!this.current) return;
@@ -5056,6 +5058,40 @@ var QianliJiangshan = {
   exit(ctx) { exitArtWorld(this, ctx); this.btns = null; }
 };
 
+// A head-centred veil works in stereo XR and passthrough as well as desktop.
+class GalleryTransition {
+  constructor(app) {
+    this.app=app;
+    this.material=new THREE7.MeshBasicMaterial({color:0x080a0e,side:THREE7.BackSide,transparent:true,opacity:0,depthTest:false,depthWrite:false,toneMapped:false});
+    this.mesh=new THREE7.Mesh(new THREE7.SphereGeometry(.5,24,16),this.material);
+    this.mesh.renderOrder=10000;this.mesh.frustumCulled=false;this.mesh.visible=false;
+    this.mesh.userData.noCollider=true;app.scene.add(this.mesh);
+  }
+  fade(to,duration) {
+    this.finish?.();
+    const from=this.material.opacity,start=performance.now();
+    this.mesh.visible=true;
+    return new Promise(resolve=>{
+      const finish=()=>{
+        clearTimeout(timer);this.material.opacity=to;this.mesh.visible=to>0;
+        this.step=null;this.finish=null;resolve();
+      };
+      const timer=setTimeout(finish,duration+80);
+      this.finish=finish;
+      this.step=now=>{
+        const t=Math.min(1,(now-start)/duration);
+        const ease=t*t*t*(t*(t*6-15)+10);
+        this.material.opacity=from+(to-from)*ease;
+        if(t===1)finish();
+      };
+    });
+  }
+  update(now) {
+    this.mesh.position.copy(this.app.input.head);
+    this.step?.(now);
+  }
+}
+
 // One shared context: evolving ambient phrases and dry, crisp interaction feedback.
 class GalleryAudio {
   constructor() {
@@ -5101,8 +5137,8 @@ class GalleryAudio {
   setEnabled(v){this.enabled=v;this.sync();if(v&&this.active)void this.unlock();}
   setWorld(id){
     if(this.world===id)return;
-    this.world=id;this.phrase=0;
-    if(this.ctx){this.stopVoices();this.nextPhrase=this.ctx.currentTime+.35;}
+    // Keep the current phrase and its reverb tail; adopt the new texture at the next phrase.
+    this.world=id;
   }
   // Finite voices, including scheduled notes, are reclaimed on mute / exit / world change.
   track(source,nodes,end){
@@ -5134,8 +5170,8 @@ class GalleryAudio {
     const now=this.ctx.currentTime;if(this.nextPhrase<now-.5)this.nextPhrase=now+.08;
     if(this.nextPhrase>now+.3)return;
     const settings={
-      gallery:[45,1], 'starry-night':[45,.85], 'impression-sunrise':[48,1.1],
-      'qianli-jiangshan':[43,.95], 'living-ink':[41,.8]
+      gallery:[45,1], 'starry-night':[45,.85], 'impression-sunrise':[45,1.1],
+      'qianli-jiangshan':[45,.95], 'living-ink':[45,.8]
     };
     const [root,pace]=settings[this.world]||settings.gallery;
     const chords=[[0,7,14,16],[5,12,16,21],[9,16,19,26],[2,9,14,21],[0,12,16,23],[7,14,21,26]];
@@ -5259,7 +5295,7 @@ var LivingInk={
   begin(ctx,src){
     if(this.strokes.length>=12){const old=this.strokes.shift();old.dispose();}
     const stroke=new YellowtailStroke(ctx,this.palette[this.nextColor++%this.palette.length],this.nextColor);
-    stroke.depth=src.kind==='hand' ? .16 : .72;ctx.root.add(stroke.root);stroke.add(this.pointFor(ctx,src,stroke));this.strokes.push(stroke);ctx.app.audio.click('ink');return stroke;
+    stroke.depth=src.kind==='hand' ? .16 : .72;ctx.root.add(stroke.root);stroke.add(this.pointFor(ctx,src,stroke));this.strokes.push(stroke);return stroke;
   },
   finish(src,stroke){if(!stroke.finish()){const i=this.strokes.indexOf(stroke);if(i>=0)this.strokes.splice(i,1);stroke.dispose();}},
   clear(){for(const stroke of this.strokes)stroke.dispose();this.strokes=[];this.held?.clear();},
@@ -5309,6 +5345,7 @@ var App = class {
     this.menu = new HandMenu(this);
     this.worlds = new WorldManager(this);
     this.audio = new GalleryAudio();
+    this.transition = new GalleryTransition(this);
     document.addEventListener("visibilitychange",()=>{this.audio.sync(); if(!document.hidden && this.audio.active) void this.audio.unlock();});
     window.addEventListener("pagehide",()=>this.audio.setActive(false));
     this.sessionMode = null;
@@ -5516,19 +5553,20 @@ var App = class {
     }
     this._updateBackdrop(dt);
     this.menu.update(dt, now);
-    this.im.update(dt, now, this.input.head);
+    if(!this.worlds._loading)this.im.update(dt, now, this.input.head);
     for (const v of this.visuals.values()) {
       v.device?.update();
-      v.iv.update(this.input.head, dt);
+      v.iv.update(this.input.head, dt); if(this.worlds._loading)v.iv.root.visible=false;
     }
     this.rings.update(this.im.longPressProgress(), this.input.head);
     this.worlds.update(dt, now / 1e3);
     this.logPanel.update(now);
+    this.transition.update(now);
     this.renderer.render(this.scene, this.camera);
   }
   // - logging -
   _onEvent(e) {
-    if(e.type === "press") this.audio.click();
+    if(e.type === "press" && e.interactor?.source.kind !== "hand") this.audio.click();
     if (e.type === "statechange" || e.type === "drag") return;
     const i = e.interactor;
     const src = i ? `${i.type}/${i.source.kind === "hand" ? "hand" : i.source.kind === "controller" ? "ctrl" : i.source.kind === "pointer" ? "ptr" : "mouse"}-${i.source.handedness[0]}` : "";

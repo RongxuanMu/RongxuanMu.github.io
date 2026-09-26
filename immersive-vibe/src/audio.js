@@ -43,8 +43,8 @@ class GalleryAudio {
   setEnabled(v){this.enabled=v;this.sync();if(v&&this.active)void this.unlock();}
   setWorld(id){
     if(this.world===id)return;
-    this.world=id;this.phrase=0;
-    if(this.ctx){this.stopVoices();this.nextPhrase=this.ctx.currentTime+.35;}
+    // Keep the current phrase and its reverb tail; adopt the new texture at the next phrase.
+    this.world=id;
   }
   // Finite voices, including scheduled notes, are reclaimed on mute / exit / world change.
   track(source,nodes,end){
@@ -76,8 +76,8 @@ class GalleryAudio {
     const now=this.ctx.currentTime;if(this.nextPhrase<now-.5)this.nextPhrase=now+.08;
     if(this.nextPhrase>now+.3)return;
     const settings={
-      gallery:[45,1], 'starry-night':[45,.85], 'impression-sunrise':[48,1.1],
-      'qianli-jiangshan':[43,.95], 'living-ink':[41,.8]
+      gallery:[45,1], 'starry-night':[45,.85], 'impression-sunrise':[45,1.1],
+      'qianli-jiangshan':[45,.95], 'living-ink':[45,.8]
     };
     const [root,pace]=settings[this.world]||settings.gallery;
     const chords=[[0,7,14,16],[5,12,16,21],[9,16,19,26],[2,9,14,21],[0,12,16,23],[7,14,21,26]];

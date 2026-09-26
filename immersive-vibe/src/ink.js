@@ -84,7 +84,7 @@ var LivingInk={
   begin(ctx,src){
     if(this.strokes.length>=12){const old=this.strokes.shift();old.dispose();}
     const stroke=new YellowtailStroke(ctx,this.palette[this.nextColor++%this.palette.length],this.nextColor);
-    stroke.depth=src.kind==='hand' ? .16 : .72;ctx.root.add(stroke.root);stroke.add(this.pointFor(ctx,src,stroke));this.strokes.push(stroke);ctx.app.audio.click('ink');return stroke;
+    stroke.depth=src.kind==='hand' ? .16 : .72;ctx.root.add(stroke.root);stroke.add(this.pointFor(ctx,src,stroke));this.strokes.push(stroke);return stroke;
   },
   finish(src,stroke){if(!stroke.finish()){const i=this.strokes.indexOf(stroke);if(i>=0)this.strokes.splice(i,1);stroke.dispose();}},
   clear(){for(const stroke of this.strokes)stroke.dispose();this.strokes=[];this.held?.clear();},
