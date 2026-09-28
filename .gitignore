@@ -1,1 +1,4 @@
 .DS_Store
+
+# Local drafts, exhibition exports, previews and generated QA files
+/local-artifacts/

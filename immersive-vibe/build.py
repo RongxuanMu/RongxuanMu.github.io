@@ -1,6 +1,8 @@
 from pathlib import Path
 import math,re
 P=Path(__file__).resolve().parent
+OUT=P.parent/'local-artifacts'/'immersive-vibe'
+OUT.mkdir(parents=True,exist_ok=True)
 s=(P/'original-codepen.html').read_text()
 # Keep the application worlds while taking the interaction, visuals, UI and
 # world-lifecycle core from the latest framework Pen.
@@ -143,6 +145,16 @@ s=s[:a]+q+s[b:]
 a=s.index('function buildQianli(');b=s.index('var GALLERY_VERSION',a);q=s[a:b]
 q=q.replace('new THREE.MeshBasicMaterial({ color: 0xd9c79c, fog: false })', '''new THREE.ShaderMaterial({vertexShader:`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,fragmentShader:`varying vec2 vUv;void main(){float grain=fract(sin(dot(vUv,vec2(127.1,311.7)))*43758.5453);float weave=sin(vUv.x*1400.)*sin(vUv.y*900.);vec3 silk=vec3(.80,.76,.63)+grain*.026+weave*.009;float river=(1.-smoothstep(.25,.46,vUv.y))*smoothstep(.04,.21,vUv.y);float wave=sin(vUv.y*430.+sin(vUv.x*50.)*.8);silk=mix(silk,vec3(.58,.69,.64),river*.3);silk-=vec3(.018)*river*pow(max(0.,wave),18.);gl_FragColor=vec4(silk,1.);}`})''')
 s=s[:a]+q+s[b:]
+# Scroll diorama frame from the updated CodePen.
+s=s.replace('  const globePose = { pos: new THREE.Vector3(0, 1.05, -0.6)', '  const SCROLL_BOX_HW = 215, SCROLL_BOX_H = 70, SCROLL_BOX_ZF = -25, SCROLL_BOX_ZB = -160;\n  const globePose = { pos: new THREE.Vector3(0, 1.05, -0.6)')
+s=s.replace('  // ── the ranges ──', """  // the diorama frame around the scroll, the same wireframe-box treatment as Monet's cube mode
+  const scrollFrameMat = new THREE.LineBasicMaterial({ color: 0xfff1de, transparent: true, opacity: 0.35 });
+  const scrollFrame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(SCROLL_BOX_HW * 2, SCROLL_BOX_H, SCROLL_BOX_ZF - SCROLL_BOX_ZB)), scrollFrameMat);
+  scrollFrame.position.set(0, SCROLL_BOX_H / 2, (SCROLL_BOX_ZF + SCROLL_BOX_ZB) / 2);
+  scrollFrame.userData.noCollider = true; scrollFrame.visible = false; world.add(scrollFrame);
+
+  // ── the ranges ──""")
+s=s.replace('    paper.visible = MODE === "scroll";', '    paper.visible = MODE === "scroll";\n    scrollFrame.visible = MODE === "scroll";')
 # Reset transient state on re-entry.
 s=s.replace('this.qj = buildQianli(T, root, app);','this.hot=false;\n    this.qj = buildQianli(T, root, app);')
 s=s.replace('<!-- VibeXR Gallery v0.4','<!-- Immersive Vibe v0.5.0')
@@ -180,8 +192,8 @@ arBtn.onclick = () => app.enterXR(app.preferredXRMode || "vr");
   overlay.status(app.preferredXRMode ? "Ready. Put on your headset and enter the gallery." : "No immersive session is available in this browser.");
 })();
 ''' + s[end:]
-s=s.replace('export {\n  VERSION',qa+'\nexport {\n  VERSION')
-(P/'Immersive-Vibe-v0.5.html').write_text(s)
+s=s.replace('export {\n  VERSION',qa+'\n'+(P/'src/landing.js').read_text()+'\nexport {\n  VERSION')
+(OUT/'Immersive-Vibe-v0.5.html').write_text(s)
 # Syntax check uses the identical module body that CodePen executes.
-(P/'module-check.mjs').write_text(s.split('<script type="module">')[1].split('</script>')[0])
-print(f'Built {len(s):,} characters → {P/"Immersive-Vibe-v0.5.html"}')
+(OUT/'module-check.mjs').write_text(s.split('<script type="module">')[1].split('</script>')[0])
+print(f'Built {len(s):,} characters → {OUT/"Immersive-Vibe-v0.5.html"}')
