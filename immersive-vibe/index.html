@@ -118,6 +118,8 @@ h1{font-size:clamp(50px,12vw,84px);margin-bottom:24px}.sub{font-size:27px}
 .artwork .art-caption{position:absolute;left:0;right:0;bottom:6px;margin:0}
 .hero-copy{position:relative;z-index:1}
 @media(max-width:700px){.artwork svg{opacity:.24}}
+/* Prevent selection and long-press callouts throughout the landing page. */
+#overlay,#overlay *{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;-webkit-touch-callout:none}
 </style>
 <div id="overlay">
  <main class="card">
