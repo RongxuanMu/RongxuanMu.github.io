@@ -87,7 +87,26 @@ swap('document.getElementById("ver").textContent = `v${VERSION}`;',
      'document.getElementById("ver").textContent = `MicroDuck XR \\u00b7 VibeXR v${VERSION}`;')
 swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0, 1.75, 0.55);')
 swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(0, 0.35, -1.3);')
-s = '<meta charset="utf-8">\n<title>MicroDuck XR</title>\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' + s
+# head: portrait favicon (like the rest of the portfolio) + social preview card. Absolute URLs, so they also
+# resolve when the file is pasted into CodePen.
+SITE = 'https://rongxuanmu.github.io'
+head = f"""<meta charset="utf-8">
+<title>MicroDuck XR</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/jpeg" href="{SITE}/Resources/common/Rongxuan.jpeg">
+<link rel="apple-touch-icon" href="{SITE}/Resources/common/Rongxuan.jpeg">
+<meta name="description" content="MicroDuck XR by Rongxuan Mu - Pollen Robotics' Microduck robot in WebXR. Its real walking policies run in MuJoCo in your browser; pick it up, send it walking, make it kick.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MicroDuck XR - Rongxuan Mu">
+<meta property="og:description" content="A real robot policy you can pick up with your hands. Pollen Robotics' Microduck in WebXR, simulated live in the browser.">
+<meta property="og:url" content="{SITE}/microduck-xr/">
+<meta property="og:image" content="{SITE}/Resources/microduck/social-preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="MicroDuck XR by Rongxuan Mu: the white and orange Microduck robot standing on a line-drawn stage.">
+<meta name="twitter:card" content="summary_large_image">
+"""
+s = head + s
 
 # single-module sanity: no binding imported twice
 names = re.findall(r'^import (?:\* as (\w+)|\{([^}]*)\}|(\w+)) from', s, re.M)
