@@ -1,111 +1,33 @@
-<!-- VibeXR Interaction Framework v0.8.8 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
+<!-- VibeXR Interaction Framework v0.8.23 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
-  v0.8.23: select sound is a crisp mouse click instead of the finger snap - a ~5 ms bright plastic transient
-           over a tiny resonant tick and a faint low "thock" on press, and a quieter, higher click on release.
-  v0.8.22: drawing worked again - v0.8.20 hid the sketch surface with object.visible = false, but
-           Interactable.isVisible walks the object tree, so the board stopped being a hit-test candidate.
-           The collider boxes now hide their MATERIAL instead.
-  v0.8.21: UI panels / buttons /board faces render in the OPAQUE pass with an alpha cutout (alphaTest +
-           alphaToCoverage) instead of as transparent quads. Distance-sorted transparency used the object
-           ORIGIN, so on a tilted panel a button near the top could sort behind its own background and vanish,
-           and the transparent floor grid could paint over a menu. Depth testing now decides both.
-  v0.8.20: no passthrough leaking through the UI - button / caption pills are filled opaque black in every
-           state, the square collider boxes behind buttons and the drawing surface are no longer drawn, the
-           handle is an opaque black capsule with an always-on white outline, and the slider track is opaque.
-  v0.8.19: UI depth fixed - the per-panel renderOrder layering (background 0 / base 1 / text 2) was GLOBAL, so
-           a distant panel's text drew over a nearer panel, and the hover outline at 100 drew over everything.
-           All UI and the outline now sort purely by distance; only true overlays (ray, reticle, poke and
-           long-press rings, hand mask, backdrop) keep an explicit order.
-  v0.8.18: table leg removed (floating plate); sketch board is one panel - the caption moved out of the canvas
-           into a capsule that shares the header row with capsule swatches and Clear, all on the board's own base;
-           the drag handle is a capsule too, and button labels auto-shrink to fit their pill.
-  v0.8.17: desk plate is a true short cylinder with thick (4 px) rims via the fat-line pipeline; hover outline
-           renders after the UI so panels no longer paint over it.
-  v0.8.16: one palette everywhere - black backgrounds (page, scene, VR backdrop, panels, desk), white lines and
-           text, neutral grey floor rings; no dark blue or cyan chrome left (object / swatch colours stay).
-  v0.8.15: hover outline is pushed outward in screen space from the object's projected centre - a constant
-           thickness in screen pixels (ICFG.outlinePx 2.5, outlinePxSelect 4) at any distance or scale, with
-           no gaps at box corners.
-  v0.8.14: hover / press feedback is a white outline (inverted hull, like the hand) instead of an emissive glow.
-  v0.8.13: UI panels, log, drawing surface and desk use an opaque pure black base (was a 35 % dark tint).
-  v0.8.12: finger-snap select sound; white-line sketch style extended to the log panel, drawing surface, board
-           handle, labels, floor ring and the desk (translucent dark base + white rims); every panel keeps a
-           translucent dark base for legibility; colour swatches show their true colour (painted on the face);
-           all hover / press feedback is a white glow; ray and cursor are always white.
-  v0.8.11: hand menu / UI panels, buttons and sliders restyled to the hand's white-line sketch look
-           (transparent panel + white outline, outlined buttons, inverted when pressed / on, white slider).
-           Reticle centre dot removed; floor grid replaced by radial rings (0.5 m steps, 1 m labels); crisp
-           WebAudio click on every press (Sfx); lighter blue (THEME.hover) for the ray / cursor hover state.
-  v0.8.10: ray / direct exclusivity is decided by hover alone - three states only: nothing hovered -> ray shown,
-           one near object hovered -> ray hidden, one far object hovered -> ray shown. The v0.8.9 "direct zone"
-           (ray off with nothing hovered) is removed. With several objects in near range exactly one gets the hover:
-           ranked by surface distance + nearCentroidWeight x centroid distance.
-  v0.8.9: no cursor ball in either mode (near cursor sphere removed too; direct hover = object highlight only).
-  v0.8.8: direct-interaction range enlarged (near 5 / 6 cm, poke hover 6 cm); pinch indicator ball removed so
-          the ray and a direct affordance never show together; speed gain only above 0.6 m/s (full at 1.8).
-  v0.8.7: far grab has no minimum distance (no jump when ray-pinching something close); far cone narrowed to
-          2\u00b0 diameter (1\u00b0 half-angle); idle cursor more visible (brighter ring + centre dot) and the cursor /
-          ray blend smoothly between idle, hover and select (cursorStateSmoothing).
-  v0.8.6: sketch board scaling also only updates while its handle is selected (like the facing);
-          cube-vs-cube physical collision and the settle-to-table fall removed.
-  v0.8.5: sketch board faces the viewer only while its handle is selected, and the facing is computed from the
-          panel centre (not the handle pivot); released, it keeps its orientation.
-  v0.8.4: table height calibrated to 0.5 m below the headset on every session start and reset
-          (TABLE_BELOW_HEAD); board slope back to K = 0.8 (linear, no upper clamp); softer far depth gain
-          (reachRef 0.35 -> 0.45, depthExponent 1.4 -> 1.25, speedMax 3 -> 2.5, about 30 % less push / pull).
-  v0.8.3: board never looks smaller with distance - slope K = 1 (constant angular size) and the 4x upper
-          clamp removed, so beyond 0.5 m the scale follows the same linear slope however far the board goes.
-  v0.8.2: board distance scaling - fixed inside 0.5 m, beyond that linear with slope 0.8 (BOARD_SCALE_NEAR / _K).
-  v0.8.0
-  - playground: (removed in v0.8.6) physical collision between the table cubes (box vs box, least-penetration push; held pushes free).
-  - sketch board: pivot moved to the handle bar, so distance scaling and facing happen about the grab point -
-    pulling it nearer by ray-pinch no longer slides the handle out from under the pinch.
-  v0.7.9: sketch board scales with distance to the viewer (constant angular size); two-hand scale edits the
-          user factor on top of that rule.
-  v0.7.8: sketch board keeps facing the viewer while dragged / scaled (re-faces the head every frame);
-          its handle drag is translation-only (new opts.translateOnly).
-  v0.7.7: cursor always visible while aiming (dim without a target); depth from a separate larger cone
-          (cursorConeAngle 10\u00b0 half-angle); nothing inside it -> depth is held, no fallback to a default.
-  v0.7.6: far cone tightened - hand / controller half-angle 2\u00b0 (4\u00b0 diameter), sticky exit 1.25x (5\u00b0 max).
-  v0.7.5: temporal solver on top of the spatial cursor depth (cursorSmoothing / cursorMaxSpeed, visual only).
-  v0.7.4: cursor depth is spatial, not temporal - a function of the ray orientation blending the two
-          angularly nearest targets (cursorBlendAngle / cursorDefaultDepth); no lag, no drift when still.
-  v0.7.3: hand mask + outline forced first in the opaque pass so cubes / spheres / table are clipped by the
-          hand too (not only the UI); UI panel moved off the table edge.
-  v0.7.2: sketch board handle on the lower edge (toolbar moved to the top); table at 1.44 m.
-
-  v0.7.1
-  - far ray is straight again (no bend toward the target); depth interpolation kept, hover = reticle + ray colour + highlight.
-  - sketch board: drag handle above it (move / two-hand rotate + scale); placed on the left by default.
-  - table raised (see TABLE_TOP); UI panel and log follow it.
-  - hands: outline hull is opaque, so UI in front of the hand covers it and UI behind it is occluded correctly.
-
-  v0.7 changes
-  - playground: SketchBoard - a 2D canvas you draw on with any method (fingertip poke with depth-based
-    width, near pinch, far ray pinch / trigger, mouse). Auto colour = by method; swatches + Clear below it.
-  - interaction: opts.multi - several simultaneous selections as independent presses (both hands can draw).
-  - ui: fixed the see-through hole behind panel titles / button labels / slider labels (text quads no
-    longer write depth; the layers are offset in z and sorted by distance - see v0.8.19).
-
-  v0.6.2: the far ray cursor interpolated its depth over time between targets (replaced by the spatial rule in v0.7.4).
-  v0.6.1: table raised to 1.04 m (TABLE_TOP constant in the playground; cubes, orb, bell and labels follow).
-
-  v0.6 changes
-  - hands: the joint / bone skeleton is hidden by default; "Joints" in the hand menu turns it on.
-  - hands: the hand mesh is drawn as a white outline only (depth-only mask + inverted hull), so the
-    real hand shows through in passthrough and occludes virtual objects behind it. "Hand outline" toggles it.
-  - removed the v0.5 throw / inertia (throwable, damping, settle); drags stop where you release.
-
-  v0.5 changes (on top of v0.4)
-  - input: sources without a gamepad (Vision Pro transient-pointer, gaze, screen taps) now select via the
-    session's selectstart/selectend events; new source kind "pointer" (far-only, no device visual).
-    Controllers also OR the session select events with the trigger, so a runtime that reports no
-    gamepad.buttons still works.
-  - interaction: sticky far hover (farExitScale) so small far targets stop flickering at the cone edge.
-  - interaction: opts.precise = exact triangle raycast against the meshes (spheres no longer hit at box corners).
-  - interaction: opts.constrain({position, quaternion, scale}) hook applied to drags and two-hand
-    transforms (playground cubes cannot go below the table).
-  - desktop: mouse wheel while ray-dragging = push / pull (mirrors the thumbstick); free wheel still orbits.
+  Changelog, newest first
+  0.8.23  select sound: a crisp mouse click on press and a softer, higher click on release (was a finger snap)
+  0.8.22  sketch surface is hit-testable again: its collider hides its material, not the object
+  0.8.21  UI draws opaque with an alpha cutout, so depth (not origin sorting) orders panels, buttons and grid
+  0.8.20  no passthrough through the UI: opaque pills, handle and slider track; collider boxes not drawn
+  0.8.19  UI and hover outline sort by distance; only true overlays keep an explicit renderOrder
+  0.8.18  floating desk plate; sketch board is one panel with a capsule header row; labels shrink to fit
+  0.8.17  desk plate is a short cylinder with 4 px rims; hover outline renders after the UI
+  0.8.16  one palette: black bases, white lines and text, grey floor rings
+  0.8.15  hover outline is a screen-space hull of constant pixel width, with no gaps at corners
+  0.8.14  hover / press feedback is a white outline instead of an emissive glow
+  0.8.13  panels, log, drawing surface and desk get an opaque black base
+  0.8.12  finger-snap select sound; white-line sketch style across the UI; swatches show their true colour
+  0.8.11  hand menu and UI restyled to white-line sketch; radial floor rings; WebAudio click on press
+  0.8.10  ray vs direct decided by hover alone: nothing -> ray, near target -> no ray, far target -> ray
+  0.8.9   no cursor ball in either mode
+  0.8.8   larger direct range (near 5 / 6 cm, poke hover 6 cm); far speed gain only above 0.6 m/s
+  0.8.7   far grab keeps its pick distance; 2 deg far cone; cursor / ray blend smoothly between states
+  0.8.6   board scales only while its handle is held; cube collisions and settle-to-table removed
+  0.8.5   board faces the viewer only while held, computed from the panel centre
+  0.8.4   table calibrated 0.5 m below the headset on start / reset; softer far depth gain
+  0.8.2-3 board distance scaling: fixed inside 0.5 m, then linear beyond it
+  0.8.0   sketch board pivots on its handle bar
+  0.7.x   sketch board (draw with any input); opts.multi; opts.translateOnly; spatial cursor-depth solver;
+          hand mask occludes all geometry
+  0.6.x   hands drawn as a white outline (joints optional); throw / inertia removed
+  0.5     select via session events for gamepad-less sources (Vision Pro, gaze); sticky far hover;
+          opts.precise and opts.constrain; mouse wheel push / pull while dragging
 -->
 <style>
 html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
