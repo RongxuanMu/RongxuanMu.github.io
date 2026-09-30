@@ -520,10 +520,18 @@ function outlineGeometry(geo) {
   if (geo.userData.vxrHull) return geo.userData.vxrHull;
   let g = geo;
   try {
-    g = mergeVertices(geo.clone());
+    const pos = new THREE2.BufferGeometry();
+    pos.setAttribute("position", geo.attributes.position);
+    if (geo.index) pos.setIndex(geo.index);
+    g = mergeVertices(pos);
     g.computeVertexNormals();
   } catch (_) {
     g = geo;
+  }
+  if (g !== geo) {
+    g.computeBoundingBox();
+    g.userData.vxrCenter = g.boundingBox.getCenter(new THREE2.Vector3());
+    g.translate(-g.userData.vxrCenter.x, -g.userData.vxrCenter.y, -g.userData.vxrCenter.z);
   }
   geo.userData.vxrHull = g;
   return g;
@@ -539,7 +547,7 @@ function hoverOutlineMaterial() {
     sh.uniforms.uPush = m.userData.push;
     sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\nuniform float uPush;\n" + sh.vertexShader.replace(
       "#include <project_vertex>",
-      "#include <project_vertex>\n if ( uPush > 0.0 ) { vec4 vxrP = mvPosition; vxrP.xyz *= ( length( vxrP.xyz ) + uPush ) / max( length( vxrP.xyz ), 1e-4 ); gl_Position = projectionMatrix * vxrP; }\n vec4 vxrC = projectionMatrix * modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );\n vec2 vxrD = ( gl_Position.xy / gl_Position.w - vxrC.xy / vxrC.w ) * uViewport;\n if ( length( vxrD ) > 1e-6 ) gl_Position.xy += normalize( vxrD ) * uOutlinePx * 2.0 * gl_Position.w / uViewport;"
+      "#include <project_vertex>\n if ( uPush > 0.0 ) { vec4 vxrP = mvPosition; vxrP.xyz *= ( length( vxrP.xyz ) + uPush ) / max( length( vxrP.xyz ), 1e-4 ); gl_Position = projectionMatrix * vxrP; }\n vec4 vxrC = projectionMatrix * modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );\n vec2 vxrD = ( gl_Position.xy / gl_Position.w - vxrC.xy / vxrC.w ) * uViewport;\n if ( uPush > 0.0 ) { vec4 vxrQ = projectionMatrix * modelViewMatrix * vec4( transformed, 1.0 ); vec4 vxrN = projectionMatrix * modelViewMatrix * vec4( transformed + normalize( normal ) * 0.002, 1.0 ); vec2 vxrND = ( vxrN.xy / vxrN.w - vxrQ.xy / vxrQ.w ) * uViewport; if ( dot( vxrND, vxrD ) < 0.0 ) vxrND = -vxrND; vxrD = vxrND; }\n if ( length( vxrD ) > 1e-6 ) gl_Position.xy += normalize( vxrD ) * uOutlinePx * 2.0 * gl_Position.w / uViewport;"
     );
   };
   m.customProgramCacheKey = () => "vxr-hover-outline";
@@ -548,6 +556,7 @@ function hoverOutlineMaterial() {
 // the clip-space offset needs the pixel size of the viewport being drawn (per eye in XR)
 function outlineHull(sourceMesh, mat) {
   const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);
+  if (hull.geometry.userData.vxrCenter) hull.position.copy(hull.geometry.userData.vxrCenter);
   hull.userData.isOutline = hull.userData.noCollider = hull.userData.noHighlight = true;
   // no renderOrder: the hull sits at the object's own depth, so plain distance sorting puts it in front of
   // whatever is behind the object and behind whatever is in front of it.
@@ -2476,12 +2485,15 @@ var MD_CURB_H = 0.025;
 var MD_BALL_R = 0.05;
 var MD_BALL_PARK = [50, 0, MD_BALL_R];
 var MD_GRAB_K = 100, MD_GRAB_D = Math.sqrt(MD_GRAB_K), MD_GRAB_MAX_ACC = 200;
+// two-hand rotation spring (rad/s^2 per rad), critically damped, capped
+var MD_GRAB_KR = 400, MD_GRAB_DR = 2 * Math.sqrt(MD_GRAB_KR), MD_GRAB_MAX_ANG = 800;
 // MuJoCo viewer perturbation gains
 var MD_TABLE_BELOW_HEAD = 0.5;
 // skating brake strength and how early (s at the current speed) to start braking for a goal
-// (14 goal trips each: -0.3 / 0.5 s fell 5 times, -0.22 / 0.8 s and -0.15 / 1.2 s twice, -0.1 / 1.8 s never,
-// stopping a median 0.42 m from the goal)
-var MD_SKATE = { brake: -0.1, lead: 1.8 };
+// brake: sheds speed safely from any speed (braking from ~0.8 m/s at -0.15 or harder tipped it over in goal
+// trials); stop: the final brake, only from <= 0.55 m/s, where it halts in ~0.17 m with no falls
+// stopMax: fastest speed the firm stop is used from; shed: start shedding speed at shed[0] + shed[1] * v metres
+var MD_SKATE = { brake: -0.1, stop: -0.22, stopMax: 0.55, shed: [0.5, 2] };
 var MD_WRAP = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 // The four official colourways (linear RGB material specs, from the Space's variants.js). Every mesh fills a
 // semantic slot; a colourway fills the slots. The chips use the press-kit shell colours, like the official picker.
@@ -2742,7 +2754,9 @@ async function mdBuildRig(A, parent) {
           new T.Vector3(1, 1, 1)
         );
         if (geom.mesh === "jaw.stl" || geom.mesh === "jaw_soft.stl") {
-          const mesh = new T.Mesh(display, mdMaterial(A.variant, slot));
+          const jg = display.clone();
+          jg.userData = {};
+          const mesh = new T.Mesh(jg, mdMaterial(A.variant, slot));
           mesh.userData = { meshName: geom.mesh, slot };
           m.decompose(mesh.position, mesh.quaternion, mesh.scale);
           bodies.get(b.name).add(mesh);
@@ -2758,6 +2772,9 @@ async function mdBuildRig(A, parent) {
   await Promise.all(pending);
   for (const { body, slot, items } of parts.values()) {
     const geo = items.length === 1 ? items[0].display.clone().applyMatrix4(items[0].m) : mdMergeGeometries(items.map((it) => it.display.clone().applyMatrix4(it.m)));
+    // clones share the source's userData object, where the framework caches a part's outline hull: without a
+    // fresh one, a part reused in several bodies would draw another body's hull, detached from itself
+    geo.userData = {};
     const mesh = new T.Mesh(geo, mdMaterial(A.variant, slot));
     mesh.name = `${body}:${slot}`;
     mesh.userData.slot = slot;
@@ -3065,7 +3082,7 @@ var Microduck = {
     this.sound = new MdSound(app.sfx);
     this.sound.setOn(this.soundOn ?? true);
     this.kickPlan = null;
-    this.speed ??= 0.35;
+    this.speed ??= 0.8;
     // a steady 72 Hz: if the browser targets 90 / 120 Hz and a frame runs long it halves the rate, which reads
     // as a sudden low refresh; 72 is every current headset's comfortable floor
     const xs = app.renderer.xr.getSession?.();
@@ -3258,8 +3275,36 @@ var Microduck = {
     const S = this.S;
     if (!S?.grab) return;
     const x = S.data.xfrc_applied, a = S.grab.bodyId * 6;
-    x[a] = x[a + 1] = x[a + 2] = 0;
+    for (let k = 0; k < 6; k++) x[a + k] = 0;
     S.grab = null;
+  },
+  // two hands on the duck: it follows the midpoint of your hands and turns with the line between them (the
+  // rotation from the starting hand-to-hand direction to the current one); the distance between the hands is
+  // ignored - no scaling. When one hand lets go, the framework hands the other back a normal one-hand drag.
+  _handsSim() {
+    return this.duckIt.selections.slice(0, 2).map((s) => this.sim.worldToLocal(s.interactor.attach.clone()));
+  },
+  _grab2Start() {
+    const S = this.S;
+    if (!S || this.duckIt.selections.length < 2) return;
+    const [a, b] = this._handsSim(), q = S.data.qpos, T = THREE6;
+    const q0 = new T.Quaternion(q[4], q[5], q[6], q[3]);
+    S.grab = {
+      ...S.trunk, two: true,
+      mid0: a.clone().add(b).multiplyScalar(0.5), dir0: b.clone().sub(a).normalize(),
+      pos0: new T.Vector3(q[0], q[1], q[2]), q0, qTarget: q0.clone(), target: [q[0], q[1], q[2]]
+    };
+    this.goal.active = false;
+  },
+  _grab2Update() {
+    const g = this.S?.grab;
+    if (!g?.two || this.duckIt.selections.length < 2) return;
+    const [a, b] = this._handsSim(), dir = b.clone().sub(a);
+    if (dir.lengthSq() < 1e-8) return;
+    const rot = new THREE6.Quaternion().setFromUnitVectors(g.dir0, dir.normalize());
+    const t = a.add(b).multiplyScalar(0.5).add(g.pos0.clone().sub(g.mid0).applyQuaternion(rot));
+    g.target = [t.x, t.y, Math.max(0.02, t.z)];
+    g.qTarget.copy(rot).multiply(g.q0);
   },
   _applyGrab() {
     const S = this.S, g = S.grab;
@@ -3272,6 +3317,21 @@ var Microduck = {
     if (n > MD_GRAB_MAX_ACC) for (let k = 0; k < 3; k++) f[k] *= MD_GRAB_MAX_ACC / n;
     const x = S.data.xfrc_applied, a = g.bodyId * 6;
     for (let k = 0; k < 3; k++) x[a + k] = g.mass * f[k];
+    if (!g.qTarget) return;
+    // rotational spring-damper toward the two-hand orientation (world frame; free-joint angular velocity is
+    // in the body frame, so rotate it out first)
+    const qc = _mdQa.set(q[4], q[5], q[6], q[3]), qe = _mdQb.copy(g.qTarget).multiply(_mdQc.copy(qc).invert());
+    if (qe.w < 0) qe.set(-qe.x, -qe.y, -qe.z, -qe.w);
+    const ang = 2 * Math.acos(Math.min(1, qe.w)), sn = Math.sqrt(Math.max(0, 1 - qe.w * qe.w));
+    const e = sn > 1e-6 ? _mdV2.set(qe.x, qe.y, qe.z).multiplyScalar(ang / sn) : _mdV2.set(0, 0, 0);
+    const w = _mdV3.set(v[3], v[4], v[5]).applyQuaternion(qc);
+    const acc = e.multiplyScalar(MD_GRAB_KR).addScaledVector(w, -MD_GRAB_DR);
+    if (acc.length() > MD_GRAB_MAX_ANG) acc.setLength(MD_GRAB_MAX_ANG);
+    // inertia of a ~5 cm-radius body: enough to turn the duck crisply without fighting the policy's balance
+    const I = g.mass * 25e-4;
+    x[a + 3] = I * acc.x;
+    x[a + 4] = I * acc.y;
+    x[a + 5] = I * acc.z;
   },
   // - console: action buttons + speed (left), drive joystick (right) -
   _buildConsole(ctx) {
@@ -3569,7 +3629,9 @@ var Microduck = {
         const rig = await mdBuildRig({ kin: V.kin, mesh: A.mesh, variant: this.variant ?? "classic" }, group);
         if (token !== this.token) return;
         // hull drawn ~one duck-size behind the duck: its own parts hide every inner edge, only the silhouette shows
-        const it = this._grabbable(this.ctx, rig.trunk, "duck", { outlinePush: () => 0.3 * this.stage.scale.x });
+        // twoHand: a second hand turns the grab into move + rotate (the physics does it; scale is ignored)
+        const it = this._grabbable(this.ctx, rig.trunk, "duck", { twoHand: true, outlinePush: () => 0.3 * this.stage.scale.x });
+        it.on("transformstart", () => this._grab2Start()).on("transformend", () => this.S?.grab?.two && this._grabEnd());
         it.on("tap", () => this.quack()).on("longpress", () => this.S?.loco === "legs" && this.btn.sit._click());
         this.rigs[loco] = { group, rig, it };
       }
@@ -3806,7 +3868,7 @@ var Microduck = {
       if (h && x === 0 && v < 0.2) x = 0.25;
       return [x, 0, h];
     }
-    let target = null, arrive = 0.35;
+    let target = null, arrive = 0.2;
     if (this.follow) {
       const h = this.sim.worldToLocal(this.app.input.head.clone());
       target = [h.x, h.y];
@@ -3815,12 +3877,24 @@ var Microduck = {
     // nothing to do: roll to a stop instead of coasting away
     if (!target) return [v > 0.25 ? B.brake : 0, 0, 0];
     const dx = target[0] - q[0], dy = target[1] - q[1], dist = Math.hypot(dx, dy);
-    if (dist < arrive + B.lead * v) {
-      if (!this.follow && v < 0.12) this.goal.active = false;
-      return [brake, 0, 0];
+    // arrived: stopped within 20 cm (or at your side when following)
+    if (dist < arrive && v < 0.12) {
+      if (!this.follow) this.goal.active = false;
+      return [0, 0, 0];
     }
-    const err = MD_WRAP(Math.atan2(dy, dx) - this._yaw());
-    return [Math.abs(err) > 0.6 ? 0.3 : Math.max(0.25, push * Math.min(1, dist)), 0, T6clamp(err, -0.3, 0.3)];
+    // approach: push while far; nearer, shed speed gently to ~0.5 m/s (it coasts at ~0.4 on its own),
+    // then a firm stop at the last moment - from <= 0.55 m/s the -0.22 brake stops it in ~0.8 s / ~0.17 m
+    // without falls, where from full speed it tips over
+    const err = MD_WRAP(Math.atan2(dy, dx) - this._yaw()), steer = T6clamp(err, -0.3, 0.3);
+    // the stop comes first: passing close to the goal swings the heading error past the turn-back threshold
+    const halt = v > 0.1 ? v < B.stopMax ? B.stop : B.brake : 0;
+    if (dist < Math.max(arrive, 0.35 * v + 0.05)) return [halt, 0, 0];
+    // goal off to the side / behind: with the heading capped at 0.3 a rolling duck only circles it - stop, then
+    // turn at a slow push, where the same heading makes a tight turn
+    if (Math.abs(err) > 0.6) return v > 0.3 ? [halt, 0, 0] : [0.28, 0, steer];
+    // shed speed early enough that the gentle brake reaches ~0.5 m/s before the final stop
+    if (dist < B.shed[0] + B.shed[1] * v) return [v > 0.5 ? B.brake : v < 0.25 ? 0.25 : 0, 0, steer];
+    return [push, 0, steer];
   },
   _startAssist(want) {
     if (this.S.movingT > 0) return want;
@@ -4064,6 +4138,7 @@ var Microduck = {
     const S = this.S, rig = this.rig, q = S.data.qpos;
     rig.trunk.position.set(q[0], q[1], q[2]);
     rig.trunk.quaternion.set(q[4], q[5], q[6], q[3]);
+    rig.trunk.scale.set(1, 1, 1);
     for (let j = 0; j < MD_NJ; j++) mdSetJoint(rig, MD_JOINTS[j], q[S.qposAdr[j]]);
     for (const e of S.extra) mdSetJoint(rig, e.name, q[e.adr]);
     this.shadow.position.set(q[0], q[1], 2e-3);
@@ -4118,6 +4193,7 @@ var Microduck = {
     const S = this.S;
     if (!S) return;
     this._readManual();
+    this._grab2Update();
     this.jaw = Math.max(0, this.jaw - dt / 0.35);
     // 50 Hz control, paced by the render loop: inference is async, so one pump runs at a time and catches up
     // (up to 3 steps) when the headset renders below 50 fps; beyond that the sim slows instead of spiralling
@@ -4166,6 +4242,8 @@ var Microduck = {
   }
 };
 var _mdg = new THREE6.Vector3();
+var _mdQa = new THREE6.Quaternion(), _mdQb = new THREE6.Quaternion(), _mdQc = new THREE6.Quaternion();
+var _mdV2 = new THREE6.Vector3(), _mdV3 = new THREE6.Vector3();
 var _mdV = new THREE6.Vector3(), _mdOne = new THREE6.Vector3(1, 1, 1), _mdM = new THREE6.Matrix4(), _mdM2 = new THREE6.Matrix4();
 function T6clamp(v, lo = 0.6, hi = 1.6) {
   return Math.min(hi, Math.max(lo, v));

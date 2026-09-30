@@ -35,6 +35,22 @@ swap(r'sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\n"'
      r'sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\nuniform float uPush;\n"')
 swap(r'"#include <project_vertex>\n vec4 vxrC',
      r'"#include <project_vertex>\n if ( uPush > 0.0 ) { vec4 vxrP = mvPosition; vxrP.xyz *= ( length( vxrP.xyz ) + uPush ) / max( length( vxrP.xyz ), 1e-4 ); gl_Position = projectionMatrix * vxrP; }\n vec4 vxrC')
+# 2b. ...and pushes each hull vertex outward along its own (smooth) normal as projected on screen, not away from
+#     the part's origin: an origin push leaves edges that point at the origin (a leg's sides) with no outline, and
+#     merged parts' origins sit at their body joint, far from the geometry
+swap(r' * uViewport;\n if ( length( vxrD ) > 1e-6 )',
+     r' * uViewport;\n if ( uPush > 0.0 ) { vec4 vxrQ = projectionMatrix * modelViewMatrix * vec4( transformed, 1.0 ); vec4 vxrN = projectionMatrix * modelViewMatrix * vec4( transformed + normalize( normal ) * 0.002, 1.0 ); vec2 vxrND = ( vxrN.xy / vxrN.w - vxrQ.xy / vxrQ.w ) * uViewport; if ( dot( vxrND, vxrD ) < 0.0 ) vxrND = -vxrND; vxrD = vxrND; }\n if ( length( vxrD ) > 1e-6 )')
+# 2d. each hull is centred on its own bounding box and sits there under its mesh, so "away from the centre"
+#     means away from the part itself (merged parts have their origin at the body joint, far from the geometry);
+#     the normal push above uses that direction to flip normals of inverted CAD windings outward
+swap('  geo.userData.vxrHull = g;\n  return g;',
+     '  if (g !== geo) {\n    g.computeBoundingBox();\n    g.userData.vxrCenter = g.boundingBox.getCenter(new THREE2.Vector3());\n    g.translate(-g.userData.vxrCenter.x, -g.userData.vxrCenter.y, -g.userData.vxrCenter.z);\n  }\n  geo.userData.vxrHull = g;\n  return g;')
+swap('  const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);',
+     '  const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);\n  if (hull.geometry.userData.vxrCenter) hull.position.copy(hull.geometry.userData.vxrCenter);')
+# 2c. the hull is welded by POSITION only: welding the render geometry kept its crease normals as separate
+#     vertices, so the hull split open along every hard edge and the normal push tore it into gaps and shards
+swap('    g = mergeVertices(geo.clone());\n    g.computeVertexNormals();',
+     '    const pos = new THREE2.BufferGeometry();\n    pos.setAttribute("position", geo.attributes.position);\n    if (geo.index) pos.setIndex(geo.index);\n    g = mergeVertices(pos);\n    g.computeVertexNormals();')
 swap('this._outlineMat.opacity = level === 2 ? 1 : 0.85;',
      'this._outlineMat.opacity = level === 2 ? 1 : 0.85;\n'
      '    const push = this.opts.outlinePush;\n'
