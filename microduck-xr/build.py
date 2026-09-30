@@ -63,12 +63,12 @@ swap('  vrBtn.disabled = !vr;\n  arBtn.disabled = !ar;\n', '  arBtn.disabled = !
 swap('if (!ar && vr) arBtn.textContent = "Enter (VR only)", arBtn.disabled = false, arBtn.onclick = () => app.enterXR("vr");',
      'if (!ar && vr) arBtn.onclick = () => app.enterXR("vr");')
 # page chrome
-swap('<!-- VibeXR Interaction Framework v0.8.8 - single-file build',
+swap('<!-- VibeXR Interaction Framework v0.8.23 - single-file build',
      '<!-- Microduck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)\n'
      '  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.23.\n'
      '  Robot: Pollen Robotics Microduck - pollen-robotics/microduck + microduck_rl (Apache-2.0). Model, visual mesh\n'
      '  and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.\n\n'
-     '  VibeXR Interaction Framework v0.8.8 - single-file build')
+     '  VibeXR Interaction Framework v0.8.23 - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
 # landing: the card sits left of the duck in landscape, at the bottom in portrait, compact on short screens;
 # the world frames the duck in whatever space is left

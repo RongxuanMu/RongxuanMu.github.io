@@ -173,6 +173,7 @@
                 <li><strong>Grab the duck</strong> and lift it: it keeps fighting for balance in your hand, and when dropped the stand-up policy gets it back on its feet.</li>
                 <li><strong>Point and pinch the floor</strong> to send it walking, or drag the goal flag; <strong>Follow me</strong> and <strong>Look at me</strong> make it track you.</li>
                 <li><strong>Throw the ball, then Kick</strong>: the duck walks up, lines up and kicks. The kicks are blind one-shot policies, so the approach is planned around where they connect.</li>
+                <li><strong>Rollers</strong> swaps in the roller-skate Microduck and its own skating policy: push to glide across the room at up to ~0.9 m/s, steer as it rolls, and <strong>Crouch</strong> for a low glide.</li>
                 <li><strong>Roll, Peck, Sit</strong> and the rest live in the <strong>hand menu</strong> (palm up); the framework's own options sit on its Settings page.</li>
                 <li>Move the whole stage by its bar, which turns the stage to face you; resize it with two hands, set it on a tabletop, or remove the boundary to let the duck roam your real floor.</li>
                 <li>Every motion is voiced by synthesized robot sounds: servo whine, footsteps, a "wheee" on the roll and an "uh-oh" when it falls.</li>
@@ -183,7 +184,7 @@
             <h2>How it works</h2>
             <ul class="md-list">
                 <li><strong>Physics:</strong> MuJoCo compiled to WebAssembly steps the same MJCF the policies were trained on (5 ms timestep).</li>
-                <li><strong>Control:</strong> seven ONNX policies (walk, stand-up, sit-stand, roll, two kicks, ground peck) run in ONNX Runtime Web at 50 Hz on a 61-value observation: IMU, joint state, last action and a 13-value command.</li>
+                <li><strong>Control:</strong> nine ONNX policies (walk, stand-up, sit-stand, roll, two kicks, ground peck, plus skating and crouch-glide for the roller variant) run in ONNX Runtime Web at 50 Hz on a 61-value observation: IMU, joint state, last action and a 13-value command.</li>
                 <li><strong>Making it controllable:</strong> the walking policy only starts from a still stance with the training-time sensor noise, and has distinct start and stop speeds, so every controller (goal, follow, joystick, kick approach) is shaped around those measured thresholds.</li>
                 <li><strong>Interaction:</strong> picking the duck up applies a MuJoCo-viewer-style spring to its body, so the robot reacts physically instead of being teleported.</li>
                 <li><strong>Rendering and XR:</strong> three.js and WebXR, single HTML file, passthrough by default.</li>

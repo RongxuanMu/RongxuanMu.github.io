@@ -42,7 +42,10 @@ var MD_POLICIES = {
   roll: "roulade.onnx",
   kickL: "ball_kick_left.onnx",
   kickR: "ball_kick_right.onnx",
-  groundpick: "alpha_ground_pick.onnx"
+  groundpick: "alpha_ground_pick.onnx",
+  // roller-skate variant (lazy): velocity-tracking skating + the crouch-glide one-shot
+  drive: "BEST_roller.onnx",
+  crouch: "BEST_roller_crouch.onnx"
 };
 var MD_JOINTS = [
   "left_hip_yaw", "left_hip_roll", "left_hip_pitch", "left_knee", "left_ankle",
@@ -66,6 +69,10 @@ var MD_BALL_PARK = [50, 0, MD_BALL_R];
 var MD_GRAB_K = 100, MD_GRAB_D = Math.sqrt(MD_GRAB_K), MD_GRAB_MAX_ACC = 200;
 // MuJoCo viewer perturbation gains
 var MD_TABLE_BELOW_HEAD = 0.5;
+// skating brake strength and how early (s at the current speed) to start braking for a goal
+// (14 goal trips each: -0.3 / 0.5 s fell 5 times, -0.22 / 0.8 s and -0.15 / 1.2 s twice, -0.1 / 1.8 s never,
+// stopping a median 0.42 m from the goal)
+var MD_SKATE = { brake: -0.1, lead: 1.8 };
 var MD_WRAP = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 // classic colourway (linear RGB, from the Space's variants.js)
 var MD_MAT = (() => {
@@ -83,6 +90,8 @@ var MD_MAT = (() => {
       "upper_leg_left.stl": CREAM, "upper_leg_right.stl": CREAM, "hip_l.stl": GRAY,
       "foot_left.stl": ORANGE, "foot_right.stl": ORANGE, "ankle_left.stl": ORANGE, "ankle_right.stl": ORANGE,
       "sole_left.stl": YELLOW, "sole_right.stl": YELLOW,
+      // roller skates: blade + ankle bracket take the shoe colour, rims the sole accent, tyres rubber-dark
+      "roller_blade.stl": ORANGE, "ankle_l_v1.stl": ORANGE, "ankle_r_v1.stl": ORANGE, "rim.stl": YELLOW, "tire.stl": DARK,
       "xl330.stl": DARK, "leg.stl": GRAY, "seeed_bearing__configuration_default.stl": DARK,
       "yaw2roll.stl": DARK, "bearing_roll.stl": DARK, "neck.stl": GRAY, "np_f970.stl": DARK,
       "pcb__raspberry_pi_zero_2_w.stl": DARK, "elec_rpi_robot_hat_pcb.stl": DARK, "banana_pcb_locker.stl": DARK,
@@ -213,8 +222,16 @@ function mdLoadAssets(status) {
     };
     status("Compiling physics…");
     const { xml, meshFiles } = mdBuildXml(xmlSrc);
-    const vfs = new mujoco.MjVFS();
-    for (const f of meshFiles) vfs.addBuffer(`assets/${f}`, mdBinaryStl((await mesh(f)).welded));
+    // one VFS for both variants; the rollers only add their wheel / blade meshes
+    const vfs = new mujoco.MjVFS(), vfsFiles = /* @__PURE__ */ new Set();
+    const addMeshes = async (files) => {
+      for (const f of files) {
+        if (vfsFiles.has(f)) continue;
+        vfsFiles.add(f);
+        vfs.addBuffer(`assets/${f}`, mdBinaryStl((await mesh(f)).welded));
+      }
+    };
+    await addMeshes(meshFiles);
     const model = mujoco.MjModel.from_xml_string(xml, vfs);
     status("Loading walking policies…");
     const opts = { executionProviders: ["wasm"] };
@@ -223,10 +240,27 @@ function mdLoadAssets(status) {
     await Promise.all([load("walk"), load("stand")]);
     // the one-shot tricks stream in behind the walker
     const extras = Promise.allSettled(["sitstand", "roll", "kickL", "kickR", "groundpick"].map(load));
-    return { mujoco, ort, kin, mesh, model, sessions, extras };
+    return { mujoco, ort, mesh, sessions, extras, load, addMeshes, vfs, legs: { model, kin } };
   })();
   mdAssets.catch(() => mdAssets = null);
   return mdAssets;
+}
+// roller-skate Microduck: its own MJCF (same 14 actuators and 61-value observation, plus four passive wheels),
+// kinematics and two policies - fetched the first time someone switches to it, then kept
+function mdLoadRollers(A, status) {
+  if (A.rollers) return A.rollers;
+  A.rollers = (async () => {
+    status("Loading the roller skates\u2026");
+    const [xmlSrc, kin] = await Promise.all([
+      mdFetch("robot/mjlab/robot_allcollisions_rollers.xml", "text"),
+      mdFetch("robot/mjlab/kinematics_rollers.json", "json")
+    ]);
+    const { xml, meshFiles } = mdBuildXml(xmlSrc);
+    await Promise.all([A.addMeshes(meshFiles), A.load("drive"), A.load("crouch")]);
+    return { model: A.mujoco.MjModel.from_xml_string(xml, A.vfs), kin };
+  })();
+  A.rollers.catch(() => A.rollers = null);
+  return A.rollers;
 }
 // - render rig: one Group per MJCF body, hinge joints as local rotations (port of the Space's duck.js) -
 async function mdBuildRig(A, parent) {
@@ -362,14 +396,16 @@ var MdSound = class {
   }
   stop() {
     for (const o of this.humOsc ?? []) o.stop();
+    this.rumble?.src.stop();
+    this.rumble = null;
     this.panner?.disconnect();
     this.humOsc = null;
     this.out = null;
   }
   // p = duck, h = listener position, q = listener orientation
-  update(p, h, q, servo) {
+  update(p, h, q, servo, roll = 0) {
     const c = this._ctx();
-    if (!c) return;
+    if (!c || ![p.x, p.y, p.z, h.x, h.y, h.z, q.x, q.w, servo, roll].every(Number.isFinite)) return;
     const t = c.currentTime, L = c.listener, f = _mdS1.set(0, 0, -1).applyQuaternion(q), u = _mdS2.set(0, 1, 0).applyQuaternion(q);
     const set = (param, v) => param.setTargetAtTime(v, t, 0.03);
     if (this.panner.positionX) [this.panner.positionX, this.panner.positionY, this.panner.positionZ].forEach((a, i) => set(a, p.getComponent(i)));
@@ -384,6 +420,22 @@ var MdSound = class {
     this.hum.gain.setTargetAtTime(0.05 * servo, t, 0.06);
     this.humOsc[0].frequency.setTargetAtTime(160 + 220 * servo, t, 0.08);
     this.humOsc[1].frequency.setTargetAtTime(164 + 226 * servo, t, 0.08);
+    // wheels: looped noise through a low band, level and brightness follow ground speed
+    if (!this.rumble && roll > 0.01 && this.sfx.noise) {
+      const src = c.createBufferSource(), f = c.createBiquadFilter();
+      src.buffer = this.sfx.noise;
+      src.loop = true;
+      f.type = "bandpass";
+      f.Q.value = 0.9;
+      this.rumble = { src, f, g: c.createGain() };
+      this.rumble.g.gain.value = 0;
+      src.connect(f).connect(this.rumble.g).connect(this.out);
+      src.start();
+    }
+    if (this.rumble) {
+      this.rumble.g.gain.setTargetAtTime(0.16 * roll, t, 0.08);
+      this.rumble.f.frequency.setTargetAtTime(180 + 420 * roll, t, 0.1);
+    }
   }
   // one voice: oscillator gliding f0 -> f1, optional vibrato (rate Hz, depth Hz), attack / exponential decay
   _tone(type, f0, f1, dur, gain, at = 0, vib = null, filter = null) {
@@ -443,6 +495,12 @@ var MdSound = class {
     this._tone("triangle", 700, 2100, 0.4, 0.07, 0.35, [14, 60]);
     this._tone("sawtooth", 200, 520, 0.6, 0.03, 0, null, ["bandpass", 1400, 3]);
   }
+  // crouch-glide: servo drop, then a long gliding "wheee" that rises as it stands back up
+  glide() {
+    this._tone("sawtooth", 380, 140, 0.45, 0.04, 0, null, ["bandpass", 1100, 3]);
+    this._tone("sine", 520, 440, 1.2, 0.1, 0.3, [6, 25]);
+    this._tone("sine", 440, 1250, 0.6, 0.12, 1.5, [10, 40]);
+  }
   // stuck the landing: clunk + a pleased two-note "ta-da"
   land() {
     this.clunk(0.6);
@@ -499,6 +557,7 @@ var MdSound = class {
 var _mdS1 = new THREE6.Vector3(), _mdS2 = new THREE6.Vector3();
 var Microduck = {
   id: "microduck",
+  skate: MD_SKATE,
   title: "Microduck",
   init(ctx) {
     const T = THREE6, { root, app } = ctx;
@@ -746,10 +805,11 @@ var Microduck = {
         if (!this.app.renderer.xr.isPresenting) this._heroCamera();
       } }),
       bound: b("Boundary", { toggle: true, value: this.boundary ?? true, onClick: (v) => this.setBoundary(v) }),
+      rollers: b("Rollers", { toggle: true, value: this.loco === "rollers", onClick: (v) => this.setLoco(v ? "rollers" : "legs") }),
       sound: b("Sound", { toggle: true, value: this.soundOn ?? true, onClick: (v) => this.sound.setOn(this.soundOn = v) }),
       reset: b("Reset", { onClick: () => this.reset() })
     };
-    const B = this.btn, items = [B.sit, B.roll, B.peck, B.kickL, B.kickR, B.ball, B.follow, B.look, B.quack, B.table, B.bound, B.sound, B.reset];
+    const B = this.btn, items = [B.sit, B.roll, B.peck, B.kickL, B.kickR, B.ball, B.follow, B.look, B.quack, B.table, B.bound, B.rollers, B.sound, B.reset];
     if (inMenu) items.push(B.settings = b("Settings \u203a", { onClick: () => app.menu.show("settings") }));
     panel.layout(items, { cols: 3, top: 0.03 });
     const slider = ctx.slider("Speed", { w: 0.2, value: 0.35, onChange: (v) => this.speed = v });
@@ -833,7 +893,9 @@ var Microduck = {
   },
   _desktopCamera(dt, t) {
     const a = this.app, cam = a.camera, ctl = a.controls, C = this.cam;
-    if (!C) return;
+    // a zero-size window (minimized, hidden iframe) has no framing to compute; a corrupted pose is re-framed
+    if (!C || innerWidth < 2 || innerHeight < 2) return;
+    if (![cam.position.x, cam.position.y, cam.position.z, ctl.target.x].every(Number.isFinite)) return this._heroCamera();
     // follow the duck (target and camera slide together) until the user takes the camera
     if (this.rig && C.sway) {
       const f = this.rig.trunk.getWorldPosition(_mdV);
@@ -896,7 +958,7 @@ var Microduck = {
       this.quack();
       I.quackAt = 7 + Math.random() * 8;
     }
-    if (I.peckAt <= 0 && S.A.sessions.groundpick) {
+    if (I.peckAt <= 0 && S.A.sessions.groundpick && S.loco === "legs") {
       this.trigger("groundpick");
       I.peckAt = 18 + Math.random() * 14;
     }
@@ -947,15 +1009,67 @@ var Microduck = {
   },
   // - simulation lifecycle -
   _startSim(A) {
-    const { mujoco, model } = A, T = THREE6;
+    this.A = A;
+    this.rigs = {};
+    this.setLoco(this.loco ?? "legs");
+    const token = this.token;
+    A.extras.then(() => token === this.token && this.app.log("all policies loaded"));
+  },
+  // legs <-> rollers: each variant keeps its own model, rig and duck interactable; switching swaps the
+  // simulation state (fresh MjData at the STAND keyframe) and shows the matching rig
+  async setLoco(loco) {
+    const A = this.A, token = this.token;
+    if (!A || this.switching || this.S && this.S.loco === loco) return;
+    this.switching = true;
+    try {
+      const V = loco === "rollers" ? await mdLoadRollers(A, (m) => this.status(m)) : A.legs;
+      if (token !== this.token) return;
+      if (!this.rigs[loco]) {
+        const group = new THREE6.Group();
+        group.name = `rig:${loco}`;
+        this.sim.add(group);
+        const rig = await mdBuildRig({ kin: V.kin, mesh: A.mesh }, group);
+        if (token !== this.token) return;
+        // hull drawn ~one duck-size behind the duck: its own parts hide every inner edge, only the silhouette shows
+        const it = this._grabbable(this.ctx, rig.trunk, "duck", { outlinePush: () => 0.3 * this.stage.scale.x });
+        it.on("tap", () => this.quack()).on("longpress", () => this.S?.loco === "legs" && this.btn.sit._click());
+        this.rigs[loco] = { group, rig, it };
+      }
+      const old = this.S;
+      this.S = this._makeState(A, V, loco);
+      old?.data.delete();
+      for (const [k, r] of Object.entries(this.rigs)) r.group.visible = k === loco;
+      Object.assign(this, { loco, rig: this.rigs[loco].rig, duckIt: this.rigs[loco].it });
+      // the 1 m curb trips a skating robot (it reaches ~0.9 m/s): skates open the boundary, legs restore it
+      if (loco === "rollers" && this.boundary) this.boundaryBeforeSkates = true, this.setBoundary(false);
+      else if (loco === "legs" && this.boundaryBeforeSkates) this.boundaryBeforeSkates = false, this.setBoundary(true);
+      this._applyCurb();
+      this.reset();
+      this._syncRig();
+      this.btn.rollers.setValue(loco === "rollers");
+      this.btn.roll.setLabel(loco === "rollers" ? "Crouch" : "Roll");
+      this.status(loco === "rollers" ? "On roller skates \u00b7 Crouch for a glide" : "Point + pinch the floor to walk \u00b7 grab the duck \u00b7 tap = quack");
+      this.app.log(`microduck ready (${loco})`);
+    } catch (e) {
+      console.error(e);
+      this.status(`\u26a0 ${e.message}`);
+      this.btn.rollers.setValue(this.S?.loco === "rollers");
+    } finally {
+      this.switching = false;
+    }
+  },
+  _makeState(A, V, loco) {
+    const { mujoco } = A, model = V.model;
     const data = new mujoco.MjData(model);
     const id = (type, name) => mujoco.mj_name2id(model, mujoco.mjtObj[type].value, name);
     const trunkId = id("mjOBJ_BODY", "trunk_base"), ballId = id("mjOBJ_BODY", "ball");
     const bj = model.jnt("ball_freejoint");
-    this.S = {
-      A, mujoco, model, data,
+    return {
+      A, mujoco, model, data, loco,
       qposAdr: MD_JOINTS.map((n) => model.jnt(n).qposadr),
       dofAdr: MD_JOINTS.map((n) => model.jnt(n).dofadr),
+      // unactuated hinges (the rollers' four wheels): not in obs / ctrl, synced to the rig so they spin
+      extra: V.kin.bodies.filter((b) => b.joint && b.joint.type === "hinge" && !MD_JOINTS.includes(b.joint.name)).map((b) => ({ name: b.joint.name, adr: model.jnt(b.joint.name).qposadr })),
       gyroAdr: model.sensor("imu_ang_vel").adr,
       trunkId,
       standKey: id("mjOBJ_KEY", "STAND"),
@@ -972,20 +1086,6 @@ var Microduck = {
       busy: false,
       steps: 0
     };
-    this._applyCurb();
-    this.reset();
-    const token = this.token;
-    mdBuildRig(A, this.sim).then((rig) => {
-      if (token !== this.token) return;
-      this.rig = rig;
-      // hull drawn ~one duck-size behind the duck: its own parts hide every inner edge, only the silhouette shows
-      this.duckIt = this._grabbable(this.ctx, rig.trunk, "duck", { outlinePush: () => 0.3 * this.stage.scale.x });
-      this.duckIt.on("tap", () => this.quack()).on("longpress", () => this.btn.sit._click());
-      this._syncRig();
-      this.status("Point + pinch the floor to walk · grab the duck · tap = quack");
-      this.app.log("microduck ready");
-    });
-    A.extras.then(() => token === this.token && this.app.log("all policies loaded"));
   },
   reset() {
     const S = this.S;
@@ -1029,6 +1129,12 @@ var Microduck = {
   trigger(what) {
     const S = this.S;
     if (!S) return;
+    // on skates: Roll is the crouch-glide; sit, peck and kicks are legged moves (as in the official simulator)
+    if (S.loco === "rollers") {
+      if (what === "roll") what = "crouch";
+      else if (what !== "stand") return this.status("That one needs legs \u2014 switch Rollers off");
+      else return;
+    }
     const need = { sit: "sitstand", stand: "sitstand", roll: "roll", kickL: "kickL", kickR: "kickR", groundpick: "groundpick" }[what];
     if (need && !S.A.sessions[need]) return this.status("That move is still loading…");
     if (S.recovery || S.run) return;
@@ -1058,6 +1164,8 @@ var Microduck = {
     this.goal.active = false;
     S.mode = what;
     if (what === "roll") S.run = { steps: 0, tipped: false, max: 150 }, this.sound.whee();
+    // crouch-glide: phase clock in the command slots, 5 s period, hands back at phase 0.7 (3.5 s)
+    else if (what === "crouch") S.run = { phase: 0, period: 5, end: 0.7 }, this.sound.glide();
     else if (what === "groundpick") S.run = { phase: 0, period: 4, end: 0.7 }, this.sound.peck();
     else S.run = { steps: 0, max: 25 }, this.sound.hup();
   },
@@ -1075,6 +1183,7 @@ var Microduck = {
   // kicking foot. With a ball out, Kick walks up to it, lines up, then kicks; without one it kicks at the air.
   kick(foot) {
     if (!this.S) return;
+    if (this.S.loco === "rollers") return this.trigger(foot);
     if (!this.ball.visible) return this.trigger(foot);
     const q = this.S.data.qpos, b = this.S.ballBody.qAdr;
     this.kickPlan = { foot, yaw: Math.atan2(q[b + 1] - q[1], q[b] - q[0]), t: 0 };
@@ -1137,12 +1246,43 @@ var Microduck = {
   // going down to ~0.15 m/s. So automatic commands are full-rate turns or forward speed, and _startAssist
   // bridges the start.
   _turn(err) {
-    return Math.sign(err);
+    return Math.sign(err) * (this.S.loco === "rollers" ? 0.3 : 1);
   },
   _steer(tx, ty, fwd, ang) {
     const q = this.S.data.qpos, err = MD_WRAP(Math.atan2(ty - q[1], tx - q[0]) - this._yaw());
     if (Math.abs(err) > 0.6) return [0, 0, this._turn(err)];
     return [Math.max(0.2, fwd * Math.cos(err)), 0, T6clamp(err * 2.2, -ang, ang)];
+  },
+  // Skating, measured on the roller policy (boundary off): cmd[0] is push intensity, not speed - > 0 pushes
+  // (0.3-0.6 reaches ~0.9 m/s), 0 coasts (it keeps rolling), < 0 brakes: hard brakes tip it over and braking
+  // on once slow spins it (see MD_SKATE). cmd[2] is a heading error, capped at 0.3: it steers while rolling;
+  // turning on the spot is unreliable. So: always roll a little to steer, brake gently only down to ~0.15 m/s,
+  // and start braking well before a goal.
+  _skate(m) {
+    const S = this.S, q = S.data.qpos, v = Math.hypot(S.data.qvel[0], S.data.qvel[1]);
+    const push = 0.25 + 0.35 * this.speed, B = this.skate, brake = v > 0.15 ? B.brake : 0;
+    if (Math.hypot(m[0], m[2]) > 0.12) {
+      this.goal.active = false;
+      let x = m[0] > 0.12 ? 0.2 + (push - 0.2) * m[0] : m[0] < -0.12 ? brake : 0;
+      const h = Math.abs(m[2]) > 0.12 ? 0.3 * m[2] : 0;
+      if (h && x === 0 && v < 0.2) x = 0.25;
+      return [x, 0, h];
+    }
+    let target = null, arrive = 0.35;
+    if (this.follow) {
+      const h = this.sim.worldToLocal(this.app.input.head.clone());
+      target = [h.x, h.y];
+      arrive = 0.6 / this.stage.scale.x;
+    } else if (this.goal.active) target = [this.goal.pos.x, this.goal.pos.y];
+    // nothing to do: roll to a stop instead of coasting away
+    if (!target) return [v > 0.25 ? B.brake : 0, 0, 0];
+    const dx = target[0] - q[0], dy = target[1] - q[1], dist = Math.hypot(dx, dy);
+    if (dist < arrive + B.lead * v) {
+      if (!this.follow && v < 0.12) this.goal.active = false;
+      return [brake, 0, 0];
+    }
+    const err = MD_WRAP(Math.atan2(dy, dx) - this._yaw());
+    return [Math.abs(err) > 0.6 ? 0.3 : Math.max(0.25, push * Math.min(1, dist)), 0, T6clamp(err, -0.3, 0.3)];
   },
   _startAssist(want) {
     if (this.S.movingT > 0) return want;
@@ -1157,6 +1297,7 @@ var Microduck = {
   _activeSession() {
     const S = this.S, s = S.A.sessions;
     if (S.recovery?.state === "recovering") return s.stand;
+    if (S.loco === "rollers") return S.mode === "crouch" ? s.crouch : s.drive;
     return s[S.mode] ?? s.walk;
   },
   _projGravity(out) {
@@ -1171,12 +1312,16 @@ var Microduck = {
   // twist + head targets from joystick / sticks / keys > follow-me > goal, recomputed every control step
   _command() {
     const S = this.S, q = S.data.qpos, tw = S.twist, head = this.app.input.head;
-    // Speed slider: forward 0.2 (start threshold) .. 0.35 m/s (trained range: 0.4), turn 0.7 .. 1 rad/s
-    const fwd = 0.2 + 0.15 * this.speed, ang = 0.7 + 0.3 * this.speed;
+    // Speed slider. Legs: forward 0.2 (start threshold) .. 0.35 m/s (trained range: 0.4), turn 0.7 .. 1 rad/s.
+    // Skates: forward 0.25 .. 0.6 m/s, turn capped at 0.3 rad/s - faster turns tip the robot over (the runtime
+    // launches rollers with --max-angular-vel 0.3)
+    const skates = S.loco === "rollers";
+    const fwd = skates ? 0.25 + 0.35 * this.speed : 0.2 + 0.15 * this.speed, ang = skates ? 0.3 : 0.7 + 0.3 * this.speed;
     const m = this.manual;
     let want = [0, 0, 0];
     const locked = S.mode !== "walk" || S.recovery || S.postKick > 0 || S.grab || S.pending;
-    if (!locked) {
+    if (!locked && skates) want = this._skate(m);
+    else if (!locked) {
       if (Math.hypot(m[0], m[2]) > 0.12) {
         this.goal.active = false;
         this.kickPlan = null;
@@ -1202,12 +1347,13 @@ var Microduck = {
         }
       }
     }
-    if (!locked) this._startAssist(want);
+    if (!locked && !skates) this._startAssist(want);
     for (let k = 0; k < 3; k++) tw[k] += 0.25 * (want[k] - tw[k]);
     // look at me: head yaw toward your head, neck + head pitch up toward it (training caps: pitch 1.1, yaw 1.4)
     const ht = [0, 0, 0, 0];
     const idle = this.attract && !want[0] && !want[2] && !this.kickPlan && !S.movingT;
-    const gaze = this.look ? this.sim.worldToLocal(head.clone()) : idle ? this.idleGaze : null;
+    // (skates: the roller policies were trained with zero head / body command slots, so no gaze)
+    const gaze = skates ? null : this.look ? this.sim.worldToLocal(head.clone()) : idle ? this.idleGaze : null;
     if (gaze && !locked) {
       const h = gaze;
       const dx = h.x - q[0], dy = h.y - q[1], dz = h.z - q[2] - 0.08;
@@ -1237,13 +1383,13 @@ var Microduck = {
     for (let j = 0; j < MD_NJ; j++) o[i++] = S.lastAction[j];
     c.fill(0);
     if (S.mode === "sitstand") c[0] = S.sitFlag;
-    else if (S.mode === "groundpick" && S.run) {
+    else if ((S.mode === "groundpick" || S.mode === "crouch") && S.run) {
       const a = 2 * Math.PI * S.run.phase;
       c[0] = Math.cos(a);
       c[1] = Math.sin(a);
     } else if (S.mode === "walk" && !S.recovery) c.set(S.twist, 0);
     // the stand and ground-pick policies were trained with zero-padded head / body slots
-    if (S.mode !== "groundpick" && !S.recovery) c.set(S.head, 3);
+    if (S.mode !== "groundpick" && !S.recovery && S.loco === "legs") c.set(S.head, 3);
     for (let k = 0; k < MD_CMD; k++) o[i++] = c[k];
     return o;
   },
@@ -1304,7 +1450,7 @@ var Microduck = {
           this.status("Back on its feet!");
         } else if (r.steps >= 300 && !S.grab) this.reset();
       }
-    } else if (fallen && S.mode === "walk" && !S.grab && S.postKick === 0) {
+    } else if (fallen && S.loco === "legs" && S.mode === "walk" && !S.grab && S.postKick === 0) {
       if (++S.fallDebounce >= 10) {
         S.fallDebounce = 0;
         S.recovery = { state: "fallen", steps: 0 };
@@ -1326,7 +1472,7 @@ var Microduck = {
         S.mode = "walk";
         S.postKick = 20;
       }
-    } else if (S.mode === "groundpick") {
+    } else if (S.mode === "groundpick" || S.mode === "crouch") {
       run.phase += MD_CTRL_DT / run.period;
       if (run.phase >= run.end) {
         S.run = null;
@@ -1381,6 +1527,7 @@ var Microduck = {
     rig.trunk.position.set(q[0], q[1], q[2]);
     rig.trunk.quaternion.set(q[4], q[5], q[6], q[3]);
     for (let j = 0; j < MD_NJ; j++) mdSetJoint(rig, MD_JOINTS[j], q[S.qposAdr[j]]);
+    for (const e of S.extra) mdSetJoint(rig, e.name, q[e.adr]);
     this.shadow.position.set(q[0], q[1], 2e-3);
     this.shadow.scale.setScalar(T6clamp(1.2 - q[2] * 1.5, 0.35, 1.1));
     this.shadow.material.opacity = T6clamp(1.3 - q[2] * 2, 0.2, 1);
@@ -1453,7 +1600,8 @@ var Microduck = {
       this._syncRig();
       const a = this.app, xr = a.renderer.xr.isPresenting;
       this.sound.update(this.rig.trunk.getWorldPosition(_mdV), xr ? a.input.head : a.camera.position, xr ? a.input.headQuat : a.camera.quaternion,
-        S.grab || S.mode !== "walk" || S.movingT || S.jv > 6 ? Math.min(1, (S.jv ?? 0) / 25) : 0);
+        S.grab || S.mode !== "walk" || S.movingT || S.jv > 6 ? Math.min(1, (S.jv ?? 0) / 25) : 0,
+        S.loco === "rollers" && !S.grab && S.data.qpos[2] < 0.2 ? Math.min(1, Math.hypot(S.data.qvel[0], S.data.qvel[1]) / 0.5) : 0);
     }
     this.flag.visible = this.goal.active || this.flagIt.selections.length > 0;
     this.flagHead.material.emissive.setHex(this.goal.active ? 3342336 : 0);
