@@ -1,10 +1,43 @@
-// Apply dark mode ASAP before paint (default to bright if no saved preference)
-(function preApplyDarkMode() {
+const SITE_STYLES = [
+    { id: 'glass', label: 'Glass' },
+    { id: 'paper', label: 'Paper' }
+];
+
+function readSiteStyle() {
+    try {
+        return localStorage.getItem('siteStyle') === 'paper' ? 'paper' : 'glass';
+    } catch (e) {
+        return 'glass';
+    }
+}
+
+function ensurePaperFonts() {
+    if (document.getElementById('paper-fonts')) return;
+    const link = document.createElement('link');
+    link.id = 'paper-fonts';
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,520;9..144,640&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap';
+    document.head.appendChild(link);
+}
+
+function applySiteStyle(style) {
+    const paper = style === 'paper';
+    document.documentElement.classList.toggle('style-paper', paper);
+    if (document.body) document.body.classList.toggle('style-paper', paper);
+    if (paper) ensurePaperFonts();
+    document.querySelectorAll('.style-menu__item').forEach((button) => {
+        const active = button.dataset.style === style;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-checked', active ? 'true' : 'false');
+    });
+}
+
+// Apply theme ASAP before paint (default to bright glass)
+(function preApplyTheme() {
     try {
         // One-time migration: reset default to bright the first time after this update
         const versionKey = 'darkModeVersion';
         const currentVersion = '2';
-        const savedPreference = localStorage.getItem('darkMode');
         if (localStorage.getItem(versionKey) !== currentVersion) {
             localStorage.setItem('darkMode', 'false');
             localStorage.setItem(versionKey, currentVersion);
@@ -12,36 +45,100 @@
 
         const effectivePref = localStorage.getItem('darkMode');
         const shouldUseDark = effectivePref === null ? false : effectivePref === 'true';
-        if (shouldUseDark) {
-            document.documentElement.classList.add('dark-mode');
-            // If body already exists, ensure it matches
-            if (document.body) document.body.classList.add('dark-mode');
-        } else {
-            document.documentElement.classList.remove('dark-mode');
-            if (document.body) document.body.classList.remove('dark-mode');
+        document.documentElement.classList.toggle('dark-mode', shouldUseDark);
+        if (document.body) document.body.classList.toggle('dark-mode', shouldUseDark);
+
+        // Glass is the default. Reset once so an earlier paper default does not stick.
+        const styleVersionKey = 'siteStyleVersion';
+        const styleVersion = '2';
+        if (localStorage.getItem(styleVersionKey) !== styleVersion) {
+            localStorage.setItem('siteStyle', 'glass');
+            localStorage.setItem(styleVersionKey, styleVersion);
         }
+        applySiteStyle(readSiteStyle());
     } catch (e) {
         // fail silent; avoid blocking render
     }
 })();
 
-// Dark Mode Toggle Functionality
+// Dark mode toggle, plus a style list revealed by hovering that control
 class DarkMode {
     constructor() {
         const savedPreference = localStorage.getItem('darkMode');
         this.isDarkMode = savedPreference === null ? false : savedPreference === 'true';
+        this.style = readSiteStyle();
         this.init();
     }
 
     init() {
-        // Apply dark mode on page load
+        this.mountStyleMenu();
         this.applyDarkMode();
-        
-        // Add event listener to toggle button
+        applySiteStyle(this.style);
+
         const toggleButton = document.getElementById('darkModeToggle');
         if (toggleButton) {
             toggleButton.addEventListener('click', () => this.toggle());
         }
+    }
+
+    mountStyleMenu() {
+        const container = document.querySelector('.dark-mode-toggle-container');
+        if (!container || container.querySelector('.style-menu')) return;
+
+        const menu = document.createElement('div');
+        menu.className = 'style-menu';
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute('aria-label', 'Page style');
+
+        const label = document.createElement('p');
+        label.className = 'style-menu__label';
+        label.textContent = 'Style';
+        menu.appendChild(label);
+
+        SITE_STYLES.forEach((entry) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'style-menu__item';
+            button.dataset.style = entry.id;
+            button.setAttribute('role', 'menuitemradio');
+            button.innerHTML = '<span class="style-menu__swatch" aria-hidden="true"></span><span>' + entry.label + '</span>';
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.setStyle(entry.id);
+                this.dismissStyleMenu();
+            });
+            menu.appendChild(button);
+        });
+
+        container.appendChild(menu);
+
+        container.addEventListener('mouseleave', () => {
+            container.classList.remove('is-style-menu-closed');
+        });
+        const toggleButton = document.getElementById('darkModeToggle');
+        if (toggleButton) {
+            toggleButton.addEventListener('focus', () => {
+                container.classList.remove('is-style-menu-closed');
+            });
+        }
+    }
+
+    dismissStyleMenu() {
+        const container = document.querySelector('.dark-mode-toggle-container');
+        if (!container) return;
+        container.classList.add('is-style-menu-closed');
+        const active = document.activeElement;
+        if (active && container.contains(active)) active.blur();
+    }
+
+    setStyle(style) {
+        this.style = style === 'paper' ? 'paper' : 'glass';
+        try {
+            localStorage.setItem('siteStyle', this.style);
+        } catch (e) {
+            // ignore storage failures
+        }
+        applySiteStyle(this.style);
     }
 
     toggle() {
@@ -54,19 +151,14 @@ class DarkMode {
         const body = document.body;
         const root = document.documentElement;
         const toggleButton = document.getElementById('darkModeToggle');
-        
-        if (this.isDarkMode) {
-            body.classList.add('dark-mode');
-            root.classList.add('dark-mode');
-            if (toggleButton) {
-                toggleButton.innerHTML = '<i class="fas fa-sun"></i>';
-            }
-        } else {
-            body.classList.remove('dark-mode');
-            root.classList.remove('dark-mode');
-            if (toggleButton) {
-                toggleButton.innerHTML = '<i class="fas fa-moon"></i>';
-            }
+
+        body.classList.toggle('dark-mode', this.isDarkMode);
+        root.classList.toggle('dark-mode', this.isDarkMode);
+        if (toggleButton) {
+            toggleButton.innerHTML = this.isDarkMode
+                ? '<i class="fas fa-sun"></i>'
+                : '<i class="fas fa-moon"></i>';
+            toggleButton.setAttribute('aria-label', this.isDarkMode ? 'Switch to light mode' : 'Switch to dark mode');
         }
     }
 }

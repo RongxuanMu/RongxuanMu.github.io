@@ -51,6 +51,10 @@
         return document.documentElement.classList.contains('dark-mode');
     }
 
+    function isPaper() {
+        return document.documentElement.classList.contains('style-paper');
+    }
+
     function randomBetween(min, max) {
         return min + Math.random() * (max - min);
     }
@@ -501,7 +505,7 @@
     function render(time) {
         animationId = window.requestAnimationFrame(render);
 
-        if (isPaused || document.hidden) {
+        if (isPaused || document.hidden || isPaper()) {
             return;
         }
 

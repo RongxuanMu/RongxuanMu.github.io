@@ -41,6 +41,51 @@
     --avatar-tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 2px 5px rgba(0, 0, 0, 0.12);
 }
 
+/* Paper craft: warm sheet, ink, and a lifted print shadow */
+html.style-paper,
+body.style-paper {
+    --glass-bg: rgba(247, 241, 230, 0.94);
+    --glass-bg-strong: #fbf6ec;
+    --glass-border: rgba(72, 48, 26, 0.16);
+    --glass-border-width: 1px;
+    --glass-radius: 3px;
+    --glass-shadow: 0 1px 0 rgba(255, 252, 246, 0.9), 0 14px 32px rgba(72, 46, 18, 0.08);
+    --glass-shadow-hover: 0 18px 36px rgba(72, 46, 18, 0.14);
+    --glass-blur: none;
+    --glass-inset: inset 0 0 0 1px rgba(255, 252, 246, 0.72);
+    --text-primary: #2a2218;
+    --text-secondary: #5c4d3c;
+    --accent: #8c3b24;
+    --accent-hover: #6a2b16;
+    --page-bg-top: #efe4d0;
+    --page-bg-bottom: #e3d3b8;
+    --page-bg: linear-gradient(180deg, var(--page-bg-top) 0%, var(--page-bg-bottom) 100%);
+    --avatar-tile-radius: 2px;
+    --avatar-tile-shadow: 0 1px 2px rgba(62, 40, 18, 0.16);
+    --avatar-tile-shadow-hover: 0 10px 22px rgba(62, 40, 18, 0.28);
+    --font-body: "Source Serif 4", "Iowan Old Style", Palatino, "Palatino Linotype", serif;
+    --font-display: "Fraunces", "Iowan Old Style", Palatino, serif;
+}
+
+html.dark-mode.style-paper,
+body.dark-mode.style-paper {
+    --glass-bg: rgba(38, 32, 26, 0.94);
+    --glass-bg-strong: #2c261f;
+    --glass-border: rgba(243, 230, 208, 0.14);
+    --glass-shadow: 0 16px 34px rgba(0, 0, 0, 0.38);
+    --glass-shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.5);
+    --glass-inset: inset 0 0 0 1px rgba(255, 236, 210, 0.05);
+    --text-primary: #f4ecdf;
+    --text-secondary: #cbbba4;
+    --accent: #e2a56a;
+    --accent-hover: #f0c49a;
+    --page-bg-top: #1c1814;
+    --page-bg-bottom: #120f0c;
+    --page-bg: linear-gradient(180deg, var(--page-bg-top) 0%, var(--page-bg-bottom) 100%);
+    --avatar-tile-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --avatar-tile-shadow-hover: 0 12px 24px rgba(0, 0, 0, 0.55);
+}
+
 /* General Styles */
 * {
     -webkit-user-select: none;
@@ -1089,6 +1134,280 @@ a:hover {
 
 .dark-mode .custom-link:hover {
     color: var(--accent);
+}
+
+/* Paper grain sits on the page ground; sheets stay solid so type stays sharp */
+html.style-paper::before {
+    background-color: var(--page-bg-bottom);
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E"),
+        radial-gradient(ellipse at 12% 0%, rgba(255, 252, 245, 0.72), transparent 46%),
+        radial-gradient(ellipse at 88% 100%, rgba(120, 78, 40, 0.09), transparent 42%),
+        linear-gradient(180deg, var(--page-bg-top), var(--page-bg-bottom));
+    background-size: 180px 180px, auto, auto, auto;
+    background-blend-mode: multiply, normal, normal, normal;
+}
+
+html.dark-mode.style-paper::before {
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E"),
+        radial-gradient(ellipse at 18% 0%, rgba(226, 165, 106, 0.08), transparent 42%),
+        linear-gradient(180deg, var(--page-bg-top), var(--page-bg-bottom));
+    background-size: 180px 180px, auto, auto;
+    background-blend-mode: overlay, normal, normal;
+}
+
+html.style-paper,
+body.style-paper {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-variant-numeric: oldstyle-nums;
+}
+
+html.style-paper body,
+html.style-paper p,
+html.style-paper li,
+html.style-paper button,
+html.style-paper input {
+    font-family: var(--font-body);
+}
+
+html.style-paper h1,
+html.style-paper h2,
+html.style-paper h3,
+html.style-paper h4,
+html.style-paper nav.top-nav ul li a {
+    font-family: var(--font-display);
+    font-weight: 560;
+    letter-spacing: -0.02em;
+}
+
+html.style-paper #metaballs-canvas {
+    display: none;
+}
+
+/* Paper texture stays on the page ground. Photos and video keep their own color. */
+html.style-paper body {
+    isolation: isolate;
+    z-index: 0;
+}
+
+html.style-paper img,
+html.style-paper video,
+html.style-paper picture,
+html.style-paper .modal-content {
+    filter: none !important;
+    -webkit-filter: none !important;
+    mix-blend-mode: normal !important;
+}
+
+html.style-paper.dark-mode,
+body.style-paper.dark-mode {
+    background-color: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+html.style-paper.dark-mode h1,
+html.style-paper.dark-mode h2,
+html.style-paper.dark-mode h3,
+html.style-paper.dark-mode h4,
+html.style-paper.dark-mode h5,
+html.style-paper.dark-mode h6,
+body.style-paper.dark-mode h1,
+body.style-paper.dark-mode h2,
+body.style-paper.dark-mode h3,
+body.style-paper.dark-mode h4,
+body.style-paper.dark-mode h5,
+body.style-paper.dark-mode h6 {
+    color: var(--text-primary) !important;
+}
+
+html.style-paper.dark-mode nav.top-nav,
+body.style-paper.dark-mode nav.top-nav {
+    background: var(--glass-bg-strong) !important;
+    background-color: var(--glass-bg-strong) !important;
+    box-shadow: var(--glass-shadow), var(--glass-inset) !important;
+}
+
+html.style-paper.dark-mode nav.top-nav ul li a,
+body.style-paper.dark-mode nav.top-nav ul li a,
+html.style-paper.dark-mode .social-media a,
+body.style-paper.dark-mode .social-media a {
+    color: var(--text-primary) !important;
+}
+
+html.style-paper.dark-mode nav.top-nav ul li a:hover,
+body.style-paper.dark-mode nav.top-nav ul li a:hover {
+    color: var(--text-primary) !important;
+    background: rgba(243, 230, 208, 0.08);
+}
+
+html.style-paper.dark-mode .social-media,
+html.style-paper.dark-mode main section#contact .social-media,
+body.style-paper.dark-mode .social-media,
+body.style-paper.dark-mode main section#contact .social-media {
+    background: var(--glass-bg-strong) !important;
+    background-color: var(--glass-bg-strong) !important;
+    box-shadow: var(--glass-shadow), var(--glass-inset) !important;
+}
+
+html.style-paper.dark-mode .social-media a:hover,
+body.style-paper.dark-mode .social-media a:hover {
+    color: var(--accent) !important;
+}
+
+html.style-paper.dark-mode main section,
+body.style-paper.dark-mode main section {
+    color: var(--text-secondary) !important;
+}
+
+html.style-paper.dark-mode section h2,
+html.style-paper.dark-mode section h3,
+html.style-paper.dark-mode section h4,
+body.style-paper.dark-mode section h2,
+body.style-paper.dark-mode section h3,
+body.style-paper.dark-mode section h4 {
+    color: var(--text-primary) !important;
+    border-bottom-color: var(--glass-border) !important;
+}
+
+/* Homepage sheets keep a hairline, like paper laid on a desk */
+html.style-paper body.homepage nav.top-nav,
+html.style-paper body.homepage #about,
+html.style-paper body.homepage #projects,
+html.style-paper body.homepage #publications,
+html.style-paper body.homepage #publications li,
+html.style-paper body.homepage #awards,
+html.style-paper body.homepage #awards li,
+html.style-paper body.homepage .social-media {
+    border: 1px solid var(--glass-border);
+}
+
+html.style-paper body.homepage .project {
+    border: 1px solid rgba(255, 252, 246, 0.28);
+}
+
+/* Style list — opens beside the light/dark control */
+.dark-mode-toggle-container {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.dark-mode-toggle-container::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 168px;
+    height: 10px;
+}
+
+.style-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 148px;
+    margin: 0;
+    padding: 8px;
+    list-style: none;
+    background: var(--glass-bg-strong);
+    border: var(--glass-border-width) solid var(--glass-border);
+    border-radius: var(--glass-radius);
+    box-shadow: var(--glass-shadow), var(--glass-inset);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+}
+
+.dark-mode-toggle-container:hover .style-menu,
+.dark-mode-toggle-container:focus-within .style-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    pointer-events: auto;
+}
+
+.dark-mode-toggle-container.is-style-menu-closed .style-menu {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+}
+
+.style-menu__label {
+    margin: 0 8px 4px;
+    font-family: var(--font-display, Arial, sans-serif);
+    font-size: 10px;
+    font-weight: 640;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.style-menu__item {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-family: var(--font-display, Arial, sans-serif);
+    font-size: 14px;
+    font-weight: 520;
+    letter-spacing: 0.01em;
+    text-align: left;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+html.style-paper .style-menu__item {
+    border-radius: 2px;
+}
+
+.style-menu__item:hover,
+.style-menu__item.is-active {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.dark-mode .style-menu__item:hover,
+.dark-mode .style-menu__item.is-active {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.style-menu__swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex: none;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
+
+.style-menu__item[data-style="paper"] .style-menu__swatch {
+    background:
+        linear-gradient(180deg, rgba(255, 252, 246, 0.45), transparent 60%),
+        #e7d7be;
+}
+
+.style-menu__item[data-style="glass"] .style-menu__swatch {
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(210, 210, 210, 0.55));
+}
+
+.style-menu__item.is-active .style-menu__swatch {
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--accent);
 }
 
 /* Homepage: no separation lines / panel borders */
