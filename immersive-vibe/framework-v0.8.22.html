@@ -1,6 +1,8 @@
-<!-- VibeXR Interaction Framework v0.8.23 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
+<!-- VibeXR Interaction Framework v0.8.24 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.8.24  hover outline: welded by position only and centred on each part (no gaps or shards on CAD
+          meshes); opts.outlinePush draws a silhouette-only outline pushed along the surface normals
   0.8.23  select sound: a crisp mouse click on press and a softer, higher click on release (was a finger snap)
   0.8.22  sketch surface is hit-testable again: its collider hides its material, not the object
   0.8.21  UI draws opaque with an alpha cutout, so depth (not origin sorting) orders panels, buttons and grid
@@ -498,10 +500,18 @@ function outlineGeometry(geo) {
   if (geo.userData.vxrHull) return geo.userData.vxrHull;
   let g = geo;
   try {
-    g = mergeVertices(geo.clone());
+    const pos = new THREE2.BufferGeometry();
+    pos.setAttribute("position", geo.attributes.position);
+    if (geo.index) pos.setIndex(geo.index);
+    g = mergeVertices(pos);
     g.computeVertexNormals();
   } catch (_) {
     g = geo;
+  }
+  if (g !== geo) {
+    g.computeBoundingBox();
+    g.userData.vxrCenter = g.boundingBox.getCenter(new THREE2.Vector3());
+    g.translate(-g.userData.vxrCenter.x, -g.userData.vxrCenter.y, -g.userData.vxrCenter.z);
   }
   geo.userData.vxrHull = g;
   return g;
@@ -510,12 +520,14 @@ function hoverOutlineMaterial() {
   const m = new THREE2.MeshBasicMaterial({ color: 16777215, side: THREE2.BackSide, transparent: true, opacity: 0.9, depthWrite: false });
   m.userData.px = { value: ICFG.outlinePx };
   m.userData.viewport = { value: new THREE2.Vector2(1024, 1024) };
+  m.userData.push = { value: 0 };
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uOutlinePx = m.userData.px;
     sh.uniforms.uViewport = m.userData.viewport;
-    sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\n" + sh.vertexShader.replace(
+    sh.uniforms.uPush = m.userData.push;
+    sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\nuniform float uPush;\n" + sh.vertexShader.replace(
       "#include <project_vertex>",
-      "#include <project_vertex>\n vec4 vxrC = projectionMatrix * modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );\n vec2 vxrD = ( gl_Position.xy / gl_Position.w - vxrC.xy / vxrC.w ) * uViewport;\n if ( length( vxrD ) > 1e-6 ) gl_Position.xy += normalize( vxrD ) * uOutlinePx * 2.0 * gl_Position.w / uViewport;"
+      "#include <project_vertex>\n if ( uPush > 0.0 ) { vec4 vxrP = mvPosition; vxrP.xyz *= ( length( vxrP.xyz ) + uPush ) / max( length( vxrP.xyz ), 1e-4 ); gl_Position = projectionMatrix * vxrP; }\n vec4 vxrC = projectionMatrix * modelViewMatrix * vec4( 0.0, 0.0, 0.0, 1.0 );\n vec2 vxrD = ( gl_Position.xy / gl_Position.w - vxrC.xy / vxrC.w ) * uViewport;\n if ( uPush > 0.0 ) { vec4 vxrQ = projectionMatrix * modelViewMatrix * vec4( transformed, 1.0 ); vec4 vxrN = projectionMatrix * modelViewMatrix * vec4( transformed + normalize( normal ) * 0.002, 1.0 ); vec2 vxrND = ( vxrN.xy / vxrN.w - vxrQ.xy / vxrQ.w ) * uViewport; if ( dot( vxrND, vxrD ) < 0.0 ) vxrND = -vxrND; vxrD = vxrND; }\n if ( length( vxrD ) > 1e-6 ) gl_Position.xy += normalize( vxrD ) * uOutlinePx * 2.0 * gl_Position.w / uViewport;"
     );
   };
   m.customProgramCacheKey = () => "vxr-hover-outline";
@@ -524,6 +536,7 @@ function hoverOutlineMaterial() {
 // the clip-space offset needs the pixel size of the viewport being drawn (per eye in XR)
 function outlineHull(sourceMesh, mat) {
   const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);
+  if (hull.geometry.userData.vxrCenter) hull.position.copy(hull.geometry.userData.vxrCenter);
   hull.userData.isOutline = hull.userData.noCollider = hull.userData.noHighlight = true;
   // no renderOrder: the hull sits at the object's own depth, so plain distance sorting puts it in front of
   // whatever is behind the object and behind whatever is in front of it.
@@ -554,6 +567,8 @@ var Interactable = class _Interactable {
    *  constrain(t, it) : t = {position, quaternion, scale} in world space, mutate to constrain any transform
    *  multi            : accept any number of simultaneous selections as independent presses (no two-hand transform)
    *  translateOnly    : a drag moves the object with the selector but never rotates it (default false)
+   *  outlinePush      : m or () => m - draw the hover outline that far behind the object, so only its outer
+   *                     silhouette shows (multi-part models); the outline then follows the surface normals
    */
   constructor(object, opts = {}) {
     this.object = object;
@@ -676,6 +691,8 @@ var Interactable = class _Interactable {
     for (const h of this._outline) h.visible = level > 0;
     this._outlineMat.userData.px.value = level === 2 ? ICFG.outlinePxSelect : ICFG.outlinePx;
     this._outlineMat.opacity = level === 2 ? 1 : 0.85;
+    const push = this.opts.outlinePush;
+    this._outlineMat.userData.push.value = typeof push === "function" ? push() : push || 0;
   }
 
 };
@@ -2605,7 +2622,7 @@ var Playground = {
 };
 
 // src/main.js
-var VERSION = "0.8.23";
+var VERSION = "0.8.24";
 var App = class {
   constructor() {
     if (window.__HAND_L) setHandAssetsBase64(window.__HAND_L, window.__HAND_R);

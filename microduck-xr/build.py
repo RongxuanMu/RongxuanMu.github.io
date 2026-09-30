@@ -26,35 +26,6 @@ swap('await app.worlds.load("playground");', 'await app.worlds.load("microduck")
 #    bounding sphere contained the ray - a large target (the stage floor) always does, so the cursor was
 #    drawn on the floor while a button was hovered
 swap('  _cursorDepth(origin, dir, hit) {', '  _cursorDepth(origin, dir, hit) {\n    if (hit) return hit.distance;')
-# 2. opts.outlinePush (m or () => m): draw the hover hull that far BEHIND the object along the view ray, so the
-#    object's own parts hide every inner edge and only the outer silhouette shows (multi-part models)
-swap('m.userData.viewport = { value: new THREE2.Vector2(1024, 1024) };',
-     'm.userData.viewport = { value: new THREE2.Vector2(1024, 1024) };\n  m.userData.push = { value: 0 };')
-swap('sh.uniforms.uViewport = m.userData.viewport;', 'sh.uniforms.uViewport = m.userData.viewport;\n    sh.uniforms.uPush = m.userData.push;')
-swap(r'sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\n"',
-     r'sh.vertexShader = "uniform float uOutlinePx;\nuniform vec2 uViewport;\nuniform float uPush;\n"')
-swap(r'"#include <project_vertex>\n vec4 vxrC',
-     r'"#include <project_vertex>\n if ( uPush > 0.0 ) { vec4 vxrP = mvPosition; vxrP.xyz *= ( length( vxrP.xyz ) + uPush ) / max( length( vxrP.xyz ), 1e-4 ); gl_Position = projectionMatrix * vxrP; }\n vec4 vxrC')
-# 2b. ...and pushes each hull vertex outward along its own (smooth) normal as projected on screen, not away from
-#     the part's origin: an origin push leaves edges that point at the origin (a leg's sides) with no outline, and
-#     merged parts' origins sit at their body joint, far from the geometry
-swap(r' * uViewport;\n if ( length( vxrD ) > 1e-6 )',
-     r' * uViewport;\n if ( uPush > 0.0 ) { vec4 vxrQ = projectionMatrix * modelViewMatrix * vec4( transformed, 1.0 ); vec4 vxrN = projectionMatrix * modelViewMatrix * vec4( transformed + normalize( normal ) * 0.002, 1.0 ); vec2 vxrND = ( vxrN.xy / vxrN.w - vxrQ.xy / vxrQ.w ) * uViewport; if ( dot( vxrND, vxrD ) < 0.0 ) vxrND = -vxrND; vxrD = vxrND; }\n if ( length( vxrD ) > 1e-6 )')
-# 2d. each hull is centred on its own bounding box and sits there under its mesh, so "away from the centre"
-#     means away from the part itself (merged parts have their origin at the body joint, far from the geometry);
-#     the normal push above uses that direction to flip normals of inverted CAD windings outward
-swap('  geo.userData.vxrHull = g;\n  return g;',
-     '  if (g !== geo) {\n    g.computeBoundingBox();\n    g.userData.vxrCenter = g.boundingBox.getCenter(new THREE2.Vector3());\n    g.translate(-g.userData.vxrCenter.x, -g.userData.vxrCenter.y, -g.userData.vxrCenter.z);\n  }\n  geo.userData.vxrHull = g;\n  return g;')
-swap('  const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);',
-     '  const hull = new THREE2.Mesh(outlineGeometry(sourceMesh.geometry), mat);\n  if (hull.geometry.userData.vxrCenter) hull.position.copy(hull.geometry.userData.vxrCenter);')
-# 2c. the hull is welded by POSITION only: welding the render geometry kept its crease normals as separate
-#     vertices, so the hull split open along every hard edge and the normal push tore it into gaps and shards
-swap('    g = mergeVertices(geo.clone());\n    g.computeVertexNormals();',
-     '    const pos = new THREE2.BufferGeometry();\n    pos.setAttribute("position", geo.attributes.position);\n    if (geo.index) pos.setIndex(geo.index);\n    g = mergeVertices(pos);\n    g.computeVertexNormals();')
-swap('this._outlineMat.opacity = level === 2 ? 1 : 0.85;',
-     'this._outlineMat.opacity = level === 2 ? 1 : 0.85;\n'
-     '    const push = this.opts.outlinePush;\n'
-     '    this._outlineMat.userData.push.value = typeof push === "function" ? push() : push || 0;')
 # 3. UI panel bases are visible from behind too
 swap('new THREE4.MeshBasicMaterial({ map: roundedPanelTexture(512, Math.round(512 * h / w)), alphaTest: 0.5, alphaToCoverage: true })',
      'new THREE4.MeshBasicMaterial({ map: roundedPanelTexture(512, Math.round(512 * h / w)), alphaTest: 0.5, alphaToCoverage: true, side: THREE4.DoubleSide })')
@@ -79,12 +50,12 @@ swap('  vrBtn.disabled = !vr;\n  arBtn.disabled = !ar;\n', '  arBtn.disabled = !
 swap('if (!ar && vr) arBtn.textContent = "Enter (VR only)", arBtn.disabled = false, arBtn.onclick = () => app.enterXR("vr");',
      'if (!ar && vr) arBtn.onclick = () => app.enterXR("vr");')
 # page chrome
-swap('<!-- VibeXR Interaction Framework v0.8.23 - single-file build',
+swap('<!-- VibeXR Interaction Framework v0.8.24 - single-file build',
      '<!-- Microduck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)\n'
-     '  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.23.\n'
+     '  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.24.\n'
      '  Robot: Pollen Robotics Microduck - pollen-robotics/microduck + microduck_rl (Apache-2.0). Model, visual mesh\n'
      '  and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.\n\n'
-     '  VibeXR Interaction Framework v0.8.23 - single-file build')
+     '  VibeXR Interaction Framework v0.8.24 - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
 # landing: the card sits left of the duck in landscape, at the bottom in portrait, compact on short screens;
 # the world frames the duck in whatever space is left

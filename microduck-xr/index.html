@@ -14,13 +14,15 @@
 <meta property="og:image:alt" content="Microduck XR by Rongxuan Mu: the white and orange Microduck robot standing on a line-drawn stage.">
 <meta name="twitter:card" content="summary_large_image">
 <!-- Microduck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)
-  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.23.
+  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.24.
   Robot: Pollen Robotics Microduck - pollen-robotics/microduck + microduck_rl (Apache-2.0). Model, visual mesh
   and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.
 
-  VibeXR Interaction Framework v0.8.23 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.8.24 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.8.24  hover outline: welded by position only and centred on each part (no gaps or shards on CAD
+          meshes); opts.outlinePush draws a silhouette-only outline pushed along the surface normals
   0.8.23  select sound: a crisp mouse click on press and a softer, higher click on release (was a finger snap)
   0.8.22  sketch surface is hit-testable again: its collider hides its material, not the object
   0.8.21  UI draws opaque with an alpha cutout, so depth (not origin sorting) orders panels, buttons and grid
@@ -587,6 +589,8 @@ var Interactable = class _Interactable {
    *  constrain(t, it) : t = {position, quaternion, scale} in world space, mutate to constrain any transform
    *  multi            : accept any number of simultaneous selections as independent presses (no two-hand transform)
    *  translateOnly    : a drag moves the object with the selector but never rotates it (default false)
+   *  outlinePush      : m or () => m - draw the hover outline that far behind the object, so only its outer
+   *                     silhouette shows (multi-part models); the outline then follows the surface normals
    */
   constructor(object, opts = {}) {
     this.object = object;
@@ -4250,7 +4254,7 @@ function T6clamp(v, lo = 0.6, hi = 1.6) {
 }
 
 // src/main.js
-var VERSION = "0.8.23";
+var VERSION = "0.8.24";
 var App = class {
   constructor() {
     if (window.__HAND_L) setHandAssetsBase64(window.__HAND_L, window.__HAND_R);
