@@ -1,5 +1,7 @@
 <!-- VibeXR Interaction Framework v0.8.8 - single-file build (open in Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
+  v0.8.23: select sound is a crisp mouse click instead of the finger snap - a ~5 ms bright plastic transient
+           over a tiny resonant tick and a faint low "thock" on press, and a quieter, higher click on release.
   v0.8.22: drawing worked again - v0.8.20 hid the sketch surface with object.visible = false, but
            Interactable.isVisible walks the object tree, so the board stopped being a hit-test candidate.
            The collider boxes now hide their MATERIAL instead.
@@ -2681,7 +2683,7 @@ var Playground = {
 };
 
 // src/main.js
-var VERSION = "0.8.22";
+var VERSION = "0.8.23";
 var App = class {
   constructor() {
     if (window.__HAND_L) setHandAssetsBase64(window.__HAND_L, window.__HAND_R);
@@ -2912,6 +2914,7 @@ var App = class {
   _onEvent(e) {
     if (e.type === "statechange" || e.type === "drag") return;
     if (e.type === "press") this.sfx.click();
+    else if (e.type === "release" && !e.cancelled) this.sfx.click(0.3, true);
     const i = e.interactor;
     const src = i ? `${i.type}/${i.source.kind === "hand" ? "hand" : i.source.kind === "controller" ? "ctrl" : i.source.kind === "pointer" ? "ptr" : "mouse"}-${i.source.handedness[0]}` : "";
     const name = e.target.object.name || "object";
@@ -2958,35 +2961,39 @@ var Sfx = class {
     if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
     return this.ctx;
   }
-  // finger snap: a sharp band-passed noise crack (~2.6 kHz) with a bright edge (> 6 kHz) over a very short
-  // low "thump" (220 -> 90 Hz); everything is gone within ~90 ms
-  click(gain = 0.3) {
+  // mouse click: a ~5 ms bright plastic transient (noise, high-passed, peaked at ~5 kHz) over a tiny resonant
+  // tick (2.3 -> 1.7 kHz, 14 ms) and, on press, a faint low "thock" (320 -> 140 Hz). The release click is the
+  // same shape, quieter and a little higher - press / release like a real switch. All gone within ~30 ms.
+  click(gain = 0.3, release = false) {
     const c = this.ensure();
     if (!c || c.state !== "running") return;
-    const t = c.currentTime;
-    const burst = (type, freq, q, g0, dur) => {
-      const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-      src.buffer = this.noise;
-      f.type = type;
-      f.frequency.value = freq;
-      if (q) f.Q.value = q;
-      g.gain.setValueAtTime(g0, t);
-      g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
-      src.connect(f).connect(g).connect(c.destination);
-      src.start(t);
-      src.stop(t + dur + 0.01);
+    const t = c.currentTime + 1e-3, k = release ? 0.45 : 1, up = release ? 1.25 : 1;
+    const src = c.createBufferSource(), hp = c.createBiquadFilter(), pk = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = this.noise;
+    hp.type = "highpass";
+    hp.frequency.value = 2500 * up;
+    pk.type = "peaking";
+    pk.frequency.value = 5200 * up;
+    pk.Q.value = 1.4;
+    pk.gain.value = 10;
+    g.gain.setValueAtTime(gain * 1.4 * k, t);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + 5e-3);
+    src.connect(hp).connect(pk).connect(g).connect(c.destination);
+    src.start(t);
+    src.stop(t + 0.01);
+    const tick = (type, f0, f1, dur, level) => {
+      const o = c.createOscillator(), og = c.createGain();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      og.gain.setValueAtTime(level, t);
+      og.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+      o.connect(og).connect(c.destination);
+      o.start(t);
+      o.stop(t + dur + 5e-3);
     };
-    burst("bandpass", 2600, 0.9, gain * 1.6, 0.07);
-    burst("highpass", 6000, 0, gain * 0.9, 0.025);
-    const osc = c.createOscillator(), og = c.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(220, t);
-    osc.frequency.exponentialRampToValueAtTime(90, t + 0.06);
-    og.gain.setValueAtTime(gain * 0.8, t);
-    og.gain.exponentialRampToValueAtTime(1e-4, t + 0.08);
-    osc.connect(og).connect(c.destination);
-    osc.start(t);
-    osc.stop(t + 0.09);
+    tick("triangle", 2300 * up, 1700 * up, 0.014, gain * 0.5 * k);
+    if (!release) tick("sine", 320, 140, 0.025, gain * 0.35);
   }
 
 };
