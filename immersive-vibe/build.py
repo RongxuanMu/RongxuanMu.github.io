@@ -33,7 +33,7 @@ a=s.index('<style>');b=s.index('<script type="importmap">')
 s=s[:a]+cover+'\n'+s[b:]
 a=s.index('<div id="overlay">',s.index('<script type="importmap">'));b=s.index('<script type="module">',a)
 s=s[:a]+s[b:]
-s=s.replace('var GALLERY_VERSION = "0.4";','var GALLERY_VERSION = "0.6.0";')
+s=s.replace('var GALLERY_VERSION = "0.4";','var GALLERY_VERSION = "0.7.0";')
 s=s.replace('// src/main.js\nvar VERSION', (P/'src/transition.js').read_text()+'\n'+(P/'src/audio.js').read_text()+'\n'+(P/'src/ink.js').read_text()+'\n// src/main.js\nvar VERSION')
 s=s.replace('this.worlds = new WorldManager(this);','this.worlds = new WorldManager(this);\n    this.audio = new GalleryAudio();\n    this.transition = new GalleryTransition(this);\n    document.addEventListener("visibilitychange",()=>{this.audio.sync(); if(!document.hidden && this.audio.active) void this.audio.unlock();});\n    window.addEventListener("pagehide",()=>this.audio.setActive(false));')
 s=s.replace('this.worlds.register(QianliJiangshan);','this.worlds.register(QianliJiangshan);\n    this.worlds.register(LivingInk);')
@@ -157,7 +157,7 @@ s=s.replace('  // ── the ranges ──', """  // the diorama frame around th
 s=s.replace('    paper.visible = MODE === "scroll";', '    paper.visible = MODE === "scroll";\n    scrollFrame.visible = MODE === "scroll";')
 # Reset transient state on re-entry.
 s=s.replace('this.qj = buildQianli(T, root, app);','this.hot=false;\n    this.qj = buildQianli(T, root, app);')
-s=s.replace('<!-- VibeXR Gallery v0.4','<!-- Immersive Vibe v0.5.0')
+s=s.replace('<!-- VibeXR Gallery v0.4','<!-- Immersive Vibe v0.7.0')
 # Explicit opt-in developer QA only, never a desktop-experience CTA.
 qa='''
 if(new URLSearchParams(location.search).get('qa')==='1'){
