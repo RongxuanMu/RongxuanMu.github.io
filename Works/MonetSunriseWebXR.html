@@ -963,7 +963,7 @@ async function startXR() {
     xrSession.addEventListener('end', onSessionEnd);
     await renderer.xr.setSession(xrSession);
     xrRefSpace = await xrSession.requestReferenceSpace('local-floor');
-    if (SESSION_KIND === 'ar') renderer.setClearColor(0x000000, 0); else renderer.setClearColor(0x1a1d27, 1);
+    applyClear();
     globePose.pos.set(0, 1.05, -0.55); globePose.yaw = 0; globePose.scale = 1;
     applyMode();
     panel.style.display = 'none'; panelToggle.style.display = 'none'; hud.style.display = 'block';
@@ -976,7 +976,7 @@ function onSessionEnd() {
   for (const s of ['left', 'right']) { const h = hands[s]; h.active = false; h.grabbing = false; h.palmUp = false; pinchDots[s].visible = false; }
   for (let i = 0; i < HAND_N; i++) handLayer.alpha[i] = 0;
   handLayer.flush();
-  renderer.setClearColor(isWidget() ? 0x1a1d27 : 0x8ea3c4, 1);
+  applyClear();
   panel.style.display = 'block'; hud.style.display = 'block'; hud.innerHTML = DESKTOP_HUD;
   mouseHand = true;
   renderer.setAnimationLoop(desktopLoop);
@@ -1103,7 +1103,12 @@ window.addEventListener('keyup', e => { if (e.key === 'Shift') sunElevTarget = F
 
 // ── UI: on-page control panel (shares state with the 3D hand menu) ──
 const DESKTOP_HUD = 'M — hand menu &nbsp;·&nbsp; Move the mouse — sweep &nbsp;·&nbsp; Hold click — pinch &nbsp;·&nbsp; Right-drag — orbit &nbsp;·&nbsp; Shift — lift the sun';
-function setMode(m) { MODE = m; renderer.setClearColor(isWidget() ? 0x1a1d27 : 0x8ea3c4, 1); applyMode(); syncPanel(); }
+function applyClear() {
+  if (SESSION_KIND === 'ar' && isWidget()) renderer.setClearColor(0x000000, 0);
+  else if (MODE === 'immersive') renderer.setClearColor(0x8ea3c4, 1);
+  else renderer.setClearColor(0x1a1d27, 1);
+}
+function setMode(m) { MODE = m; applyClear(); applyMode(); syncPanel(); }
 function setPinch(v) { FX.pinch = v; syncMenu(); syncPanel(); }
 function toggleFX(k) {
   FX[k] = !FX[k];
