@@ -1,5 +1,5 @@
-"""Build MicroDuck XR: the VibeXR Interaction Framework single-file build with its demo playground
-world swapped for the MicroDuck world (src/microduck.js). Output: index.html, a single file that can be
+"""Build Microduck XR: the VibeXR Interaction Framework single-file build with its demo playground
+world swapped for the Microduck world (src/microduck.js). Output: index.html, a single file that can be
 pasted as-is into a CodePen HTML panel."""
 from pathlib import Path
 import re
@@ -18,7 +18,7 @@ def swap(a, b):
 a = s.index('// src/worlds/playground.js')
 b = s.index('// src/main.js\nvar VERSION')
 s = s[:a] + (P / 'src' / 'microduck.js').read_text().rstrip() + '\n\n' + s[b:]
-swap('this.worlds.register(Playground);', 'this.worlds.register(MicroDuck);')
+swap('this.worlds.register(Playground);', 'this.worlds.register(Microduck);')
 swap('await app.worlds.load("playground");', 'await app.worlds.load("microduck");')
 
 # framework patches (kept small and generic; each is a behaviour fix / extension of the framework, not duck code)
@@ -64,12 +64,12 @@ swap('if (!ar && vr) arBtn.textContent = "Enter (VR only)", arBtn.disabled = fal
      'if (!ar && vr) arBtn.onclick = () => app.enterXR("vr");')
 # page chrome
 swap('<!-- VibeXR Interaction Framework v0.8.8 - single-file build',
-     '<!-- MicroDuck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)\n'
+     '<!-- Microduck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)\n'
      '  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.23.\n'
      '  Robot: Pollen Robotics Microduck - pollen-robotics/microduck + microduck_rl (Apache-2.0). Model, visual mesh\n'
      '  and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.\n\n'
      '  VibeXR Interaction Framework v0.8.8 - single-file build')
-swap('<h1>VibeXR</h1>', '<h1>MicroDuck XR</h1>')
+swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
 # landing: the card sits left of the duck in landscape, at the bottom in portrait, compact on short screens;
 # the world frames the duck in whatever space is left
 swap('@media (max-width: 600px) { #overlay { align-items: flex-end; padding-bottom: 16px; } }',
@@ -84,26 +84,26 @@ swap('<p class="sub">Interaction framework &middot; see-through by default &midd
 swap('"WebXR not available - desktop preview (left-click = ray pinch, wheel while dragging = push / pull, right-drag = orbit)"',
      '"Desktop preview: click the floor to walk, drag the duck, WASD drive, Q quack, right-drag orbit"')
 swap('document.getElementById("ver").textContent = `v${VERSION}`;',
-     'document.getElementById("ver").textContent = `MicroDuck XR \\u00b7 VibeXR v${VERSION}`;')
+     'document.getElementById("ver").textContent = `Microduck XR \\u00b7 VibeXR v${VERSION}`;')
 swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0, 1.75, 0.55);')
 swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(0, 0.35, -1.3);')
 # head: portrait favicon (like the rest of the portfolio) + social preview card. Absolute URLs, so they also
 # resolve when the file is pasted into CodePen.
 SITE = 'https://rongxuanmu.github.io'
 head = f"""<meta charset="utf-8">
-<title>MicroDuck XR</title>
+<title>Microduck XR</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/jpeg" href="{SITE}/Resources/common/Rongxuan.jpeg">
 <link rel="apple-touch-icon" href="{SITE}/Resources/common/Rongxuan.jpeg">
-<meta name="description" content="MicroDuck XR by Rongxuan Mu - Pollen Robotics' Microduck robot in WebXR. Its real walking policies run in MuJoCo in your browser; pick it up, send it walking, make it kick.">
+<meta name="description" content="Microduck XR by Rongxuan Mu - Pollen Robotics' Microduck robot in WebXR. Its real walking policies run in MuJoCo in your browser; pick it up, send it walking, make it kick.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="MicroDuck XR - Rongxuan Mu">
+<meta property="og:title" content="Microduck XR - Rongxuan Mu">
 <meta property="og:description" content="A real robot policy you can pick up with your hands. Pollen Robotics' Microduck in WebXR, simulated live in the browser.">
 <meta property="og:url" content="{SITE}/microduck-xr/">
 <meta property="og:image" content="{SITE}/Resources/microduck/social-preview.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="MicroDuck XR by Rongxuan Mu: the white and orange Microduck robot standing on a line-drawn stage.">
+<meta property="og:image:alt" content="Microduck XR by Rongxuan Mu: the white and orange Microduck robot standing on a line-drawn stage.">
 <meta name="twitter:card" content="summary_large_image">
 """
 s = head + s

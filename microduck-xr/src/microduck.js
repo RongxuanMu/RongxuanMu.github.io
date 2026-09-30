@@ -1,5 +1,5 @@
 // src/worlds/microduck.js
-// MicroDuck XR - the real Pollen Robotics Microduck walking policies, running in the browser and
+// Microduck XR - the real Pollen Robotics Microduck walking policies, running in the browser and
 // controlled with hands, controllers or a mouse through the VibeXR interaction framework.
 //
 // Physics: MuJoCo WASM (@mujoco/mujoco) stepping the same MJCF the policies were trained on
@@ -497,9 +497,9 @@ var MdSound = class {
   }
 };
 var _mdS1 = new THREE6.Vector3(), _mdS2 = new THREE6.Vector3();
-var MicroDuck = {
+var Microduck = {
   id: "microduck",
-  title: "MicroDuck",
+  title: "Microduck",
   init(ctx) {
     const T = THREE6, { root, app } = ctx;
     this.ctx = ctx;
@@ -553,7 +553,7 @@ var MicroDuck = {
     mdLoadAssets((m) => this.status(m)).then((A) => token === this.token && this._startSim(A)).catch((e) => {
       console.error(e);
       if (token === this.token) this.status(`⚠ ${e.message}`);
-      app.error(`MicroDuck: ${e.message}`);
+      app.error(`Microduck: ${e.message}`);
     });
   },
   // - scene: the stage (a disc in MJCF frame), goal flag, ball, drag bar -
@@ -726,7 +726,7 @@ var MicroDuck = {
     // in XR the command panel is the hand menu's home page (palm up / controller B), with the framework's
     // menu as its Settings page; on desktop (no palm) it floats beside the stage
     const app = ctx.app, inMenu = this.inMenu = !!app.sessionMode;
-    const panel = this.panel = ctx.panel(inMenu ? "MicroDuck" : "MicroDuck · poke, pinch or ray", { w: 0.26, h: 0.24 });
+    const panel = this.panel = ctx.panel(inMenu ? "Microduck" : "Microduck · poke, pinch or ray", { w: 0.26, h: 0.24 });
     const b = (label, opts) => ctx.button(label, { w: 0.078, h: 0.026, fontSize: 26, ...opts });
     this.btn = {
       sit: b("Sit", { toggle: true, onClick: (v) => this.trigger(v ? "sit" : "stand") }),
@@ -784,7 +784,7 @@ var MicroDuck = {
     if (inMenu) {
       app.menu.addPage("duck", panel);
       const m = app.menuButtons;
-      this.menuBack = ctx.button("\u2039 MicroDuck", { w: 0.075, h: 0.026, fontSize: 26, onClick: () => app.menu.show("duck") });
+      this.menuBack = ctx.button("\u2039 Microduck", { w: 0.075, h: 0.026, fontSize: 26, onClick: () => app.menu.show("duck") });
       app.menu.setItems([this.menuBack, m.vst, m.gain, m.mesh, m.joints, m.ray, m.reset, m.clear, m.exit], app.opacitySlider);
     } else ctx.root.add(panel.root);
   },

@@ -1,19 +1,19 @@
 <meta charset="utf-8">
-<title>MicroDuck XR</title>
+<title>Microduck XR</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/jpeg" href="https://rongxuanmu.github.io/Resources/common/Rongxuan.jpeg">
 <link rel="apple-touch-icon" href="https://rongxuanmu.github.io/Resources/common/Rongxuan.jpeg">
-<meta name="description" content="MicroDuck XR by Rongxuan Mu - Pollen Robotics' Microduck robot in WebXR. Its real walking policies run in MuJoCo in your browser; pick it up, send it walking, make it kick.">
+<meta name="description" content="Microduck XR by Rongxuan Mu - Pollen Robotics' Microduck robot in WebXR. Its real walking policies run in MuJoCo in your browser; pick it up, send it walking, make it kick.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="MicroDuck XR - Rongxuan Mu">
+<meta property="og:title" content="Microduck XR - Rongxuan Mu">
 <meta property="og:description" content="A real robot policy you can pick up with your hands. Pollen Robotics' Microduck in WebXR, simulated live in the browser.">
 <meta property="og:url" content="https://rongxuanmu.github.io/microduck-xr/">
 <meta property="og:image" content="https://rongxuanmu.github.io/Resources/microduck/social-preview.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="MicroDuck XR by Rongxuan Mu: the white and orange Microduck robot standing on a line-drawn stage.">
+<meta property="og:image:alt" content="Microduck XR by Rongxuan Mu: the white and orange Microduck robot standing on a line-drawn stage.">
 <meta name="twitter:card" content="summary_large_image">
-<!-- MicroDuck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)
+<!-- Microduck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)
   with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.23.
   Robot: Pollen Robotics Microduck - pollen-robotics/microduck + microduck_rl (Apache-2.0). Model, visual mesh
   and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.
@@ -157,7 +157,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
 <script>window.__HAND_URL = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0.20/dist/profiles/generic-hand/";</script>
 <div id="overlay">
   <div class="card">
-    <h1>MicroDuck XR</h1>
+    <h1>Microduck XR</h1>
     <p class="sub">The real Microduck walking policies in MuJoCo &middot; point, pinch &amp; grab to play &middot; built on the VibeXR interaction framework</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
@@ -2485,7 +2485,7 @@ var WorldManager = class {
 };
 
 // src/worlds/microduck.js
-// MicroDuck XR - the real Pollen Robotics Microduck walking policies, running in the browser and
+// Microduck XR - the real Pollen Robotics Microduck walking policies, running in the browser and
 // controlled with hands, controllers or a mouse through the VibeXR interaction framework.
 //
 // Physics: MuJoCo WASM (@mujoco/mujoco) stepping the same MJCF the policies were trained on
@@ -2983,9 +2983,9 @@ var MdSound = class {
   }
 };
 var _mdS1 = new THREE6.Vector3(), _mdS2 = new THREE6.Vector3();
-var MicroDuck = {
+var Microduck = {
   id: "microduck",
-  title: "MicroDuck",
+  title: "Microduck",
   init(ctx) {
     const T = THREE6, { root, app } = ctx;
     this.ctx = ctx;
@@ -3039,7 +3039,7 @@ var MicroDuck = {
     mdLoadAssets((m) => this.status(m)).then((A) => token === this.token && this._startSim(A)).catch((e) => {
       console.error(e);
       if (token === this.token) this.status(`⚠ ${e.message}`);
-      app.error(`MicroDuck: ${e.message}`);
+      app.error(`Microduck: ${e.message}`);
     });
   },
   // - scene: the stage (a disc in MJCF frame), goal flag, ball, drag bar -
@@ -3212,7 +3212,7 @@ var MicroDuck = {
     // in XR the command panel is the hand menu's home page (palm up / controller B), with the framework's
     // menu as its Settings page; on desktop (no palm) it floats beside the stage
     const app = ctx.app, inMenu = this.inMenu = !!app.sessionMode;
-    const panel = this.panel = ctx.panel(inMenu ? "MicroDuck" : "MicroDuck · poke, pinch or ray", { w: 0.26, h: 0.24 });
+    const panel = this.panel = ctx.panel(inMenu ? "Microduck" : "Microduck · poke, pinch or ray", { w: 0.26, h: 0.24 });
     const b = (label, opts) => ctx.button(label, { w: 0.078, h: 0.026, fontSize: 26, ...opts });
     this.btn = {
       sit: b("Sit", { toggle: true, onClick: (v) => this.trigger(v ? "sit" : "stand") }),
@@ -3270,7 +3270,7 @@ var MicroDuck = {
     if (inMenu) {
       app.menu.addPage("duck", panel);
       const m = app.menuButtons;
-      this.menuBack = ctx.button("\u2039 MicroDuck", { w: 0.075, h: 0.026, fontSize: 26, onClick: () => app.menu.show("duck") });
+      this.menuBack = ctx.button("\u2039 Microduck", { w: 0.075, h: 0.026, fontSize: 26, onClick: () => app.menu.show("duck") });
       app.menu.setItems([this.menuBack, m.vst, m.gain, m.mesh, m.joints, m.ray, m.reset, m.clear, m.exit], app.opacitySlider);
     } else ctx.root.add(panel.root);
   },
@@ -4019,7 +4019,7 @@ var App = class {
     this._addSource(this.mouse);
     Interactable.onAny = (e) => this._onEvent(e);
     this._buildMenu();
-    this.worlds.register(MicroDuck);
+    this.worlds.register(Microduck);
     addEventListener("resize", () => {
       if (this.renderer.xr.isPresenting) return;
       this.camera.aspect = innerWidth / innerHeight;
@@ -4310,7 +4310,7 @@ var overlay = (() => {
 })();
 var app = new App();
 window.VXR = { app, THREE: THREE7, ICFG, VERSION, dev: { HandVisual, outlineMaterial } };
-document.getElementById("ver").textContent = `MicroDuck XR \u00b7 VibeXR v${VERSION}`;
+document.getElementById("ver").textContent = `Microduck XR \u00b7 VibeXR v${VERSION}`;
 await app.worlds.load("microduck");
 var arBtn = document.getElementById("enter-ar");
 arBtn.onclick = () => app.enterXR("ar");
