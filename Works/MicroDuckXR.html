@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MicroDuck XR - Rongxuan Portfolio</title>
+    <link rel="stylesheet" href="../project-styles.css?v=3">
+    <link rel="stylesheet" href="../styles.css?v=26">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/x-icon">
+    <script src="../darkmode.js?v=4"></script>
+    <script src="../metaballs.js?v=23" defer></script>
+    <meta name="description" content="MicroDuck XR puts Pollen Robotics' open-source Microduck robot in your room: its real walking policies run in MuJoCo in the browser, and you play with it by hand in WebXR.">
+    <style>
+        .md-launch {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-top: 1.5rem;
+            border: 1px solid #e6e6e6;
+            border-radius: 8px;
+            background: #fff;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        a.md-launch,
+        a.md-launch:hover {
+            cursor: url('../Resources/common/PinchCursor.png') 1 1, pointer;
+        }
+
+        a.md-launch:active {
+            cursor: url('../Resources/common/PinchedCursor.png') 1 1, pointer;
+        }
+
+        a.md-launch:hover {
+            border-color: #cfcfcf;
+        }
+
+        .md-launch video {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            background: #000;
+            display: block;
+            pointer-events: none;
+        }
+
+        .md-launch-meta {
+            padding: 16px 18px 18px;
+        }
+
+        .md-launch-meta h3 {
+            margin: 0 0 0.5rem;
+            border: none;
+            padding: 0;
+            font-size: 1.2rem;
+        }
+
+        .md-launch-meta p {
+            margin: 0;
+            color: #666;
+            font-size: 0.92rem;
+            text-align: left;
+        }
+
+        .md-open {
+            display: inline-block;
+            margin-top: 0.85rem;
+            color: #0066cc;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .md-list {
+            margin: 0.5rem 0 0;
+            padding-left: 1.2rem;
+            text-align: left;
+        }
+
+        .md-list li {
+            margin: 0.45rem 0;
+        }
+
+        .dark-mode .md-launch {
+            background: rgba(26, 26, 26, 0.7) !important;
+            border-color: #333 !important;
+        }
+
+        .dark-mode .md-launch-meta p {
+            color: #aaa !important;
+        }
+
+        .dark-mode a.md-launch:hover {
+            border-color: #555 !important;
+        }
+
+        .dark-mode .md-open {
+            color: #8ab4f8;
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav">
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#play">Play</a></li>
+            <li><a href="#how">How it works</a></li>
+            <li><a href="../index.html">← Home</a></li>
+        </ul>
+    </nav>
+
+    <div class="dark-mode-toggle-container">
+        <button id="darkModeToggle" aria-label="Toggle dark mode">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <header>
+        <div class="image-container">
+            <video autoplay muted loop playsinline preload="metadata" poster="../Resources/microduck/MicroDuckXR.jpg">
+                <source src="../Resources/microduck/MicroDuckXR.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h1>MicroDuck XR</h1>
+            <h2>A real robot policy you can pick up with your hands</h2>
+            <p>
+                <strong>MicroDuck XR</strong> brings <a href="https://github.com/pollen-robotics/microduck" target="_blank" rel="noopener noreferrer">Microduck</a>,
+                Pollen Robotics' open-source bipedal duck robot, into your room. It is not an animation: the duck's
+                trained reinforcement-learning policies run in the browser against a MuJoCo physics model of the
+                robot, 50 times a second, exactly as they would drive the real hardware.
+            </p>
+            <p>
+                The experience is built on my <strong>VibeXR interaction framework</strong>, so hands, controllers
+                and a mouse all share one interaction model: point, pinch, poke, grab. The question it explores is
+                what it feels like to <strong>direct and handle an embodied AI agent</strong> in shared space,
+                rather than watch it on a screen.
+            </p>
+        </section>
+
+        <section id="play">
+            <h2>Play</h2>
+            <a class="md-launch" href="../microduck-xr/" target="_blank" rel="noopener noreferrer" aria-label="Open MicroDuck XR">
+                <video autoplay muted loop playsinline preload="metadata" poster="../Resources/microduck/MicroDuckXR.jpg">
+                    <source src="../Resources/microduck/MicroDuckXR.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="md-launch-meta">
+                    <h3>MicroDuck XR</h3>
+                    <p>
+                        Open it in a Quest, Galaxy XR or Vision Pro browser and tap Enter for passthrough. On desktop
+                        the duck idles on the landing screen: click the floor to walk it, drag it to pick it up,
+                        WASD to drive, Q to quack.
+                    </p>
+                    <span class="md-open">Open live demo ↗</span>
+                </div>
+            </a>
+            <ul class="md-list">
+                <li><strong>Grab the duck</strong> and lift it: it keeps fighting for balance in your hand, and when dropped the stand-up policy gets it back on its feet.</li>
+                <li><strong>Point and pinch the floor</strong> to send it walking, or drag the goal flag; <strong>Follow me</strong> and <strong>Look at me</strong> make it track you.</li>
+                <li><strong>Throw the ball, then Kick</strong>: the duck walks up, lines up and kicks. The kicks are blind one-shot policies, so the approach is planned around where they connect.</li>
+                <li><strong>Roll, Peck, Sit</strong> and the rest live in the <strong>hand menu</strong> (palm up); the framework's own options sit on its Settings page.</li>
+                <li>Move the whole stage by its bar, which turns the stage to face you; resize it with two hands, set it on a tabletop, or remove the boundary to let the duck roam your real floor.</li>
+                <li>Every motion is voiced by synthesized robot sounds: servo whine, footsteps, a "wheee" on the roll and an "uh-oh" when it falls.</li>
+            </ul>
+        </section>
+
+        <section id="how">
+            <h2>How it works</h2>
+            <ul class="md-list">
+                <li><strong>Physics:</strong> MuJoCo compiled to WebAssembly steps the same MJCF the policies were trained on (5 ms timestep).</li>
+                <li><strong>Control:</strong> seven ONNX policies (walk, stand-up, sit-stand, roll, two kicks, ground peck) run in ONNX Runtime Web at 50 Hz on a 61-value observation: IMU, joint state, last action and a 13-value command.</li>
+                <li><strong>Making it controllable:</strong> the walking policy only starts from a still stance with the training-time sensor noise, and has distinct start and stop speeds, so every controller (goal, follow, joystick, kick approach) is shaped around those measured thresholds.</li>
+                <li><strong>Interaction:</strong> picking the duck up applies a MuJoCo-viewer-style spring to its body, so the robot reacts physically instead of being teleported.</li>
+                <li><strong>Rendering and XR:</strong> three.js and WebXR, single HTML file, passthrough by default.</li>
+            </ul>
+            <p>
+                Robot, model and trained policies: <a href="https://github.com/pollen-robotics/microduck" target="_blank" rel="noopener noreferrer">pollen-robotics/microduck</a>
+                and <a href="https://github.com/pollen-robotics/microduck_rl" target="_blank" rel="noopener noreferrer">microduck_rl</a> (Apache-2.0), loaded from the
+                <a href="https://huggingface.co/spaces/pollen-robotics/microduck-simulator" target="_blank" rel="noopener noreferrer">Microduck simulator</a> on Hugging Face.
+            </p>
+        </section>
+
+        <section id="contact">
+            <div class="social-media">
+                <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="https://github.com/RongxuanMu" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="https://codepen.io/MuRongxuan" target="_blank"><i class="fab fa-codepen"></i></a>
+                <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
+                <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+                <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
+                <a href="mailto:rongxuanmu@foxmail.com"><i class="fas fa-envelope"></i></a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Rongxuan Mu. All rights reserved.</p>
+    </footer>
+</body>
+</html>
