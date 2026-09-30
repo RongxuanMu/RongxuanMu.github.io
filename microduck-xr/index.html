@@ -2431,7 +2431,7 @@ var WorldManager = class {
 //               and WASD also drive.
 import * as THREE6 from "three";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
-import { mergeVertices as mdMergeVertices, toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { mergeVertices as mdMergeVertices, mergeGeometries as mdMergeGeometries, toCreasedNormals } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
@@ -2440,7 +2440,8 @@ var MD_URL = {
   space: "https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/023172c8a7d629b5258d90364c13bafe013abbfa/app/public",
   mujoco: "https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.11.0/mujoco.js",
   ort: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/ort.wasm.min.mjs",
-  ortDir: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/"
+  ortDir: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/",
+  meshopt: "https://cdn.jsdelivr.net/npm/meshoptimizer@0.22.0/meshopt_simplifier.module.js"
 };
 var MD_POLICIES = {
   walk: "BEST_alpha_walking.onnx",
@@ -2482,33 +2483,56 @@ var MD_TABLE_BELOW_HEAD = 0.5;
 // stopping a median 0.42 m from the goal)
 var MD_SKATE = { brake: -0.1, lead: 1.8 };
 var MD_WRAP = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-// classic colourway (linear RGB, from the Space's variants.js)
-var MD_MAT = (() => {
+// The four official colourways (linear RGB material specs, from the Space's variants.js). Every mesh fills a
+// semantic slot; a colourway fills the slots. The chips use the press-kit shell colours, like the official picker.
+var MD_SLOT = {
+  "top_head_shell.stl": "headDome", "bottom_head_shell.stl": "trim", "face_part.stl": "facePlate",
+  "noenoeil.stl": "eyeRing", "lens.stl": "lens", "m12_lens_holder.stl": "mechDark",
+  "soft_mouth_top.stl": "beakUpper", "jaw.stl": "beakLower", "jaw_soft.stl": "tongue",
+  "trunk_base.stl": "bodyShell", "left_shell.stl": "sideShells", "right_shell.stl": "sideShells",
+  "upper_leg_left.stl": "legShells", "upper_leg_right.stl": "legShells", "hip_l.stl": "hips",
+  "foot_left.stl": "feet", "foot_right.stl": "feet", "ankle_left.stl": "feet", "ankle_right.stl": "feet",
+  "sole_left.stl": "soles", "sole_right.stl": "soles",
+  // roller skates: blade + ankle bracket take the shoe colour, rims the sole accent, tyres rubber-dark
+  "roller_blade.stl": "feet", "ankle_l_v1.stl": "feet", "ankle_r_v1.stl": "feet", "rim.stl": "soles", "tire.stl": "mechDark",
+  "xl330.stl": "mechDark", "leg.stl": "mechGray", "seeed_bearing__configuration_default.stl": "mechDark",
+  "yaw2roll.stl": "mechDark", "bearing_roll.stl": "mechDark", "neck.stl": "mechGray", "np_f970.stl": "mechDark",
+  "pcb__raspberry_pi_zero_2_w.stl": "mechDark", "elec_rpi_robot_hat_pcb.stl": "mechDark", "banana_pcb_locker.stl": "mechDark",
+  "speaker.stl": "mechDark", "upper_leg_rigidity_plate.stl": "mechGray", "yaw_roll_motion.stl": "mechGray",
+  "neck_pitch.stl": "mechGray", "motor_support.stl": "mechGray", "power_support.stl": "mechGray",
+  "seeed_bearing__configuration__22x16x4.stl": "mechGray"
+};
+var MD_VARIANTS = (() => {
   const s = (color, roughness = 0.45, metalness = 0) => ({ color, roughness, metalness });
   const AMBER_YELLOW = s([1, 0.413, 7e-3], 0.4), ORANGE = s([1, 0.144, 8e-3]), YELLOW = s([1, 0.608, 0.021], 0.4);
   const CREAM = s([0.888, 0.86, 0.798], 0.35), WARM_GRAY = s([0.328, 0.312, 0.283], 0.35);
   const DARK = s([0.012, 0.012, 0.014], 0.55, 0.3), GRAY = s([0.256, 0.256, 0.279], 0.5, 0.35), LENS = s([0.01, 0.012, 0.02], 0.05);
+  const CHARCOAL = s([0.028, 0.028, 0.033], 0.5), CHARCOAL_BODY = s([0.017, 0.017, 0.019], 0.5);
+  const PURPLE_RING = s([0.443, 0.308, 0.663], 0.4), PURPLE_SOLE = s([0.221, 0.134, 0.465]), SOFT_PURPLE = s([0.36, 0.23, 0.48]);
+  const LAVENDER = s([0.462, 0.367, 0.688], 0.35), PALE_BLUE = s([0.441, 0.613, 0.723], 0.35);
+  const common = { lens: LENS, hips: GRAY, mechDark: DARK, mechGray: GRAY, facePlate: WARM_GRAY };
+  const warm = { trim: ORANGE, beakUpper: AMBER_YELLOW, beakLower: ORANGE, tongue: AMBER_YELLOW, eyeRing: AMBER_YELLOW, feet: ORANGE, soles: YELLOW };
+  const cool = { trim: YELLOW, beakUpper: SOFT_PURPLE, beakLower: YELLOW, tongue: SOFT_PURPLE, feet: YELLOW, soles: PURPLE_SOLE };
+  const shells = (c) => ({ headDome: c, bodyShell: c, sideShells: c, legShells: c });
   return {
-    fallback: GRAY,
-    map: {
-      "top_head_shell.stl": CREAM, "bottom_head_shell.stl": ORANGE, "face_part.stl": WARM_GRAY,
-      "noenoeil.stl": AMBER_YELLOW, "lens.stl": LENS, "m12_lens_holder.stl": DARK,
-      "soft_mouth_top.stl": AMBER_YELLOW, "jaw.stl": ORANGE, "jaw_soft.stl": AMBER_YELLOW,
-      "trunk_base.stl": CREAM, "left_shell.stl": CREAM, "right_shell.stl": CREAM,
-      "upper_leg_left.stl": CREAM, "upper_leg_right.stl": CREAM, "hip_l.stl": GRAY,
-      "foot_left.stl": ORANGE, "foot_right.stl": ORANGE, "ankle_left.stl": ORANGE, "ankle_right.stl": ORANGE,
-      "sole_left.stl": YELLOW, "sole_right.stl": YELLOW,
-      // roller skates: blade + ankle bracket take the shoe colour, rims the sole accent, tyres rubber-dark
-      "roller_blade.stl": ORANGE, "ankle_l_v1.stl": ORANGE, "ankle_r_v1.stl": ORANGE, "rim.stl": YELLOW, "tire.stl": DARK,
-      "xl330.stl": DARK, "leg.stl": GRAY, "seeed_bearing__configuration_default.stl": DARK,
-      "yaw2roll.stl": DARK, "bearing_roll.stl": DARK, "neck.stl": GRAY, "np_f970.stl": DARK,
-      "pcb__raspberry_pi_zero_2_w.stl": DARK, "elec_rpi_robot_hat_pcb.stl": DARK, "banana_pcb_locker.stl": DARK,
-      "speaker.stl": DARK, "upper_leg_rigidity_plate.stl": GRAY, "yaw_roll_motion.stl": GRAY,
-      "neck_pitch.stl": GRAY, "motor_support.stl": GRAY, "power_support.stl": GRAY,
-      "seeed_bearing__configuration__22x16x4.stl": GRAY
-    }
+    classic: { label: "Cream", chip: 16246475, ...common, ...warm, ...shells(CREAM) },
+    charcoal: { label: "Graphite", chip: 7105128, ...common, ...cool, eyeRing: PURPLE_RING, ...shells(CHARCOAL_BODY), headDome: CHARCOAL },
+    purple: { label: "Lavender", chip: 12560847, ...common, ...cool, eyeRing: PALE_BLUE, ...shells(LAVENDER) },
+    blue: { label: "Sky", chip: 11131880, ...common, ...warm, ...shells(PALE_BLUE) }
   };
 })();
+var mdMats = /* @__PURE__ */ new Map();
+function mdMaterial(variant, slot) {
+  const v = MD_VARIANTS[variant] ?? MD_VARIANTS.classic, sp = v[slot] ?? v.mechGray;
+  const key = sp.color.join() + sp.roughness + sp.metalness;
+  if (!mdMats.has(key)) mdMats.set(key, new THREE6.MeshStandardMaterial({ color: new THREE6.Color(...sp.color), roughness: sp.roughness, metalness: sp.metalness }));
+  return mdMats.get(key);
+}
+function mdPaint(rig, variant) {
+  rig.root.traverse((o) => {
+    if (o.isMesh && o.userData.slot) o.material = mdMaterial(variant, o.userData.slot);
+  });
+}
 // - asset loading (once per page; world reloads reuse everything) -
 var mdAssets = null;
 function mdFetch(path, kind) {
@@ -2518,12 +2542,23 @@ function mdFetch(path, kind) {
   });
 }
 var MD_CREASE = Math.PI / 5;
-function mdDisplayGeometry(welded) {
+// Render copy of a part: simplified to ~30 % of its triangles (meshopt, 1 % error bound; the full meshes stay for
+// physics), creased normals, then re-indexed so shared corners shade once. The whole duck goes from ~200 k to
+// ~60 k rendered triangles, which is what keeps a headset at full frame rate.
+function mdDisplayGeometry(welded, MS) {
+  let g = new THREE6.BufferGeometry();
+  g.setAttribute("position", welded.attributes.position);
+  const pos = welded.attributes.position.array, n = welded.attributes.position.count;
+  let idx = welded.index ? new Uint32Array(welded.index.array) : Uint32Array.from({ length: n }, (_, i) => i);
+  if (MS && idx.length > 600) {
+    const [out] = MS.simplify(idx, pos instanceof Float32Array ? pos : new Float32Array(pos), 3, Math.floor(idx.length * 0.3 / 3) * 3, 0.01, []);
+    if (out.length >= 36) idx = out;
+  }
+  g.setIndex(new THREE6.BufferAttribute(idx, 1));
   // toCreasedNormals hashes on a 0.01-unit grid; meshes are in metres, so work in mm and scale back
-  const g = welded.clone();
-  g.deleteAttribute("normal");
+  g = g.clone();
   g.scale(1e3, 1e3, 1e3);
-  const d = toCreasedNormals(g, MD_CREASE);
+  const d = mdMergeVertices(toCreasedNormals(g, MD_CREASE));
   d.scale(1e-3, 1e-3, 1e-3);
   return d;
 }
@@ -2598,12 +2633,14 @@ function mdLoadAssets(status) {
   if (mdAssets) return mdAssets;
   mdAssets = (async () => {
     status("Loading MuJoCo, ONNX Runtime and the Microduck model…");
-    const [mujoco, ort, gltf, kin, xmlSrc] = await Promise.all([
+    const [mujoco, ort, gltf, kin, xmlSrc, MS] = await Promise.all([
       import(MD_URL.mujoco).then((m) => m.default()),
       import(MD_URL.ort),
       new GLTFLoader().loadAsync(`${MD_URL.space}/robot/mjlab/microduck.glb`),
       mdFetch("robot/mjlab/kinematics.json", "json"),
-      mdFetch("robot/mjlab/robot_allcollisions.xml", "text")
+      mdFetch("robot/mjlab/robot_allcollisions.xml", "text"),
+      // mesh simplifier for the render copies; without it the full meshes are drawn
+      import(MD_URL.meshopt).then((m) => m.MeshoptSimplifier.ready.then(() => m.MeshoptSimplifier)).catch(() => null)
     ]);
     ort.env.wasm.wasmPaths = MD_URL.ortDir;
     ort.env.wasm.numThreads = 1;
@@ -2613,7 +2650,7 @@ function mdLoadAssets(status) {
       if (!o.isMesh || !o.geometry) return;
       const name = o.userData.meshFile || o.name || o.geometry.name;
       if (!name || geoms.has(name)) return;
-      const entry = { welded: o.geometry, display: mdDisplayGeometry(o.geometry) };
+      const entry = { welded: o.geometry, display: mdDisplayGeometry(o.geometry, MS) };
       geoms.set(name, entry);
       if (o.name && o.name !== name) geoms.set(o.name, entry);
     });
@@ -2624,7 +2661,7 @@ function mdLoadAssets(status) {
       const raw = await stl.loadAsync(`${MD_URL.space}/robot/mjlab/meshes/${name}`);
       raw.deleteAttribute("normal");
       const welded = mdMergeVertices(raw, 1e-4);
-      const entry = { welded, display: mdDisplayGeometry(welded) };
+      const entry = { welded, display: mdDisplayGeometry(welded, MS) };
       geoms.set(name, entry);
       return entry;
     };
@@ -2686,12 +2723,9 @@ async function mdBuildRig(A, parent) {
     const g = bodies.get(b.name);
     joints.set(b.joint.name, { body: g, axis: new T.Vector3(...b.joint.axis).normalize(), base: g.quaternion.clone(), range: b.joint.range ?? null });
   }
-  const mats = /* @__PURE__ */ new Map(), seen = /* @__PURE__ */ new Set(), jaw = [];
-  const matFor = (name) => {
-    const sp = MD_MAT.map[name] ?? MD_MAT.fallback, key = sp.color.join() + sp.roughness + sp.metalness;
-    if (!mats.has(key)) mats.set(key, new T.MeshStandardMaterial({ color: new T.Color(...sp.color), roughness: sp.roughness, metalness: sp.metalness }));
-    return mats.get(key);
-  };
+  // Parts of one body that share a colour slot are merged into one mesh (70 -> ~30 draws); the slot, not the
+  // material, is the key so any colourway can repaint them. The jaw parts stay separate: they hinge.
+  const seen = /* @__PURE__ */ new Set(), jaw = [], parts = /* @__PURE__ */ new Map();
   const pending = [];
   for (const b of A.kin.bodies) {
     for (const geom of b.geoms) {
@@ -2701,17 +2735,34 @@ async function mdBuildRig(A, parent) {
       if (seen.has(key)) continue;
       seen.add(key);
       pending.push(A.mesh(geom.mesh).then(({ display }) => {
-        const m = new T.Mesh(display, matFor(geom.mesh));
-        m.name = geom.mesh.replace(/\.stl$/, "");
-        m.userData.meshName = geom.mesh;
-        if (geom.pos) m.position.fromArray(geom.pos);
-        if (geom.quat) m.quaternion.set(geom.quat[1], geom.quat[2], geom.quat[3], geom.quat[0]);
-        bodies.get(b.name).add(m);
-        if (geom.mesh === "jaw.stl" || geom.mesh === "jaw_soft.stl") jaw.push(m);
+        const slot = MD_SLOT[geom.mesh] ?? "mechGray";
+        const m = new T.Matrix4().compose(
+          new T.Vector3().fromArray(geom.pos ?? [0, 0, 0]),
+          geom.quat ? new T.Quaternion(geom.quat[1], geom.quat[2], geom.quat[3], geom.quat[0]) : new T.Quaternion(),
+          new T.Vector3(1, 1, 1)
+        );
+        if (geom.mesh === "jaw.stl" || geom.mesh === "jaw_soft.stl") {
+          const mesh = new T.Mesh(display, mdMaterial(A.variant, slot));
+          mesh.userData = { meshName: geom.mesh, slot };
+          m.decompose(mesh.position, mesh.quaternion, mesh.scale);
+          bodies.get(b.name).add(mesh);
+          jaw.push(mesh);
+          return;
+        }
+        const k = `${b.name}|${slot}`;
+        if (!parts.has(k)) parts.set(k, { body: b.name, slot, items: [] });
+        parts.get(k).items.push({ display, m });
       }));
     }
   }
   await Promise.all(pending);
+  for (const { body, slot, items } of parts.values()) {
+    const geo = items.length === 1 ? items[0].display.clone().applyMatrix4(items[0].m) : mdMergeGeometries(items.map((it) => it.display.clone().applyMatrix4(it.m)));
+    const mesh = new T.Mesh(geo, mdMaterial(A.variant, slot));
+    mesh.name = `${body}:${slot}`;
+    mesh.userData.slot = slot;
+    bodies.get(body).add(mesh);
+  }
   // jaw hinge: the model has no jaw joint, the quack re-creates it about the fitted axle of jaw.stl
   let jawPivot = null;
   if (jaw.length) {
@@ -2731,7 +2782,32 @@ async function mdBuildRig(A, parent) {
       jawPivot.add(m);
     }
   }
-  return { bodies, joints, jawPivot, trunk: bodies.get("trunk_base") };
+  return { root: parent, bodies, joints, jawPivot, trunk: bodies.get("trunk_base") };
+}
+// one command, several on-screen copies (floating panel + hand menu page): state writes go to all of them
+function mdMulti() {
+  const list = [];
+  return {
+    list,
+    add(b) {
+      list.push(b);
+    },
+    get value() {
+      return list[0]?.value;
+    },
+    get label() {
+      return list[0]?.label;
+    },
+    setValue(v) {
+      for (const b of list) b.setValue(v);
+    },
+    setLabel(l) {
+      for (const b of list) b.setLabel(l);
+    },
+    _click() {
+      list[0]?._click();
+    }
+  };
 }
 var _mdq = new THREE6.Quaternion();
 function mdSetJoint(rig, name, a) {
@@ -2814,8 +2890,10 @@ var MdSound = class {
   update(p, h, q, servo, roll = 0) {
     const c = this._ctx();
     if (!c || ![p.x, p.y, p.z, h.x, h.y, h.z, q.x, q.w, servo, roll].every(Number.isFinite)) return;
+    // positions are written as plain values (per-frame setTargetAtTime piles automation events onto the audio
+    // thread); the hum / rumble levels only get a new ramp when they actually change
     const t = c.currentTime, L = c.listener, f = _mdS1.set(0, 0, -1).applyQuaternion(q), u = _mdS2.set(0, 1, 0).applyQuaternion(q);
-    const set = (param, v) => param.setTargetAtTime(v, t, 0.03);
+    const set = (param, v) => param.value = v;
     if (this.panner.positionX) [this.panner.positionX, this.panner.positionY, this.panner.positionZ].forEach((a, i) => set(a, p.getComponent(i)));
     else this.panner.setPosition(p.x, p.y, p.z);
     if (L.positionX) {
@@ -2825,9 +2903,12 @@ var MdSound = class {
       L.setPosition(h.x, h.y, h.z);
       L.setOrientation(f.x, f.y, f.z, u.x, u.y, u.z);
     }
-    this.hum.gain.setTargetAtTime(0.05 * servo, t, 0.06);
-    this.humOsc[0].frequency.setTargetAtTime(160 + 220 * servo, t, 0.08);
-    this.humOsc[1].frequency.setTargetAtTime(164 + 226 * servo, t, 0.08);
+    if (Math.abs(servo - (this.lastServo ?? -1)) > 0.02) {
+      this.lastServo = servo;
+      this.hum.gain.setTargetAtTime(0.05 * servo, t, 0.06);
+      this.humOsc[0].frequency.setTargetAtTime(160 + 220 * servo, t, 0.08);
+      this.humOsc[1].frequency.setTargetAtTime(164 + 226 * servo, t, 0.08);
+    }
     // wheels: looped noise through a low band, level and brightness follow ground speed
     if (!this.rumble && roll > 0.01 && this.sfx.noise) {
       const src = c.createBufferSource(), f = c.createBiquadFilter();
@@ -2840,7 +2921,8 @@ var MdSound = class {
       src.connect(f).connect(this.rumble.g).connect(this.out);
       src.start();
     }
-    if (this.rumble) {
+    if (this.rumble && Math.abs(roll - (this.lastRoll ?? -1)) > 0.02) {
+      this.lastRoll = roll;
       this.rumble.g.gain.setTargetAtTime(0.16 * roll, t, 0.08);
       this.rumble.f.frequency.setTargetAtTime(180 + 420 * roll, t, 0.1);
     }
@@ -2983,7 +3065,11 @@ var Microduck = {
     this.sound = new MdSound(app.sfx);
     this.sound.setOn(this.soundOn ?? true);
     this.kickPlan = null;
-    this.speed = 0.35;
+    this.speed ??= 0.35;
+    // a steady 72 Hz: if the browser targets 90 / 120 Hz and a frame runs long it halves the rate, which reads
+    // as a sudden low refresh; 72 is every current headset's comfortable floor
+    const xs = app.renderer.xr.getSession?.();
+    if (xs?.supportedFrameRates?.includes(72) && xs.frameRate !== 72) xs.updateTargetFrameRate(72).catch(() => {});
     this.jaw = 0;
     this.tableTop = app.sessionMode ? T.MathUtils.clamp(app.input.head.y - MD_TABLE_BELOW_HEAD, 0.55, 1.6) : 1.1;
     root.add(new T.HemisphereLight(16777215, 4473924, 1.7));
@@ -3190,39 +3276,77 @@ var Microduck = {
   // - console: action buttons + speed (left), drive joystick (right) -
   _buildConsole(ctx) {
     const T = THREE6;
-    // in XR the command panel is the hand menu's home page (palm up / controller B), with the framework's
-    // menu as its Settings page; on desktop (no palm) it floats beside the stage
+    // The command panel floats at the left of the stage bar and rides with the stage. In XR the same commands
+    // are also the hand menu's home page (palm up / controller B), with the framework's menu as its Settings
+    // page. Both copies are built from one list and stay in sync (toggles, speed, colour).
     const app = ctx.app, inMenu = this.inMenu = !!app.sessionMode;
-    const panel = this.panel = ctx.panel(inMenu ? "Microduck" : "Microduck · poke, pinch or ray", { w: 0.26, h: 0.24 });
-    const b = (label, opts) => ctx.button(label, { w: 0.078, h: 0.026, fontSize: 26, ...opts });
-    this.btn = {
-      sit: b("Sit", { toggle: true, onClick: (v) => this.trigger(v ? "sit" : "stand") }),
-      roll: b("Roll", { onClick: () => this.trigger("roll") }),
-      peck: b("Peck", { onClick: () => this.trigger("groundpick") }),
-      kickL: b("Kick L", { onClick: () => this.kick("kickL") }),
-      kickR: b("Kick R", { onClick: () => this.kick("kickR") }),
-      ball: b("Ball", { onClick: () => this.spawnBall() }),
-      follow: b("Follow me", { toggle: true, onClick: (v) => {
+    const specs = [
+      ["sit", "Sit", { toggle: true, onClick: (v) => this.trigger(v ? "sit" : "stand") }],
+      ["roll", this.loco === "rollers" ? "Crouch" : "Roll", { onClick: () => this.trigger("roll") }],
+      ["peck", "Peck", { onClick: () => this.trigger("groundpick") }],
+      ["kickL", "Kick L", { onClick: () => this.kick("kickL") }],
+      ["kickR", "Kick R", { onClick: () => this.kick("kickR") }],
+      ["ball", "Ball", { onClick: () => this.spawnBall() }],
+      ["follow", "Follow me", { toggle: true, onClick: (v) => {
         this.follow = v;
         if (v) this.goal.active = false, this.kickPlan = null;
-      } }),
-      look: b("Look at me", { toggle: true, onClick: (v) => this.look = v }),
-      quack: b("Quack", { onClick: () => this.quack() }),
-      table: b("Tabletop", { toggle: true, value: !!this.tabletop, onClick: (v) => {
+      } }],
+      ["look", "Look at me", { toggle: true, onClick: (v) => this.look = v }],
+      ["quack", "Quack", { onClick: () => this.quack() }],
+      ["table", "Tabletop", { toggle: true, value: !!this.tabletop, onClick: (v) => {
         this._placeStage(v);
         if (!this.app.renderer.xr.isPresenting) this._heroCamera();
-      } }),
-      bound: b("Boundary", { toggle: true, value: this.boundary ?? true, onClick: (v) => this.setBoundary(v) }),
-      rollers: b("Rollers", { toggle: true, value: this.loco === "rollers", onClick: (v) => this.setLoco(v ? "rollers" : "legs") }),
-      sound: b("Sound", { toggle: true, value: this.soundOn ?? true, onClick: (v) => this.sound.setOn(this.soundOn = v) }),
-      reset: b("Reset", { onClick: () => this.reset() })
+      } }],
+      ["bound", "Boundary", { toggle: true, value: this.boundary ?? true, onClick: (v) => this.setBoundary(v) }],
+      ["rollers", "Rollers", { toggle: true, value: this.loco === "rollers", onClick: (v) => this.setLoco(v ? "rollers" : "legs") }],
+      ["sound", "Sound", { toggle: true, value: this.soundOn ?? true, onClick: (v) => this.sound.setOn(this.soundOn = v) }],
+      ["reset", "Reset", { onClick: () => this.reset() }],
+      ["settings", "Settings \u203a", { onClick: () => app.menu.show("settings") }]
+    ];
+    this.btn = {};
+    this.swatches = {};
+    this.speedSliders = [];
+    const makePanel = (title, withSettings) => {
+      const panel = ctx.panel(title, { w: 0.26, h: 0.29 });
+      const items = [];
+      for (const [key, label, o] of specs) {
+        if (key === "settings" && !withSettings) continue;
+        const b = ctx.button(label, { w: 0.078, h: 0.026, fontSize: 26, ...o, onClick: (v, e) => {
+          if (o.toggle) this.btn[key].setValue(v);
+          o.onClick(v, e);
+        } });
+        (this.btn[key] ??= mdMulti()).add(b);
+        items.push(b);
+      }
+      panel.layout(items, { cols: 3, top: 0.03 });
+      const y0 = panel.h / 2 - 0.03 - Math.ceil(items.length / 3) * 0.032;
+      const slider = ctx.slider("Speed", { w: 0.2, value: this.speed, onChange: (v) => {
+        this.speed = v;
+        for (const sl of this.speedSliders) if (sl !== slider) sl.set(v, true);
+      } });
+      slider.root.position.set(0, y0 - 0.026, 4e-3);
+      panel.root.add(slider.root);
+      this.speedSliders.push(slider);
+      // colour plate: the four official colourways
+      const lab = new T.Mesh(new T.PlaneGeometry(0.07, 0.07 * 40 / 256), new T.MeshBasicMaterial({ map: textTexture("Colour", { w: 256, h: 40, size: 34, align: "left" }), transparent: true, depthWrite: false }));
+      lab.position.set(-0.086, y0 - 0.062, 2e-3);
+      panel.root.add(lab);
+      Object.entries(MD_VARIANTS).forEach(([name, v], i) => {
+        const sw = ctx.button("", { w: 0.036, h: 0.022, swatch: v.chip, capsule: true, onClick: () => this.setVariant(name) });
+        sw.root.position.set(-0.03 + i * 0.044, y0 - 0.062, 0);
+        sw.root.name = `colour:${v.label}`;
+        panel.root.add(sw.root);
+        (this.swatches[name] ??= []).push(sw);
+      });
+      // panel bases stop the ray (otherwise it passes through to the floor / duck behind and a pinch there
+      // sends the duck off); far only, so they never take a near grab from a button
+      ctx.add(panel.root.children[0], { near: false, highlight: false });
+      return panel;
     };
-    const B = this.btn, items = [B.sit, B.roll, B.peck, B.kickL, B.kickR, B.ball, B.follow, B.look, B.quack, B.table, B.bound, B.rollers, B.sound, B.reset];
-    if (inMenu) items.push(B.settings = b("Settings \u203a", { onClick: () => app.menu.show("settings") }));
-    panel.layout(items, { cols: 3, top: 0.03 });
-    const slider = ctx.slider("Speed", { w: 0.2, value: 0.35, onChange: (v) => this.speed = v });
-    slider.root.position.set(0, -0.092, 4e-3);
-    panel.root.add(slider.root);
+    this.panel = makePanel("Microduck \u00b7 poke, pinch or ray", false);
+    ctx.root.add(this.panel.root);
+    this.menuPanel = inMenu ? makePanel("Microduck", true) : null;
+    this._markVariant();
     const joy = this.joyPanel = ctx.panel("Drive · grab the knob", { w: 0.13, h: 0.15 });
     const R = this.joyR = 0.042;
     const pad = this.pad = new T.Group();
@@ -3245,16 +3369,25 @@ var Microduck = {
       knob.position.set(0, 0, 0.01);
       this.joy.set(0, 0);
     });
-    // panel bases stop the ray (otherwise it passes through to the floor / duck behind and a pinch there
-    // sends the duck off); far only, so they never take a near grab from a button
-    for (const pn of [panel, joy]) ctx.add(pn.root.children[0], { near: false, highlight: false });
+    ctx.add(joy.root.children[0], { near: false, highlight: false });
     ctx.root.add(joy.root);
     if (inMenu) {
-      app.menu.addPage("duck", panel);
+      app.menu.addPage("duck", this.menuPanel);
       const m = app.menuButtons;
       this.menuBack = ctx.button("\u2039 Microduck", { w: 0.075, h: 0.026, fontSize: 26, onClick: () => app.menu.show("duck") });
       app.menu.setItems([this.menuBack, m.vst, m.gain, m.mesh, m.joints, m.ray, m.reset, m.clear, m.exit], app.opacitySlider);
-    } else ctx.root.add(panel.root);
+    }
+  },
+  // colourway: repaint both rigs (legs and skates) and mark the chip
+  setVariant(name) {
+    if (!MD_VARIANTS[name]) return;
+    this.variant = name;
+    for (const r of Object.values(this.rigs ?? {})) mdPaint(r.rig, name);
+    this._markVariant();
+  },
+  _markVariant() {
+    const cur = this.variant ?? "classic";
+    for (const [name, list] of Object.entries(this.swatches)) for (const sw of list) sw.root.scale.setScalar(name === cur ? 1.25 : 1);
   },
   // floor mode: the duck on the real floor at real size; tabletop: half size on a desk in front of you
   _placeStage(tabletop) {
@@ -3272,14 +3405,11 @@ var Microduck = {
     st.rotation.set(0, -Math.PI / 2, 0, "YXZ");
     // console at the sides of your reach, out of the line of sight to the stage
     const y = tabletop ? top + 0.02 : T6clamp(top + 0.05);
-    const rel = [this.joyPanel.root];
+    const rel = [this.joyPanel.root, this.panel.root];
     this.joyPanel.root.position.set(0.4, y - 0.02, -0.36);
     this.joyPanel.root.lookAt(0, y + 0.45, 0.35);
-    if (!this.inMenu) {
-      rel.push(this.panel.root);
-      this.panel.root.position.set(-0.42, y, -0.36);
-      this.panel.root.lookAt(0, y + 0.45, 0.35);
-    }
+    this.panel.root.position.set(-0.42, y, -0.36);
+    this.panel.root.lookAt(0, y + 0.45, 0.35);
     // the console rides with the stage: its pose is stored relative to the stage's position + heading (not its
     // scale, so the buttons stay hand-sized when the stage is shrunk or grown)
     const F = this._stageFrame(new THREE6.Matrix4()).invert();
@@ -3436,7 +3566,7 @@ var Microduck = {
         const group = new THREE6.Group();
         group.name = `rig:${loco}`;
         this.sim.add(group);
-        const rig = await mdBuildRig({ kin: V.kin, mesh: A.mesh }, group);
+        const rig = await mdBuildRig({ kin: V.kin, mesh: A.mesh, variant: this.variant ?? "classic" }, group);
         if (token !== this.token) return;
         // hull drawn ~one duck-size behind the duck: its own parts hide every inner edge, only the silhouette shows
         const it = this._grabbable(this.ctx, rig.trunk, "duck", { outlinePush: () => 0.3 * this.stage.scale.x });
@@ -4024,7 +4154,7 @@ var Microduck = {
       const app = ctx.app, m = app.menuButtons;
       app.menu.removePage("duck");
       app.menu.setItems([m.vst, m.gain, m.mesh, m.joints, m.ray, m.reset, m.clear, m.exit], app.opacitySlider);
-      this.panel.root.traverse((o) => o.geometry?.dispose());
+      this.menuPanel.root.traverse((o) => o.geometry?.dispose());
     }
     ctx.app.renderer.domElement.removeEventListener("pointermove", this._onPointer);
     ctx.app.controls.removeEventListener("start", this._onOrbit);
