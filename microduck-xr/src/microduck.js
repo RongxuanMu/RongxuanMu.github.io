@@ -1194,7 +1194,11 @@ var Microduck = {
     this.rigs = {};
     this.setLoco(this.loco ?? "legs");
     const token = this.token;
-    A.extras.then(() => token === this.token && this.app.log("all policies loaded"));
+    A.extras.then(() => {
+      if (token === this.token) this.app.log("all policies loaded");
+      // the site build's service worker waits for this before caching the rest for offline use
+      window.dispatchEvent(new Event("microduck-loaded"));
+    });
   },
   // legs <-> rollers: each variant keeps its own model, rig and duck interactable; switching swaps the
   // simulation state (fresh MjData at the STAND keyframe) and shows the matching rig

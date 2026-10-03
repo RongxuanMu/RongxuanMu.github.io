@@ -77,11 +77,11 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
 
 <script type="importmap">
 { "imports": {
-  "three": "./assets/lib/three/build/three.module.js",
-  "three/examples/jsm/": "./assets/lib/three/examples/jsm/"
+  "three": "https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js",
+  "three/examples/jsm/": "https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"
 } }
 </script>
-<script>window.__HAND_URL = new URL("assets/lib/webxr-input-profiles/dist/profiles/generic-hand/", location.href).href;</script>
+<script>window.__HAND_URL = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0.20/dist/profiles/generic-hand/";</script>
 <div id="overlay">
   <div class="card">
     <h1>Microduck XR</h1>
@@ -2453,11 +2453,12 @@ import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 var MD_URL = {
-  space: new URL("assets/microduck", location.href).href,
-  mujoco: new URL("assets/lib/mujoco/mujoco.js", location.href).href,
-  ort: new URL("assets/lib/onnxruntime-web/dist/ort.wasm.min.mjs", location.href).href,
-  ortDir: new URL("assets/lib/onnxruntime-web/dist/", location.href).href,
-  meshopt: new URL("assets/lib/meshoptimizer/meshopt_simplifier.module.js", location.href).href
+  // pinned Space revision: the policies were trained against exactly this MJCF
+  space: "https://huggingface.co/spaces/pollen-robotics/microduck-simulator/resolve/023172c8a7d629b5258d90364c13bafe013abbfa/app/public",
+  mujoco: "https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.11.0/mujoco.js",
+  ort: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/ort.wasm.min.mjs",
+  ortDir: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/",
+  meshopt: "https://cdn.jsdelivr.net/npm/meshoptimizer@0.22.0/meshopt_simplifier.module.js"
 };
 var MD_POLICIES = {
   walk: "BEST_alpha_walking.onnx",
@@ -4617,8 +4618,4 @@ arBtn.onclick = () => app.enterXR("ar");
 export {
   VERSION
 };
-</script><script>
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").then(() => {
-  window.addEventListener("microduck-loaded", () => navigator.serviceWorker.ready.then((r) => r.active?.postMessage("precache")), { once: true });
-}).catch(() => {});
 </script>

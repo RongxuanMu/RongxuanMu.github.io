@@ -1,7 +1,11 @@
 """Build Microduck XR: the VibeXR Interaction Framework single-file build with its demo playground
-world swapped for the Microduck world (src/microduck.js). Output: index.html, a single file that can be
-pasted as-is into a CodePen HTML panel."""
+world swapped for the Microduck world (src/microduck.js). Outputs:
+  index.html    the site page (GitHub Pages / Vercel): every library, model and policy comes from assets/
+                (fill it with vendor.py) and sw.js keeps them on the device for offline use
+  codepen.html  the same page loading from jsDelivr / Hugging Face, to paste as-is into a CodePen HTML panel"""
 from pathlib import Path
+import hashlib
+import json
 import re
 
 P = Path(__file__).resolve().parent
@@ -57,6 +61,13 @@ swap('<!-- VibeXR Interaction Framework v0.8.24 - single-file build',
      '  and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.\n\n'
      '  VibeXR Interaction Framework v0.8.24 - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
+# author credit on the landing card
+swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
+     '<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>\n'
+     '    <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a></p>')
+swap('  #ver {', '  .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }\n'
+     '  .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }\n'
+     '  .by a:hover { color: #fff; border-color: #fff; }\n  #ver {')
 # landing: the card sits left of the duck in landscape, at the bottom in portrait, compact on short screens;
 # the world frames the duck in whatever space is left
 swap('@media (max-width: 600px) { #overlay { align-items: flex-end; padding-bottom: 16px; } }',
@@ -108,5 +119,38 @@ for star, group, default in names:
 dupes = {n for n in bound if bound.count(n) > 1}
 assert not dupes, f'duplicate import bindings: {dupes}'
 
+(P / 'codepen.html').write_text(s)
+print(f'codepen.html  {len(s) / 1024:.0f} KB')
+
+# site build: the same page with every remote file swapped for its copy in assets/
+LIB = 'assets/lib'
+swap('"https://cdn.jsdelivr.net/npm/three@0.186.0/build/three.module.js"', f'"./{LIB}/three/build/three.module.js"')
+swap('"https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/"', f'"./{LIB}/three/examples/jsm/"')
+swap('window.__HAND_URL = "https://cdn.jsdelivr.net/npm/@webxr-input-profiles/assets@1.0.20/dist/profiles/generic-hand/";',
+     f'window.__HAND_URL = new URL("{LIB}/webxr-input-profiles/dist/profiles/generic-hand/", location.href).href;')
+a = s.index('var MD_URL = {')
+b = s.index('};', a) + 2
+s = s[:a] + f"""var MD_URL = {{
+  space: new URL("assets/microduck", location.href).href,
+  mujoco: new URL("{LIB}/mujoco/mujoco.js", location.href).href,
+  ort: new URL("{LIB}/onnxruntime-web/dist/ort.wasm.min.mjs", location.href).href,
+  ortDir: new URL("{LIB}/onnxruntime-web/dist/", location.href).href,
+  meshopt: new URL("{LIB}/meshoptimizer/meshopt_simplifier.module.js", location.href).href
+}};""" + s[b:]
+assert 'jsdelivr' not in s and 'huggingface' not in s, 'a remote URL is left in the site build'
+# offline: the service worker caches what the page loads, then the rest once every policy is in
+s += """<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").then(() => {
+  window.addEventListener("microduck-loaded", () => navigator.serviceWorker.ready.then((r) => r.active?.postMessage("precache")), { once: true });
+}).catch(() => {});
+</script>
+"""
 (P / 'index.html').write_text(s)
-print(f'index.html  {len(s) / 1024:.0f} KB')
+print(f'index.html    {len(s) / 1024:.0f} KB')
+
+files = sorted(f.relative_to(P).as_posix() for f in (P / 'assets').rglob('*') if f.is_file() and f.name[0] != '.' and not f.name.startswith('LICENSE'))
+assert files, 'assets/ is empty - run vendor.py'
+tag = hashlib.sha256(''.join(f'{f}:{(P / f).stat().st_size}' for f in files).encode()).hexdigest()[:10]
+sw = (P / 'src' / 'sw.js').read_text().replace('__CACHE__', f'microduck-xr-{tag}').replace('__ASSETS__', json.dumps(files, indent=1))
+(P / 'sw.js').write_text(sw)
+print(f'sw.js         {len(files)} assets, cache microduck-xr-{tag}')
