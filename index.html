@@ -4,14 +4,74 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rongxuan's Portfolio</title>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
     <link rel="stylesheet" href="styles.css?v=26">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="icon" href="Resources/common/Rongxuan.jpeg" type="image/x-icon">
-    <!-- Preload critical above-the-fold avatar images (first row) -->
-    <link rel="preload" as="image" href="Resources/Avatars/compressed/Avatar05_Rokid_compressed.jpg" fetchpriority="high">
-    <link rel="preload" as="image" href="Resources/Avatars/compressed/Avatar06_AppleVisionPro_compressed.jpg" fetchpriority="high">
-    <link rel="preload" as="image" href="Resources/Avatars/compressed/Avatar06_Hololens_compressed.jpg" fetchpriority="high">
-    <link rel="preload" as="image" href="Resources/Avatars/compressed/Avatar01_Ray-Ban_compressed.jpg" fetchpriority="high">
+    <!-- Icons load without blocking first paint; the loader waits for them -->
+    <link id="fa-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></noscript>
+    <link rel="icon" href="Resources/common/favicon-64.png" type="image/png">
+    <style>
+        /* Page loader: covers the page until the first screen is ready */
+        #page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            background: var(--page-bg-top, #f0f0f0);
+            color: var(--text-primary, #333);
+            font-family: Arial, sans-serif;
+            transition: opacity 0.45s ease, visibility 0.45s ease;
+        }
+        html.is-loaded #page-loader {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        html.is-loading, html.is-loading body { overflow: hidden; }
+        #page-loader .loader-name {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        #page-loader .loader-track {
+            width: min(240px, 60vw);
+            height: 4px;
+            border-radius: 999px;
+            background: var(--glass-border, rgba(0, 0, 0, 0.1));
+            overflow: hidden;
+        }
+        #page-loader .loader-bar {
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            background: var(--accent, #1e88e5);
+            transform: scaleX(0);
+            transform-origin: left center;
+            transition: transform 0.2s ease-out;
+        }
+        #page-loader .loader-percent {
+            margin: 0;
+            font-size: 12px;
+            color: var(--text-secondary, #555);
+            font-variant-numeric: tabular-nums;
+        }
+        /* Fast and cached loads skip straight to the page without flashing the bar */
+        #page-loader > * { animation: loader-in 0.3s ease 0.25s both; }
+        @keyframes loader-in { from { opacity: 0; } to { opacity: 1; } }
+        @media (prefers-reduced-motion: reduce) {
+            #page-loader, #page-loader .loader-bar { transition: none; }
+        }
+    </style>
+    <noscript><style>#page-loader { display: none; }</style></noscript>
+    <script>
+        document.documentElement.classList.add('is-loading');
+    </script>
     <script>
         // Simple password protection
         function checkPassword() {
@@ -55,46 +115,17 @@
                 }
             });
         });
-        
-        // Lazy load videos to prevent loading errors
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add loading="lazy" to all videos
-            const videos = document.querySelectorAll('video');
-            videos.forEach(video => {
-                video.setAttribute('loading', 'lazy');
-                // Only set the src when the video is close to viewport
-                const sources = video.querySelectorAll('source');
-                sources.forEach(source => {
-                    const dataSrc = source.getAttribute('src');
-                    source.setAttribute('data-src', dataSrc);
-                    source.removeAttribute('src');
-                });
-            });
 
-            // Intersection Observer to load videos when they come into view
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const video = entry.target;
-                        const sources = video.querySelectorAll('source');
-                        sources.forEach(source => {
-                            const dataSrc = source.getAttribute('data-src');
-                            source.setAttribute('src', dataSrc);
-                        });
-                        video.load();
-                        observer.unobserve(video);
-                    }
-                });
-            }, {rootMargin: '100px'});
-
-            // Observe all videos
-            videos.forEach(video => {
-                observer.observe(video);
-            });
-        });
     </script>
 </head>
 <body class="homepage">
+    <!-- Page loader, removed once the first screen has loaded -->
+    <div id="page-loader" role="progressbar" aria-label="Loading page" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <p class="loader-name">Rongxuan Mu</p>
+        <div class="loader-track"><div class="loader-bar"></div></div>
+        <p class="loader-percent">0%</p>
+    </div>
+
     <!-- Top Navigation Bar onload="checkPassword()" -->
     <nav class="top-nav">
         <ul>
@@ -119,169 +150,169 @@
             <div class="avatar-grid">
                 <!-- Row 1 — landscape 10×4, Figma-cropped 1:1 tiles -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar05_Rokid_compressed.jpg" alt="Rokid" width="64" height="64" fetchpriority="high" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar05_Rokid.webp" alt="Rokid" width="64" height="64" decoding="async" fetchpriority="high">
                     <div class="device-tooltip">Rokid</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar06_AppleVisionPro_compressed.jpg" alt="Apple Vision Pro" width="64" height="64" fetchpriority="high" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar06_AppleVisionPro.webp" alt="Apple Vision Pro" width="64" height="64" decoding="async" fetchpriority="high">
                     <div class="device-tooltip">Apple Vision Pro</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar06_Hololens_compressed.jpg" alt="HoloLens 2" width="64" height="64" fetchpriority="high" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar06_Hololens.webp" alt="HoloLens 2" width="64" height="64" decoding="async" fetchpriority="high">
                     <div class="device-tooltip">HoloLens 2</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar08_MagicLeap1_compressed.jpg" alt="Magic Leap 1" width="64" height="64" fetchpriority="high" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar08_MagicLeap1.webp" alt="Magic Leap 1" width="64" height="64" decoding="async" fetchpriority="high">
                     <div class="device-tooltip">Magic Leap 1</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Ray-Ban Meta Display_compressed.jpg" alt="Ray-Ban Meta Display" width="64" height="64" fetchpriority="high" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Ray-Ban Meta Display.webp" alt="Ray-Ban Meta Display" width="64" height="64" decoding="async" fetchpriority="high">
                     <div class="device-tooltip">Ray-Ban Meta Display</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar01_Ray-Ban_compressed.jpg" alt="Ray-Ban Meta" width="64" height="64" fetchpriority="high" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar01_Ray-Ban.webp" alt="Ray-Ban Meta" width="64" height="64" decoding="async" fetchpriority="high">
                     <div class="device-tooltip">Ray-Ban Meta</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar02_FovPrototype_compressed.jpg" alt="FOV Prototype" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar02_FovPrototype.webp" alt="FOV Prototype" width="64" height="64" decoding="async">
                     <div class="device-tooltip">A FOV Test Prototype</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar03_Rayneo_compressed.jpg" alt="Rayneo" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar03_Rayneo.webp" alt="Rayneo" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rayneo Glasses</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avartar04_StarV_compressed.jpg" alt="StarV" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avartar04_StarV.webp" alt="StarV" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Star V</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Quest 3_compressed.jpg" alt="Quest 3" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Quest 3.webp" alt="Quest 3" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Quest 3</div>
                 </div>
 
                 <!-- Row 2 -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar09_IMMO_compressed.jpg" alt="IMMO" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar09_IMMO.webp" alt="IMMO" width="64" height="64" decoding="async">
                     <div class="device-tooltip">IMMO</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar10_Rokid6Dof_compressed.jpg" alt="Rokid 6DoF" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar10_Rokid6Dof.webp" alt="Rokid 6DoF" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rokid 6DoF</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar11_PICO4Pro_compressed.jpg" alt="PICO 4 Pro" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar11_PICO4Pro.webp" alt="PICO 4 Pro" width="64" height="64" decoding="async">
                     <div class="device-tooltip">PICO 4 Pro, My Favorite</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar12_MagicLeap2_compressed.jpg" alt="Magic Leap 2" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar12_MagicLeap2.webp" alt="Magic Leap 2" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Magic Leap 2</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/YVR PlayForDreams_compressed.jpg" alt="YVR PlayForDreams" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/YVR PlayForDreams.webp" alt="YVR PlayForDreams" width="64" height="64" decoding="async">
                     <div class="device-tooltip">YVR PlayForDreams</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Swimming Goggle_compressed.jpg" alt="Swimming Goggle" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Swimming Goggle.webp" alt="Swimming Goggle" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Swimming Goggle</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Rokid Bolon_compressed.jpg" alt="Rokid Bolon" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Rokid Bolon.webp" alt="Rokid Bolon" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rokid Bolon</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Snap Spectacles_compressed.jpg" alt="Snap Spectacles" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Snap Spectacles.webp" alt="Snap Spectacles" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Snap Spectacles</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Viture Beast_compressed.jpg" alt="Viture Beast" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Viture Beast.webp" alt="Viture Beast" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Viture Beast</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Qwen Glasses_compressed.jpg" alt="Qwen Glasses" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Qwen Glasses.webp" alt="Qwen Glasses" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Qwen Glasses</div>
                 </div>
 
                 <!-- Row 3 -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar13_Quest2_compressed.jpg" alt="Quest 2" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar13_Quest2.webp" alt="Quest 2" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Quest 2, My First VR Headset</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar14_RokidAR_compressed.jpg" alt="Rokid AR" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar14_RokidAR.webp" alt="Rokid AR" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rokid AR</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar15_RokidGlasses_compressed.jpg" alt="Rokid Glasses" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar15_RokidGlasses.webp" alt="Rokid Glasses" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rokid Glasses</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Avatar16_RayneoX_compressed.jpg" alt="Rayneo X" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Avatar16_RayneoX.webp" alt="Rayneo X" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rayneo X</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Vivo Vision_compressed.jpg" alt="Vivo Vision" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Vivo Vision.webp" alt="Vivo Vision" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Vivo Vision</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/XiaoMi AI Glasses_compressed.jpg" alt="Xiaomi AI Glasses" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/XiaoMi AI Glasses.webp" alt="Xiaomi AI Glasses" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Xiaomi AI Glasses</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Rokid AR Glasses_compressed.jpg" alt="Rokid AR Glasses" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Rokid AR Glasses.webp" alt="Rokid AR Glasses" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rokid AR Glasses</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/HuaQiangBei Glasses_compressed.jpg" alt="HuaQiangBei Glasses" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/HuaQiangBei Glasses.webp" alt="HuaQiangBei Glasses" width="64" height="64" decoding="async">
                     <div class="device-tooltip">HuaQiangBei Glasses</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Ray Neo V3_compressed.jpg" alt="Ray Neo V3" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Ray Neo V3.webp" alt="Ray Neo V3" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Ray Neo V3</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/PICO 4_compressed.jpg" alt="PICO 4" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/PICO 4.webp" alt="PICO 4" width="64" height="64" decoding="async">
                     <div class="device-tooltip">PICO 4</div>
                 </div>
 
                 <!-- Row 4 -->
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Rayneo X3 Pro_compressed.jpg" alt="Rayneo X3 Pro" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Rayneo X3 Pro.webp" alt="Rayneo X3 Pro" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Rayneo X3 Pro</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Even Reality_compressed.jpg" alt="Even Reality" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Even Reality.webp" alt="Even Reality" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Even Reality</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Quest Pro_compressed.jpg" alt="Quest Pro" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Quest Pro.webp" alt="Quest Pro" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Quest Pro</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Vive Focus Vision_compressed.jpg" alt="Vive Focus Vision" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Vive Focus Vision.webp" alt="Vive Focus Vision" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Vive Focus Vision</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/PICO G2_compressed.jpg" alt="PICO G2" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/PICO G2.webp" alt="PICO G2" width="64" height="64" decoding="async">
                     <div class="device-tooltip">PICO G2</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Have a nap and wait for more_compressed.jpg" alt="Have a nap and wait for more" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Have a nap and wait for more.webp" alt="Have a nap and wait for more" width="64" height="64" decoding="async">
                     <div class="device-tooltip">Have a nap and wait for more</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/IMG_8452_compressed.jpg" alt="HoloLens 2" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/IMG_8452.webp" alt="HoloLens 2" width="64" height="64" decoding="async" loading="lazy">
                     <div class="device-tooltip">HoloLens 2</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/Meta Oakley_compressed.jpg" alt="Meta Oakley" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/Meta Oakley.webp" alt="Meta Oakley" width="64" height="64" decoding="async" loading="lazy">
                     <div class="device-tooltip">Meta Oakley</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/IMG_8997_compressed.jpg" alt="Clear Frames" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/IMG_8997.webp" alt="Clear Frames" width="64" height="64" decoding="async" loading="lazy">
                     <div class="device-tooltip">Clear Frames</div>
                 </div>
                 <div class="avatar-tile-wrapper">
-                    <img class="avatar-tile" src="Resources/Avatars/compressed/PICO 4 Ultra_compressed.jpg" alt="PICO 4 Ultra" width="64" height="64" loading="lazy" decoding="async">
+                    <img class="avatar-tile" src="Resources/Avatars/web/PICO 4 Ultra.webp" alt="PICO 4 Ultra" width="64" height="64" decoding="async" loading="lazy">
                     <div class="device-tooltip">PICO 4 Ultra</div>
                 </div>
             </div>
@@ -308,15 +339,15 @@
     <section id="projects">
         <h2>Selected Works</h2>
         <div class="project-grid">
-            <a href="Works/WFPN.html" class="project" style="background-image: url('Resources/wfp/PICO.png'); display: none;">
+            <a href="Works/WFPN.html" class="project" style="background-image: url('Resources/wfp/PICO.webp'); display: none;">
                 <div class="overlay">
                     <h3>Works for PICO</h3>
                     <p>2022-2025</p>
                 </div>
             </a>
             <a href="Works/MicroduckXR.html" class="project">
-                <video autoplay loop muted playsinline style="width: 100%; height: 100%;">
-                    <source src="Resources/homepage-compressed/MicroduckXR.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/MicroduckXR.webp" style="width: 100%; height: 100%;">
+                    <source data-src="Resources/homepage-compressed/MicroduckXR.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -325,8 +356,8 @@
                 </div>
             </a>
             <a href="Works/VibeXRGallery.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/VibeXRGallery.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/VibeXRGallery.webp">
+                    <source data-src="Resources/homepage-compressed/VibeXRGallery.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -335,8 +366,8 @@
                 </div>
             </a>
             <a href="Works/Geometria.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/Geometria.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/Geometria.webp">
+                    <source data-src="Resources/homepage-compressed/Geometria.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -351,8 +382,8 @@
                 </div>
             </a>
             <a href="Works/XRGameplay.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/MRshooting.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/MRshooting.webp">
+                    <source data-src="Resources/homepage-compressed/MRshooting.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -361,8 +392,8 @@
                 </div>
             </a>
             <a href="Works/Structuralism.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/Structuralism.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/Structuralism.webp">
+                    <source data-src="Resources/homepage-compressed/Structuralism.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -371,8 +402,8 @@
                 </div>
             </a>
             <a href="Works/MechanicalNomadism.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/MechanicalVideoClip.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/MechanicalVideoClip.webp">
+                    <source data-src="Resources/homepage-compressed/MechanicalVideoClip.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -381,8 +412,8 @@
                 </div>
             </a>
             <a href="Works/CityMemory.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/CityMemoVideoClip.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/CityMemoVideoClip.webp">
+                    <source data-src="Resources/homepage-compressed/CityMemoVideoClip.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -391,8 +422,8 @@
                 </div>
             </a>
             <a href="Works/OpenBrushForPICO.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/OpenBrushforPICO.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/OpenBrushforPICO.webp">
+                    <source data-src="Resources/homepage-compressed/OpenBrushforPICO.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
     
@@ -402,8 +433,8 @@
                 </div>
             </a>
             <a href="https://www.geogebra.org/u/rongxuanmu" class="project" target="_blank">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/FOVpreviewVideo.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/FOVpreviewVideo.webp">
+                    <source data-src="Resources/homepage-compressed/FOVpreviewVideo.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -426,8 +457,8 @@
                 </div>
             </a>
             <a href="Works/Tut.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/tutorialVideo.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/tutorialVideo.webp">
+                    <source data-src="Resources/homepage-compressed/tutorialVideo.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -440,8 +471,8 @@
            
 
             <a href="Works/Muzuo.html" class="project">
-                <video autoplay loop muted playsinline>
-                    <source src="Resources/homepage-compressed/Muzuo.mp4" type="video/mp4">
+                <video muted loop playsinline preload="none" poster="Resources/homepage-compressed/posters/Muzuo.webp">
+                    <source data-src="Resources/homepage-compressed/Muzuo.mp4" type="video/mp4">
                     Your browser does not support the video tag.
                 </video>
                 <div class="overlay">
@@ -449,7 +480,7 @@
                     <p>XR Serious Gaming</p>
                 </div>
             </a>
-            <a href="https://murongxuan.webflow.io/work/archived-projects" class="project" style="background-image: url('Resources/common/demo1.gif');" target="_blank">
+            <a href="https://murongxuan.webflow.io/work/archived-projects" class="project" style="background-image: url('Resources/common/demo1.webp');" target="_blank">
                 <div class="overlay">
                     <h3>Archived works</h3>
                     <p>Dummy explorations :D </p>
@@ -551,5 +582,139 @@
     <footer>
         <p>&copy; 2026 Rongxuan Mu. All rights reserved. </p>
     </footer>
+    <script>
+        // Page loader: tracks the avatars, video posters, card images and icon fonts,
+        // then reveals the page. Videos only start downloading after the reveal.
+        (function () {
+            var root = document.documentElement;
+            var loader = document.getElementById('page-loader');
+            var bar = loader.querySelector('.loader-bar');
+            var label = loader.querySelector('.loader-percent');
+            var startedAt = performance.now();
+            var total = 0;
+            var done = 0;
+            var shown = 0;
+            var finished = false;
+
+            function track(promise) {
+                total++;
+                promise.then(settle, settle);
+            }
+
+            function settle() {
+                done++;
+                // Background tabs pause animation frames, so finish from here instead
+                if (done >= total && document.hidden) finish();
+            }
+
+            function imageReady(img) {
+                return new Promise(function (resolve) {
+                    if (img.complete) return resolve();
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                });
+            }
+
+            function preload(src) {
+                var img = new Image();
+                img.decoding = 'async';
+                img.src = src;
+                return imageReady(img);
+            }
+
+            // Avatar grid: the tiles CSS hides are lazy and never requested
+            document.querySelectorAll('.avatar-tile:not([loading="lazy"])').forEach(function (img) {
+                track(imageReady(img));
+            });
+
+            // Video posters and background-image cards stand in until the videos stream
+            document.querySelectorAll('.project video[poster]').forEach(function (video) {
+                track(preload(video.getAttribute('poster')));
+            });
+            document.querySelectorAll('.project[style*="background-image"]').forEach(function (card) {
+                if (card.style.display === 'none') return;
+                var match = /url\(['"]?([^'")]+)['"]?\)/.exec(card.style.backgroundImage);
+                if (match) track(preload(match[1]));
+            });
+
+            // Font Awesome stylesheet, then its two font files
+            var faLink = document.getElementById('fa-css');
+            track(new Promise(function (resolve) {
+                if (faLink.sheet) return resolve();
+                faLink.addEventListener('load', resolve, { once: true });
+                faLink.addEventListener('error', resolve, { once: true });
+            }).then(function () {
+                if (!document.fonts || !document.fonts.load) return;
+                return Promise.all([
+                    document.fonts.load('900 1em "Font Awesome 6 Free"'),
+                    document.fonts.load('400 1em "Font Awesome 6 Brands"')
+                ]);
+            }));
+
+            track(new Promise(function (resolve) {
+                if (document.readyState === 'complete') return resolve();
+                window.addEventListener('load', resolve, { once: true });
+            }));
+
+            // Never hold the page back on a slow asset
+            var giveUp = setTimeout(finish, 8000);
+
+            function frame() {
+                if (finished) return;
+                var target = total ? done / total : 1;
+                shown += (target - shown) * 0.18;
+                if (target - shown < 0.004) shown = target;
+                var percent = Math.round(shown * 100);
+                bar.style.transform = 'scaleX(' + shown + ')';
+                label.textContent = percent + '%';
+                loader.setAttribute('aria-valuenow', percent);
+                // A cached load finishes before the bar fades in, so skip the animation
+                if (done >= total && (shown >= 1 || performance.now() - startedAt < 250)) {
+                    finish();
+                    return;
+                }
+                requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+
+            function finish() {
+                if (finished) return;
+                finished = true;
+                clearTimeout(giveUp);
+                bar.style.transform = 'scaleX(1)';
+                label.textContent = '100%';
+                root.classList.remove('is-loading');
+                root.classList.add('is-loaded');
+                setTimeout(function () { loader.remove(); }, 600);
+                startVideos();
+            }
+
+            // Load each video when it nears the viewport, and pause it when off screen
+            function startVideos() {
+                var videos = document.querySelectorAll('.project video');
+                function play(video) {
+                    var source = video.querySelector('source[data-src]');
+                    if (source) {
+                        source.src = source.getAttribute('data-src');
+                        source.removeAttribute('data-src');
+                        video.load();
+                    }
+                    var attempt = video.play();
+                    if (attempt) attempt.catch(function () {});
+                }
+                if (!('IntersectionObserver' in window)) {
+                    videos.forEach(play);
+                    return;
+                }
+                var observer = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) play(entry.target);
+                        else entry.target.pause();
+                    });
+                }, { rootMargin: '200px 0px' });
+                videos.forEach(function (video) { observer.observe(video); });
+            }
+        })();
+    </script>
 </body>
 </html>
