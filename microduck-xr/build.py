@@ -9,7 +9,7 @@ import json
 import re
 
 P = Path(__file__).resolve().parent
-s = (P.parent / 'immersive-vibe' / 'framework-v0.8.22.html').read_text()
+s = (P.parent / 'vibexr' / 'codepen.html').read_text()
 
 
 def swap(a, b):

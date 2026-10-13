@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeXR Interaction Framework - Rongxuan Portfolio</title>
+    <link rel="stylesheet" href="../project-styles.css?v=3">
+    <link rel="stylesheet" href="../styles.css?v=26">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" href="../Resources/common/favicon-64.png" type="image/png">
+    <script src="../darkmode.js?v=4"></script>
+    <script src="../metaballs.js?v=23" defer></script>
+    <meta name="description" content="VibeXR is a single-file WebXR interaction framework: hands, controllers, gaze and a mouse share one model of point, pinch, poke and grab, in passthrough by default.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="VibeXR Interaction Framework - Rongxuan Mu">
+    <meta property="og:description" content="One interaction model for hands, controllers, gaze and mouse. A single-file WebXR framework for prototyping spatial interaction in the browser.">
+    <meta property="og:url" content="https://rongxuanmu.github.io/Works/VibeXRFramework.html">
+    <meta property="og:image" content="https://rongxuanmu.github.io/Resources/vibexr-framework/VibeXRFramework.jpg">
+    <meta property="og:image:width" content="1280">
+    <meta property="og:image:height" content="720">
+    <meta name="twitter:card" content="summary_large_image">
+    <style>
+        .vx-launch {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            margin-top: 1.5rem;
+            border: 1px solid #e6e6e6;
+            border-radius: 8px;
+            background: #fff;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        a.vx-launch,
+        a.vx-launch:hover {
+            cursor: url('../Resources/common/PinchCursor.png') 1 1, pointer;
+        }
+
+        a.vx-launch:active {
+            cursor: url('../Resources/common/PinchedCursor.png') 1 1, pointer;
+        }
+
+        a.vx-launch:hover {
+            border-color: #cfcfcf;
+        }
+
+        .vx-launch video {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            background: #000;
+            display: block;
+            pointer-events: none;
+        }
+
+        .vx-launch-meta {
+            padding: 16px 18px 18px;
+        }
+
+        .vx-launch-meta h3 {
+            margin: 0 0 0.5rem;
+            border: none;
+            padding: 0;
+            font-size: 1.2rem;
+        }
+
+        .vx-launch-meta p {
+            margin: 0;
+            color: #666;
+            font-size: 0.92rem;
+            text-align: left;
+        }
+
+        .vx-open {
+            display: inline-block;
+            margin-top: 0.85rem;
+            color: #0066cc;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+
+        .vx-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.6rem 1.4rem;
+            margin-top: 1rem;
+            font-size: 0.92rem;
+        }
+
+        .vx-list {
+            margin: 0.5rem 0 0;
+            padding-left: 1.2rem;
+            text-align: left;
+        }
+
+        .vx-list li {
+            margin: 0.45rem 0;
+        }
+
+        .vx-code {
+            margin: 1rem 0 0;
+            padding: 14px 16px;
+            overflow-x: auto;
+            border-radius: 8px;
+            background: #111;
+            color: #eee;
+            font: 0.82rem/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            text-align: left;
+            white-space: pre;
+        }
+
+        main section .vx-code code {
+            display: block;
+            padding: 0;
+            background: none;
+            color: inherit;
+            font: inherit;
+            white-space: pre;
+        }
+
+        .vx-log {
+            margin: 0.75rem 0 0;
+            padding: 0;
+            list-style: none;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        .vx-log li {
+            display: grid;
+            grid-template-columns: 4.2rem 1fr;
+            gap: 0.75rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .vx-log li > code {
+            align-self: start;
+            justify-self: start;
+            font-weight: 600;
+        }
+
+        .dark-mode .vx-launch {
+            background: rgba(26, 26, 26, 0.7) !important;
+            border-color: #333 !important;
+        }
+
+        .dark-mode .vx-launch-meta p {
+            color: #aaa !important;
+        }
+
+        .dark-mode a.vx-launch:hover {
+            border-color: #555 !important;
+        }
+
+        .dark-mode .vx-open {
+            color: #8ab4f8;
+        }
+
+        .dark-mode .vx-log li {
+            border-color: #333;
+        }
+    </style>
+</head>
+<body>
+    <nav class="top-nav">
+        <ul>
+            <li><a href="#overview">Overview</a></li>
+            <li><a href="#play">Try it</a></li>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#build">Build on it</a></li>
+            <li><a href="#changelog">Changelog</a></li>
+            <li><a href="../index.html">← Home</a></li>
+        </ul>
+    </nav>
+
+    <div class="dark-mode-toggle-container">
+        <button id="darkModeToggle" aria-label="Toggle dark mode">
+            <i class="fas fa-moon"></i>
+        </button>
+    </div>
+
+    <header>
+        <div class="image-container">
+            <video autoplay muted loop playsinline preload="metadata" poster="../Resources/vibexr-framework/VibeXRFramework.jpg">
+                <source src="../Resources/vibexr-framework/VibeXRFramework.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </header>
+
+    <main>
+        <section id="overview">
+            <h1>VibeXR Interaction Framework</h1>
+            <h2>One interaction model for hands, controllers, gaze and mouse</h2>
+            <p>
+                <strong>VibeXR</strong> is the WebXR interaction framework I build my browser XR prototypes on. It is a
+                single HTML file on three.js: open it in a headset browser, tap Enter, and you are in passthrough
+                with working hands. Hands, controllers, gaze pointers (Vision Pro) and a desktop mouse all drive the
+                same small set of verbs: <strong>point, pinch, poke and grab</strong>, near or far.
+            </p>
+            <p>
+                It grew out of vibe coding: I wanted every new idea to start from interaction that already feels right,
+                instead of rebuilding rays, grabs and buttons for each prototype. The tuning comes from my XR OS
+                interaction work: when the ray appears, how far a far grab travels, how big the poke volume is, what a
+                hover outline looks like on a messy CAD mesh. Projects then supply only their own <em>world</em>.
+            </p>
+            <div class="vx-links">
+                <a href="../vibexr/" target="_blank" rel="noopener noreferrer"><i class="fas fa-vr-cardboard"></i> Live playground</a>
+                <a href="https://codepen.io/MuRongxuan" target="_blank" rel="noopener noreferrer"><i class="fab fa-codepen"></i> CodePen</a>
+                <a href="https://github.com/RongxuanMu/RongxuanMu.github.io/tree/main/vibexr" target="_blank" rel="noopener noreferrer"><i class="fab fa-github"></i> Source</a>
+            </div>
+        </section>
+
+        <section id="play">
+            <h2>Try it</h2>
+            <a class="vx-launch" href="../vibexr/" target="_blank" rel="noopener noreferrer" aria-label="Open the VibeXR interaction playground">
+                <video autoplay muted loop playsinline preload="metadata" poster="../Resources/vibexr-framework/VibeXRFramework.jpg">
+                    <source src="../Resources/vibexr-framework/VibeXRFramework.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="vx-launch-meta">
+                    <h3>Interaction Playground</h3>
+                    <p>
+                        Open it in a PICO, Quest, Galaxy XR or Vision Pro browser and tap Enter for passthrough. On desktop
+                        the playground runs as a preview: left-click is a ray pinch, the wheel pushes and pulls while
+                        dragging, right-drag orbits.
+                    </p>
+                    <span class="vx-open">Open live demo ↗</span>
+                </div>
+            </a>
+            <ul class="vx-list">
+                <li><strong>Cubes on the desk:</strong> pinch or grab them near or far; two hands rotate and scale; tap changes colour, hold spins.</li>
+                <li><strong>Sketch board:</strong> draw with a fingertip, a pinch, a ray or the mouse; move it by its handle bar and it turns to face you.</li>
+                <li><strong>UI panel:</strong> buttons, toggles and a slider you can poke directly or use from a distance.</li>
+                <li><strong>Hand menu:</strong> turn your palm up to toggle passthrough, the ray, depth gain, the hand outline and joints, or to reset the world.</li>
+                <li><strong>Event log:</strong> every hover, press, drag and release is printed as it happens.</li>
+            </ul>
+        </section>
+
+        <section id="features">
+            <h2>Features</h2>
+            <ul class="vx-list">
+                <li><strong>Unified input:</strong> hand tracking, controllers, transient gaze pointers and the mouse all become one kind of interactor, so an object written once works with all of them.</li>
+                <li><strong>Near and far, decided by hover:</strong> nothing hovered means a ray; a target within reach means direct touch and no ray; a far target keeps the ray. The cursor and ray blend smoothly between the states.</li>
+                <li><strong>Grab that keeps its depth:</strong> far grabs hold their pick distance, with speed gain only on fast motion, and the wheel or thumbstick pushes and pulls.</li>
+                <li><strong>Poke:</strong> surfaces and volumes can be pressed by a fingertip or the tip of a controller, with press depth reported.</li>
+                <li><strong>Per-object options:</strong> <code>precise</code>, <code>constrain</code>, <code>translateOnly</code>, <code>multi</code>, <code>twoHand</code>, <code>longPress</code>, <code>draggable</code> and more.</li>
+                <li><strong>Feedback:</strong> a constant-width white hover outline that stays clean on multi-part models, an outlined hand, and soft click sounds on press and release.</li>
+                <li><strong>UI kit:</strong> panels, buttons, toggles, sliders, auto-sized labels, a palm-up hand menu, a sketch board and a log panel, drawn in one black and white line style.</li>
+                <li><strong>Passthrough first:</strong> starts in AR with a VR fallback; the table height is calibrated from your head when you enter.</li>
+            </ul>
+        </section>
+
+        <section id="build">
+            <h2>Build on it</h2>
+            <p>
+                A project is a <strong>world</strong>: an object with <code>init</code>, <code>enter</code>,
+                <code>update</code> and <code>exit</code>. The world context gives it a scene root and helpers that
+                register interactables, so everything the world creates is cleaned up when it unloads.
+            </p>
+<pre class="vx-code"><code>const Hello = {
+  id: "hello",
+  title: "Hello VibeXR",
+  init(ctx) {
+    const { root, THREE } = ctx;
+    root.add(new THREE.HemisphereLight(0xffffff, 0x222222, 2));   // a world brings its own lights
+    const cube = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.1), new THREE.MeshStandardMaterial({ color: 0x7fb2ff }));
+    cube.position.set(0, 1.3, -0.5);
+    root.add(cube);
+    ctx.add(cube, { draggable: true, twoHand: true })   // grab near or far; two hands rotate and scale
+       .on("tap", () => ctx.log("tapped"))
+       .on("longpress", () => ctx.log("held"));
+    const reset = ctx.button("Reset", { onClick: () => cube.position.set(0, 1.3, -0.5) });
+    reset.root.position.set(0, 1.15, -0.45);
+    root.add(reset.root);
+  },
+  update(dt, t, ctx) {},
+};
+app.worlds.register(Hello);</code></pre>
+            <p>Projects built on VibeXR:</p>
+            <ul class="vx-list">
+                <li><a href="MicroduckXR.html"><strong>Microduck XR</strong></a>: a real robot RL policy you can pick up with your hands.</li>
+                <li><a href="VibeXRGallery.html"><strong>VibeXR Gallery</strong></a>: immersive WebXR canvases and spatial ink.</li>
+            </ul>
+        </section>
+
+        <section id="changelog">
+            <h2>Changelog</h2>
+            <p>The current version is <strong>v0.8.24</strong>. The full history is at the top of the source file.</p>
+            <ul class="vx-log">
+                <li><code>0.8.24</code><span>Hover outline welded by position and centred on each part, so CAD meshes get no gaps or shards; <code>outlinePush</code> draws a silhouette-only outline.</span></li>
+                <li><code>0.8.23</code><span>Select sound is a crisp mouse click on press and a softer click on release.</span></li>
+                <li><code>0.8.21</code><span>UI draws opaque with an alpha cutout, so depth orders panels, buttons and the grid.</span></li>
+                <li><code>0.8.14</code><span>Hover and press feedback became a white outline instead of an emissive glow.</span></li>
+                <li><code>0.8.10</code><span>Ray or direct is decided by hover alone.</span></li>
+                <li><code>0.8.0</code><span>Sketch board pivots on its handle bar.</span></li>
+                <li><code>0.7</code><span>Sketch board for any input; <code>multi</code> and <code>translateOnly</code>; spatial cursor-depth solver.</span></li>
+                <li><code>0.5</code><span>Select through session events for gamepad-less sources (Vision Pro, gaze); <code>precise</code> and <code>constrain</code>.</span></li>
+            </ul>
+        </section>
+
+        <section id="contact">
+            <div class="social-media">
+                <a href="https://www.linkedin.com/in/rongxuanmu/" target="_blank"><i class="fab fa-linkedin"></i></a>
+                <a href="https://github.com/RongxuanMu" target="_blank"><i class="fab fa-github"></i></a>
+                <a href="https://codepen.io/MuRongxuan" target="_blank"><i class="fab fa-codepen"></i></a>
+                <a href="https://space.bilibili.com/391939640" target="_blank"><i class="fab fa-bilibili"></i></a>
+                <a href="https://www.youtube.com/@Xrchitect_Rong" target="_blank"><i class="fab fa-youtube"></i></a>
+                <a href="https://murongxuan.itch.io/" target="_blank"><i class="fab fa-itch-io"></i></a>
+                <a href="mailto:rongxuanmu@foxmail.com"><i class="fas fa-envelope"></i></a>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Rongxuan Mu. All rights reserved.</p>
+    </footer>
+</body>
+</html>

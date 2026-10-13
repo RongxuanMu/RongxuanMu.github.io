@@ -6,7 +6,7 @@ OUT.mkdir(parents=True,exist_ok=True)
 s=(P/'original-codepen.html').read_text()
 # Keep the application worlds while taking the interaction, visuals, UI and
 # world-lifecycle core from the latest framework Pen.
-framework=(P/'framework-v0.8.22.html').read_text()
+framework=(P.parent/'vibexr'/'codepen.html').read_text()
 for start,end in [
     ('// src/interaction.js','// src/visuals.js'),
     ('// src/visuals.js','// src/ui.js'),
