@@ -237,7 +237,7 @@
                 <li><strong>Per-object options:</strong> <code>precise</code>, <code>constrain</code>, <code>translateOnly</code>, <code>multi</code>, <code>twoHand</code>, <code>longPress</code>, <code>draggable</code> and more.</li>
                 <li><strong>Feedback:</strong> a constant-width white hover outline that stays clean on multi-part models, an outlined hand, and soft click sounds on press and release.</li>
                 <li><strong>UI kit:</strong> panels, buttons, toggles, sliders, auto-sized labels, a palm-up hand menu, a sketch board and a log panel, drawn in one black and white line style.</li>
-                <li><strong>Passthrough first:</strong> one Enter button starts AR with VST on, falling back to VR only on headsets without AR; the table height is calibrated from your head when you enter.</li>
+                <li><strong>Passthrough first:</strong> a single Enter button starts AR with VST on (headsets without AR enter VR through the same button); the table height is calibrated from your head when you enter.</li>
             </ul>
         </section>
 
@@ -278,7 +278,7 @@ app.worlds.register(Hello);</code></pre>
             <h2>Changelog</h2>
             <p>The current version is <strong>v0.8.25</strong>. The full history is at the top of the source file.</p>
             <ul class="vx-log">
-                <li><code>0.8.25</code><span>One Enter button: passthrough AR with VST on where the headset supports it, VR only as a fallback. The separate "VR only" button is gone.</span></li>
+                <li><code>0.8.25</code><span>A single Enter button: AR with VST on by default; headsets without AR enter VR through the same button. No separate VR button.</span></li>
                 <li><code>0.8.24</code><span>Hover outline welded by position and centred on each part, so CAD meshes get no gaps or shards; <code>outlinePush</code> draws a silhouette-only outline.</span></li>
                 <li><code>0.8.23</code><span>Select sound is a crisp mouse click on press and a softer click on release.</span></li>
                 <li><code>0.8.21</code><span>UI draws opaque with an alpha cutout, so depth orders panels, buttons and the grid.</span></li>
