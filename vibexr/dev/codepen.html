@@ -1,6 +1,7 @@
-<!-- VibeXR Interaction Framework v0.8.24 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+<!-- VibeXR Interaction Framework v0.8.25 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.8.25  one Enter button: passthrough AR (VST on) where supported, VR only as a fallback; no "VR only" choice
   0.8.24  hover outline: welded by position only and centred on each part (no gaps or shards on CAD
           meshes); opts.outlinePush draws a silhouette-only outline pushed along the surface normals
   0.8.23  select sound: a crisp mouse click on press and a softer, higher click on release (was a finger snap)
@@ -62,7 +63,6 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
-      <button id="enter-vr" class="alt">VR only</button>
     </div>
     <div id="status">Loading&hellip;</div>
     <div id="error" hidden></div>
@@ -2622,7 +2622,7 @@ var Playground = {
 };
 
 // src/main.js
-var VERSION = "0.8.24";
+var VERSION = "0.8.25";
 var App = class {
   constructor() {
     if (window.__HAND_L) setHandAssetsBase64(window.__HAND_L, window.__HAND_R);
@@ -2963,19 +2963,16 @@ window.VXR = { app, THREE: THREE7, ICFG, VERSION, dev: { HandVisual, outlineMate
 document.getElementById("ver").textContent = `v${VERSION}`;
 await app.worlds.load("playground");
 var arBtn = document.getElementById("enter-ar");
-var vrBtn = document.getElementById("enter-vr");
-vrBtn.onclick = () => app.enterXR("vr");
 arBtn.onclick = () => app.enterXR("ar");
 (async () => {
   if (!navigator.xr) {
-    vrBtn.disabled = arBtn.disabled = true;
+    arBtn.disabled = true;
     overlay.status("WebXR not available - desktop preview (left-click = ray pinch, wheel while dragging = push / pull, right-drag = orbit)");
     return;
   }
   const [vr, ar] = await Promise.all(["immersive-vr", "immersive-ar"].map((m) => navigator.xr.isSessionSupported(m).catch(() => false)));
-  vrBtn.disabled = !vr;
-  arBtn.disabled = !ar;
-  if (!ar && vr) arBtn.textContent = "Enter (VR only)", arBtn.disabled = false, arBtn.onclick = () => app.enterXR("vr");
+  arBtn.disabled = !ar && !vr;
+  if (!ar && vr) arBtn.onclick = () => app.enterXR("vr");
   overlay.status(vr || ar ? "Ready" : "No immersive mode on this device - desktop preview");
 })();
 export {

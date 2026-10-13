@@ -46,20 +46,13 @@ swap('  _hands() {\n    return this.app.input.list()',
      '  _hands() {\n    return this.app.input.list()')
 swap('    if (this.owner === src) return;', '    if (this.owner === src) return;\n    this.show(this.home);')
 
-# one entry button: "Enter" starts passthrough AR where supported and falls back to VR otherwise
-swap('      <button id="enter-vr" class="alt">VR only</button>\n', '')
-swap('var vrBtn = document.getElementById("enter-vr");\nvrBtn.onclick = () => app.enterXR("vr");\n', '')
-swap('    vrBtn.disabled = arBtn.disabled = true;', '    arBtn.disabled = true;')
-swap('  vrBtn.disabled = !vr;\n  arBtn.disabled = !ar;\n', '  arBtn.disabled = !ar && !vr;\n')
-swap('if (!ar && vr) arBtn.textContent = "Enter (VR only)", arBtn.disabled = false, arBtn.onclick = () => app.enterXR("vr");',
-     'if (!ar && vr) arBtn.onclick = () => app.enterXR("vr");')
 # page chrome
-swap('<!-- VibeXR Interaction Framework v0.8.24 - single-file build',
+swap('<!-- VibeXR Interaction Framework v0.8.25 - single-file build',
      '<!-- Microduck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)\n'
-     '  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.24.\n'
+     '  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.25.\n'
      '  Robot: Pollen Robotics Microduck - pollen-robotics/microduck + microduck_rl (Apache-2.0). Model, visual mesh\n'
      '  and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.\n\n'
-     '  VibeXR Interaction Framework v0.8.24 - single-file build')
+     '  VibeXR Interaction Framework v0.8.25 - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
 # author credit on the landing card
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
