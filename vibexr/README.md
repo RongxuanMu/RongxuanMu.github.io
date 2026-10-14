@@ -29,12 +29,15 @@ For each release:
 
 ## Projects built on it
 
-The Microduck XR, Immersive Vibe and Dream Cage builds read `codepen.html` too. After a framework change, rebuild whichever should pick it up:
+The Microduck XR, Immersive Vibe, Dream Cage, Archiscape, Physics Cabinet and Robot Zoo XR builds read `codepen.html` too. After a framework change, rebuild whichever should pick it up:
 
 ```sh
 python3 microduck-xr/build.py      # -> microduck-xr/index.html and codepen.html
 python3 immersive-vibe/build.py    # -> local-artifacts/immersive-vibe/
 python3 dream-cage/build.py        # -> dream-cage/index.html and codepen.html
+python3 archiscape/build.py        # -> archiscape/index.html and codepen.html
+python3 physics-cabinet/build.py   # -> physics-cabinet/index.html and codepen.html
+python3 robot-zoo-xr/build.py      # -> robot-zoo-xr/index.html and codepen.html
 ```
 
 Microduck's patches assert the exact framework text they replace, so a change that moves that text makes its build fail instead of shipping silently. Immersive Vibe only fails when a `// src/...` section marker disappears, so check its output after a framework change.
