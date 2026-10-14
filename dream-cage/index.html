@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dream Cage</title>
-<meta name="description" content="Dream Cage by Rongxuan Mu: a diorama-sized portal cube in WebXR. Every face opens onto its own small world; turn it in your hands until two worlds line up across an edge.">
+<meta name="description" content="Dream Cage by Rongxuan Mu: a diorama-sized portal cube in WebXR. Each of its six faces opens onto its own small world; turn it in your hands until two half-shapes meet across an edge and join two worlds.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Dream Cage - Rongxuan Mu">
-<meta property="og:description" content="Dream Cage by Rongxuan Mu: a diorama-sized portal cube in WebXR. Every face opens onto its own small world; turn it in your hands until two worlds line up across an edge.">
+<meta property="og:description" content="Dream Cage by Rongxuan Mu: a diorama-sized portal cube in WebXR. Each of its six faces opens onto its own small world; turn it in your hands until two half-shapes meet across an edge and join two worlds.">
 <meta property="og:url" content="https://rongxuanmu.github.io/dream-cage/">
 <meta property="og:image" content="https://rongxuanmu.github.io/Resources/dream-cage/DreamCage.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -83,7 +83,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
 <div id="overlay">
   <div class="card">
     <h1>Dream Cage</h1>
-    <p class="sub">A portal cube the size of a diorama &middot; every face opens onto its own world &middot; turn it until two worlds line up across an edge</p>
+    <p class="sub">A portal cube the size of a diorama: each of its six faces opens onto its own little world. <strong>Goal:</strong> turn the cube until half a shape on one face meets its other half on the next face, across the glowing edge, and makes one whole shape. Each whole shape joins two worlds.</p>
     <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
@@ -1271,6 +1271,8 @@ var InteractionManager = class {
     st.len0 = Math.max(st.dir0.length(), 1e-3);
     st.dir0.normalize();
     o.matrixWorld.decompose(st.pos0, st.quat0, st.scale0);
+    st.qa0 = this._selectorQuat(a.interactor).invert();
+    st.qb0 = this._selectorQuat(b.interactor).invert();
     this.twoHand.set(it, st);
     it.emit("transformstart", { interactors: [a.interactor, b.interactor] });
   }
@@ -1282,9 +1284,12 @@ var InteractionManager = class {
       const len = Math.max(dir.length(), 1e-3);
       dir.normalize();
       let ratio = len / st.len0;
+      const dz = it.opts.scaleDeadzone || 0;
+      ratio = ratio > 1 + dz ? ratio / (1 + dz) : ratio < 1 - dz ? ratio / (1 - dz) : 1;
       const s0 = st.scale0.x;
-      ratio = THREE2.MathUtils.clamp(s0 * ratio, ICFG.minScale, ICFG.maxScale) / s0;
+      ratio = THREE2.MathUtils.clamp(s0 * ratio, it.opts.minScale ?? ICFG.minScale, it.opts.maxScale ?? ICFG.maxScale) / s0;
       const q = _q1.setFromUnitVectors(st.dir0, dir);
+      if (it.opts.twist) q.premultiply(this._twist(st, dir));
       if (!it.has("rotate") && !it.opts.twoHand) q.identity();
       if (it.opts.twoHand) {
         const pos = _v3.copy(st.pos0).sub(st.mid0).multiplyScalar(ratio).applyQuaternion(q).add(mid);
@@ -1303,6 +1308,25 @@ var InteractionManager = class {
         st.lastQuat.copy(q);
       }
     }
+  }
+  // orientation of a selector: the ray's for far, the pinch / grip's for near
+  _selectorQuat(i) {
+    const s = i.source;
+    if (i.type === "far") return (i.selecting ? i.selecting.vq : s.ray.quat).clone();
+    return s.nearQuat.clone();
+  }
+  // the two selectors' average roll about the axis between them since the two-hand grab began
+  _twist(st, axis) {
+    let sum = 0;
+    for (const [sel, inv0] of [[st.a, st.qa0], [st.b, st.qb0]]) {
+      const d = this._selectorQuat(sel.interactor).multiply(inv0);
+      const s = d.x * axis.x + d.y * axis.y + d.z * axis.z;
+      let ang = 2 * Math.atan2(s, d.w);
+      if (ang > Math.PI) ang -= 2 * Math.PI;
+      if (ang < -Math.PI) ang += 2 * Math.PI;
+      sum += ang;
+    }
+    return new THREE2.Quaternion().setFromAxisAngle(axis, sum / 2);
   }
   _endTwoHand(it) {
     if (!this.twoHand.has(it)) return;
@@ -2399,12 +2423,12 @@ var WorldManager = class {
 };
 
 // src/worlds/dreamcage.js
-// Dream Cage: a diorama-sized portal cube in the spirit of Moncage. Every face of the cube is a window into
-// its own small world; all the worlds share the cube's volume and each fragment shader keeps only what is seen
+// Dream Cage: a diorama-sized portal cube in the spirit of Moncage. Each of the six faces is a window into its
+// own small world; all the worlds share the cube's volume and each fragment shader keeps only what is seen
 // through its own face (the eye ray's entry face, found with a slab test in the cube's local space). That is a
 // single pass in plain WebGL, per eye, with no stencil buffer and no renderer changes.
-// Turn the cube (grab it, two hands, or the arrow keys on desktop) until a shape in one world lines up with
-// its partner in the neighbouring world across the shared edge: the two halves join and the worlds connect.
+// Goal: turn the cube until half a shape on one face meets its other half on the next face, across the
+// glowing edge, so the two make one whole shape. Each whole shape joins two worlds; six joins finish the cube.
 import * as THREE6 from "three";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
@@ -2413,15 +2437,19 @@ var DC_HALF = 0.12;
 // m: half the cube's edge, a 24 cm diorama
 var DC_VIEW = 0.45;
 // m: viewing distance the paired shapes are sized for (equal angular size there)
-var DC_ALIGN = THREE6.MathUtils.degToRad(0.6);
-// lined up: seen from the head, the two shapes coincide and the edge runs through both, within this angle
-// (the shapes are ~1.9 deg in radius at DC_VIEW)
-var DC_NEAR = THREE6.MathUtils.degToRad(8);
+var DC_ALIGN = THREE6.MathUtils.degToRad(1.8);
+// lined up: seen from the head, the two shapes coincide and the edge runs through both, within this angle.
+// The shapes are ~1.9 deg in radius at DC_VIEW, so this is "about one radius off". Generous on purpose: the
+// two eyes are ~6.4 cm apart and each sees the join a little differently, so neither eye has to be exact.
+var DC_NEAR = THREE6.MathUtils.degToRad(10);
 // shapes start to glow inside this angle
-var DC_HOLD = 0.45;
+var DC_HOLD = 0.3;
 // s the alignment has to hold
+var DC_HINT_AFTER = 45;
+// s without progress before the sight-line hint turns itself on
 var DC_TABLE_BELOW_HEAD = 0.5;
 var DC_FACE = { px: 0, nx: 1, py: 2, ny: 3, pz: 4, nz: 5 };
+var DC_NORMAL = { px: [1, 0, 0], nx: [-1, 0, 0], py: [0, 1, 0], ny: [0, -1, 0], pz: [0, 0, 1], nz: [0, 0, -1] };
 var DC_PORTAL = { inv: { value: new THREE6.Matrix4() }, half: { value: DC_HALF } };
 var DC_CLIP = `
 uniform mat4 uCubeInv;
@@ -2458,22 +2486,31 @@ function dcPortal(mat, face) {
   mat.customProgramCacheKey = () => `dc-portal-${face}`;
   return mat;
 }
-// The four links, one per vertical edge. Each pairs a shape in world A with one in world B, both on the line
-// that leaves the edge point X along the outward view direction v. Seen from anywhere on that line outside
-// the cube, the eye ray grazes the edge, so the edge splits the two shapes and their halves join into one.
+// Six links around the cube's belt (front - right - top - back - left - bottom - front), so every world holds
+// two halves. A link sits on the edge between faces a and b: X is a point on that edge, v the outward line of
+// sight (between the two face normals, tilted by k along the edge). Its two shapes lie on the line through X
+// along -v, at depths dA (world a) and dB (world b). From anywhere on that line outside the cube the eye ray
+// grazes the edge, so the edge splits the two shapes and their halves make one whole shape.
 var DC_LINKS = [
-  { a: "pz", b: "px", sx: 1, sz: 1, y0: 0.045, ev: 0.3, dA: 0.24, dB: 0.07, kind: "sphere",
+  { a: "pz", b: "px", e: [0, 1, 0], t: 0.045, k: 0.3, dA: 0.24, dB: 0.07, kind: "sphere",
     title: "The sunset lights the workshop lamp" },
-  { a: "px", b: "nz", sx: 1, sz: -1, y0: 0, ev: 0.12, dA: 0.09, dB: 0.2, kind: "ring",
-    title: "The gear turns the town clock" },
-  { a: "nz", b: "nx", sx: -1, sz: -1, y0: 0.04, ev: -0.2, dA: 0.25, dB: 0.08, kind: "sphere",
+  { a: "px", b: "py", e: [0, 0, 1], t: -0.04, k: 0, dA: 0.08, dB: 0.21, kind: "ring",
+    title: "The gear sets the koi swimming" },
+  { a: "py", b: "nz", e: [1, 0, 0], t: 0.05, k: 0, dA: 0.21, dB: 0.12, kind: "ring",
+    title: "The lily ring starts the town clock" },
+  { a: "nz", b: "nx", e: [0, 1, 0], t: 0.04, k: -0.2, dA: 0.25, dB: 0.08, kind: "sphere",
     title: "The moon sets the balloon free" },
-  { a: "nx", b: "pz", sx: -1, sz: 1, y0: 0.02, ev: 0.45, dA: 0.15, dB: 0.06, kind: "ring",
-    title: "The cart wheel wakes the lighthouse" }
+  { a: "nx", b: "ny", e: [0, 0, 1], t: -0.03, k: 0, dA: 0.035, dB: 0.2, kind: "ring",
+    title: "The buried wheel wakes the crystals" },
+  { a: "ny", b: "pz", e: [1, 0, 0], t: -0.05, k: 0, dA: 0.2, dB: 0.035, kind: "sphere",
+    title: "The cave pearl lights the lighthouse" }
 ];
 for (const L of DC_LINKS) {
-  L.X = new THREE6.Vector3(L.sx * DC_HALF, L.y0, L.sz * DC_HALF);
-  L.v = new THREE6.Vector3(L.sx, L.ev, L.sz).normalize();
+  const n = new THREE6.Vector3(...DC_NORMAL[L.a]).add(new THREE6.Vector3(...DC_NORMAL[L.b]));
+  L.e = new THREE6.Vector3(...L.e);
+  L.X = n.clone().multiplyScalar(DC_HALF).addScaledVector(L.e, L.t);
+  L.v = n.clone().addScaledVector(L.e, L.k).normalize();
+  L.ends = [n.clone().multiplyScalar(DC_HALF).addScaledVector(L.e, -DC_HALF), n.clone().multiplyScalar(DC_HALF).addScaledVector(L.e, DC_HALF)];
   L.PA = L.X.clone().addScaledVector(L.v, -L.dA);
   L.PB = L.X.clone().addScaledVector(L.v, -L.dB);
   L.rA = 0.015 * (DC_VIEW + L.dA) / DC_VIEW;
@@ -2521,6 +2558,14 @@ var DreamCage = {
     const ring = new T.Mesh(new T.RingGeometry(0.15, 0.156, 64).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 16777215, transparent: true, opacity: 0.5 }));
     ring.position.set(0, TABLE + 1e-3, -0.5);
     root.add(ring);
+    // progress: one pip per link around the plinth ring
+    this.pips = DC_LINKS.map((L, i) => {
+      const a = -Math.PI / 2 + (i - 2.5) * 0.16;
+      const p = new T.Mesh(new T.SphereGeometry(6e-3, 16, 10), new T.MeshBasicMaterial({ color: 5592405 }));
+      p.position.set(Math.cos(a) * 0.2, TABLE + 6e-3, -0.5 - Math.sin(a) * 0.2);
+      root.add(p);
+      return p;
+    });
     const cube = this.cube = new T.Group();
     cube.name = "dream cage";
     this.home = new T.Vector3(0, TABLE + 0.04 + H, -0.5);
@@ -2533,10 +2578,10 @@ var DreamCage = {
     const shell = new T.Mesh(new T.BoxGeometry(2 * H, 2 * H, 2 * H), shellMat);
     cube.add(shell);
     cube.add(rims(shell.geometry, 0.95, 3));
-    // one glow line per vertical edge: the active link's edge breathes, a joined edge flashes
+    // one glow line per link edge: the active link's edge breathes, a joined edge flashes
     this.seams = DC_LINKS.map((L) => {
       const g = new T.BufferGeometry();
-      g.userData.segments = [L.X.x, -H, L.X.z, L.X.x, H, L.X.z];
+      g.userData.segments = [...L.ends[0].toArray(), ...L.ends[1].toArray()];
       const s = rims(g, 0, 3, 16766586);
       cube.add(s);
       return s;
@@ -2553,36 +2598,47 @@ var DreamCage = {
       parent.add(m);
       return m;
     };
-    const sky = (face, bottom, top) => {
-      // a little inside the shell, so the shell's back edges stay hidden behind the walls without z-fighting
-      const geo = new T.BoxGeometry(2 * H * 0.97, 2 * H * 0.97, 2 * H * 0.97, 1, 10, 1);
+    // the inside walls of one world: a vertical gradient through [y, colour] stops
+    const sky = (face, stops) => {
+      const geo = new T.BoxGeometry(2 * H * 0.97, 2 * H * 0.97, 2 * H * 0.97, 1, 24, 1);
       const col = new Float32Array(geo.attributes.position.count * 3);
       geo.setAttribute("color", new T.BufferAttribute(col, 3));
       const m = add(geo, basic(16777215, face, { vertexColors: true, side: T.BackSide }));
-      const cb = new T.Color(), ct = new T.Color(), c = new T.Color();
-      m.userData.set = (b, t) => {
-        cb.set(b);
-        ct.set(t);
+      const ca = new T.Color(), cb = new T.Color(), c = new T.Color();
+      m.userData.set = (st) => {
         const p = geo.attributes.position;
         for (let i = 0; i < p.count; i++) {
-          c.lerpColors(cb, ct, THREE6.MathUtils.smoothstep(p.getY(i), -H, H)).toArray(col, i * 3);
+          const y = p.getY(i);
+          let j = 0;
+          while (j < st.length - 2 && y > st[j + 1][0]) j++;
+          const [y0, c0] = st[j], [y1, c1] = st[j + 1];
+          c.lerpColors(ca.set(c0), cb.set(c1), THREE6.MathUtils.clamp((y - y0) / (y1 - y0), 0, 1)).toArray(col, i * 3);
         }
         geo.attributes.color.needsUpdate = true;
       };
-      m.userData.set(bottom, top);
+      m.userData.set(stops);
       return m;
     };
-    const block = (face, color, top = G) => add(new T.BoxGeometry(2 * H * 0.985, top + H * 0.985, 2 * H * 0.985), std(color, face), 0, (top - H * 0.985) / 2, 0);
+    const block = (face, color, top = G, bottom = -H) => add(new T.BoxGeometry(2 * H * 0.97, top - bottom, 2 * H * 0.97), std(color, face), 0, (top + bottom) / 2, 0);
     const aim = (m, v) => m.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), v);
     const cone4 = (r, h) => new T.ConeGeometry(r, h, 4).rotateY(Math.PI / 4);
+    const between = (a, b, r, mat) => {
+      const m = add(new T.CylinderGeometry(r, r, 1, 5), mat);
+      m.position.copy(a).add(b).multiplyScalar(0.5);
+      m.scale.set(1, a.distanceTo(b), 1);
+      m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+      return m;
+    };
+    const V = (x, y, z) => new T.Vector3(x, y, z);
+    let seed = 20261014;
+    const rnd = (a = 0, b = 1) => a + (b - a) * ((seed = (1664525 * seed + 1013904223) >>> 0) / 4294967296);
     const stars = (face, n, color, ymin) => {
       const p = [];
       for (let i = 0; i < n; i++) {
-        const u = Math.random(), w = Math.random(), side = Math.floor(Math.random() * 3);
-        const a = (u * 2 - 1) * H * 0.99, b = ymin + w * (H - ymin);
-        if (side === 0) p.push(a, b, -H * 0.99);
-        else if (side === 1) p.push(a, H * 0.99, (w * 2 - 1) * H);
-        else p.push(-H * 0.99 * (Math.random() < 0.5 ? 1 : -1), b, a);
+        const side = Math.floor(rnd(0, 3)), a = rnd(-1, 1) * H * 0.96, b = ymin + rnd() * (H * 0.96 - ymin);
+        if (side === 0) p.push(a, b, -H * 0.96);
+        else if (side === 1) p.push(a, H * 0.96, rnd(-1, 1) * H);
+        else p.push(-H * 0.96 * (rnd() < 0.5 ? 1 : -1), b, a);
       }
       const g = new T.BufferGeometry();
       g.setAttribute("position", new T.Float32BufferAttribute(p, 3));
@@ -2595,30 +2651,32 @@ var DreamCage = {
       m.userData.base = base;
       return m;
     };
-    // a link shape: a sphere, or a ring facing the viewer's line of sight
-    const motif = (L, which, color, emissive, base, face) => {
+    // a link shape: a sphere, or a ring facing the line of sight
+    const motif = (L, which, color, emissive, base) => {
       const p = which === "A" ? L.PA : L.PB, r = which === "A" ? L.rA : L.rB;
-      const mat = glowMat(color, face, emissive, base);
+      const mat = glowMat(color, F[which === "A" ? L.a : L.b], emissive, base);
       const geo = L.kind === "ring" ? new T.TorusGeometry(r * 0.8, r * 0.2, 14, 40) : new T.SphereGeometry(r, 32, 20);
       const m = add(geo, mat, p.x, p.y, p.z);
       if (L.kind === "ring") aim(m, L.v);
       return m;
     };
+    const L = DC_LINKS;
     const fx = this.fx = {};
-    // - front (+Z): a lighthouse on a cliff over the evening sea -
+    // - front (+Z): a lighthouse on a rock over the evening sea, and under it the seabed -
     {
       const f = F.pz;
-      fx.frontSky = sky(f, 16033898, 2834286);
-      block(f, 1784143, G - 4e-3);
-      const sea = new T.PlaneGeometry(2 * H * 0.994, 2 * H * 0.994, 22, 22).rotateX(-Math.PI / 2);
-      fx.sea = add(sea, std(3108742, f, { roughness: 0.4 }), 0, G, 0);
+      sky(f, [[-H, 1393498], [G, 3112853], [G + 1e-3, 16033898], [H, 2834286]]);
+      const sea = new T.PlaneGeometry(2 * H * 0.97, 2 * H * 0.97, 22, 22).rotateX(-Math.PI / 2);
+      fx.sea = add(sea, std(3108742, f, { roughness: 0.4, side: T.DoubleSide, emissive: 1060915 }), 0, G, 0);
       fx.seaY = Float32Array.from(sea.attributes.position.array);
+      block(f, 13283706, -H * 0.95);
+      // the rock rises from the seabed; the lighthouse stands on it
+      add(new T.CylinderGeometry(0.03, 0.042, G + H * 0.95, 7), std(4996928, f), 0, (G - H * 0.95) / 2, -0.07);
       const rock = add(new T.DodecahedronGeometry(0.05, 0), std(5984328, f), 0, G + 6e-3, -0.07);
       rock.scale.set(1.1, 0.75, 1);
-      add(new T.DodecahedronGeometry(0.028, 0), std(4996928, f), -0.015, G, -0.08).scale.set(1.2, 0.6, 1);
-      const base = G + 0.04;
+      add(new T.DodecahedronGeometry(0.028, 0), std(4996928, f), -0.06, G, -0.08).scale.set(1.2, 0.6, 1);
       const lh = new T.Group();
-      lh.position.set(0, base, -0.075);
+      lh.position.set(0, G + 0.04, -0.075);
       inner.add(lh);
       for (let i = 0; i < 4; i++) {
         const r0 = 0.016 - i * 2e-3, r1 = r0 - 2e-3;
@@ -2627,7 +2685,6 @@ var DreamCage = {
       add(new T.CylinderGeometry(0.012, 0.012, 3e-3, 16), std(2236962, f), 0, 0.082, 0, lh);
       fx.lantern = add(new T.CylinderGeometry(7e-3, 7e-3, 0.012, 12), glowMat(16771496, f, 16764006, 0.05), 0, 0.09, 0, lh);
       add(new T.ConeGeometry(9e-3, 0.012, 12), std(12729138, f), 0, 0.102, 0, lh);
-      // the beam: hidden until the last link
       const beam = new T.Mesh(
         new T.ConeGeometry(0.03, 0.22, 20, 1, true).translate(0, -0.11, 0).rotateZ(Math.PI / 2),
         dcPortal(new T.MeshBasicMaterial({ color: 16773824, transparent: true, opacity: 0.16, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }), f)
@@ -2636,20 +2693,38 @@ var DreamCage = {
       beam.visible = false;
       lh.add(beam);
       fx.beam = beam;
-      // a little sailing boat, moored until the lighthouse wakes
       const boat = fx.boat = new T.Group();
-      boat.position.set(-0.01, G + 3e-3, 0.03);
+      boat.position.set(-0.04, G + 3e-3, 0.03);
       inner.add(boat);
       add(new T.BoxGeometry(0.03, 8e-3, 0.012), std(7884339, f), 0, 0, 0, boat);
-      const sail = new T.BufferGeometry().setFromPoints([new T.Vector3(0, 4e-3, 0), new T.Vector3(0, 0.032, 0), new T.Vector3(0.016, 4e-3, 0)]);
+      const sail = new T.BufferGeometry().setFromPoints([V(0, 4e-3, 0), V(0, 0.032, 0), V(0.016, 4e-3, 0)]);
       sail.computeVertexNormals();
       add(sail, std(15921632, f, { side: T.DoubleSide }), -6e-3, 0, 0, boat);
       add(new T.CylinderGeometry(6e-4, 6e-4, 0.03, 4), std(3355443, f), -6e-3, 0.018, 0, boat);
+      // under the sea: seaweed, fish and the open clam that holds the pearl (link 6)
+      for (let k = 0; k < 9; k++) {
+        const h = rnd(0.02, 0.045), w = add(new T.ConeGeometry(3e-3, h, 4), std(3112520, f), rnd(-0.1, 0.1), -H * 0.95 + h / 2, rnd(-0.1, 0.06));
+        w.rotation.z = rnd(-0.2, 0.2);
+      }
+      fx.fish = [];
+      for (let k = 0; k < 4; k++) {
+        const fish = add(new T.ConeGeometry(4e-3, 0.012, 5).rotateZ(Math.PI / 2), std(k % 2 ? 16762920 : 16744272, f), 0, 0, 0);
+        fish.userData = { r: rnd(0.04, 0.08), y: rnd(-0.1, -0.075), p: rnd(0, 6), s: rnd(0.4, 0.7) };
+        fx.fish.push(fish);
+      }
+      const P6 = L[5].PB, half = (top) => add(new T.SphereGeometry(0.014, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(13409704, f, { side: T.DoubleSide }), P6.x, -H * 0.95 + 2e-3, P6.z);
+      const lower = half();
+      lower.rotation.x = Math.PI;
+      lower.scale.y = 0.4;
+      const upper = half();
+      upper.rotation.x = -1.2;
+      upper.position.z -= 0.012;
+      upper.scale.y = 0.4;
     }
     // - right (+X): a workshop yard at dusk, dark until the lamp lights -
     {
       const f = F.px;
-      fx.rightSky = sky(f, 7170662, 3027253);
+      fx.rightSky = sky(f, [[-H, 7170662], [H, 3027253]]);
       block(f, 4867650);
       const shed = (x, z, w, d, h) => {
         add(new T.BoxGeometry(w, h, d), std(7039851, f), x, G + h / 2, z);
@@ -2662,10 +2737,9 @@ var DreamCage = {
       shed(-0.06, -0.02, 0.05, 0.06, 0.03);
       fx.chimneys = [[-0.07, -0.075, 0.12], [0.0, -0.085, 0.095]].map(([x, z, h]) => {
         add(new T.CylinderGeometry(7e-3, 0.01, h, 10), std(9127231, f), x, G + h / 2, z);
-        return new T.Vector3(x, G + h, z);
+        return V(x, G + h, z);
       });
       fx.windows = [];
-      // the shed windows face the viewer of this world (+X)
       for (let k = 0; k < 3; k++) {
         const w = add(new T.PlaneGeometry(9e-3, 0.011), basic(2894892, f), 0.0655, G + 0.017, 0.024 + k * 0.016);
         w.rotation.y = Math.PI / 2;
@@ -2679,17 +2753,50 @@ var DreamCage = {
         s.userData.c = fx.chimneys[k % 2];
         fx.smoke.push(s);
       }
-      // the lamp hangs on a cable from the cube's ceiling
-      const L1 = DC_LINKS[0];
-      add(new T.CylinderGeometry(6e-4, 6e-4, H - L1.PB.y, 4), std(1118481, f), L1.PB.x, (H + L1.PB.y) / 2, L1.PB.z);
-      // the gear stands on a post; it gets teeth so its turning shows
-      const L2 = DC_LINKS[1];
-      add(new T.CylinderGeometry(2e-3, 3e-3, L2.PA.y - G, 6), std(3355443, f), L2.PA.x, (L2.PA.y + G) / 2, L2.PA.z);
+      const dark = std(1118481, f);
+      between(L[0].PB, V(L[0].PB.x, H * 0.97, L[0].PB.z), 6e-4, dark);
+      // the gear (link 2) turns on a tall mast
+      between(V(L[1].PA.x, G, L[1].PA.z), L[1].PA, 2.5e-3, std(3355443, f));
+    }
+    // - top (+Y): a courtyard pond seen from above -
+    {
+      const f = F.py, W = -0.035;
+      fx.topSky = sky(f, [[-H, 2768417], [H, 3812714]]);
+      block(f, 6649429, W - 4e-3);
+      add(new T.CylinderGeometry(0.09, 0.09, 4e-3, 48), std(2125686, f, { roughness: 0.3 }), 0, W - 1e-3, 0);
+      add(new T.TorusGeometry(0.092, 5e-3, 6, 48).rotateX(Math.PI / 2), std(9078903, f), 0, W, 0);
+      for (let k = 0; k < 7; k++) {
+        const a = k / 7 * Math.PI * 2 + 0.4, r = rnd(0.03, 0.075);
+        add(new T.CylinderGeometry(0.01, 0.01, 1.5e-3, 12), std(4889157, f), Math.cos(a) * r, W + 1e-3, Math.sin(a) * r).scale.set(1, 1, 0.85);
+      }
+      fx.koi = [];
+      for (let k = 0; k < 5; k++) {
+        const koi = add(new T.SphereGeometry(4e-3, 10, 6), std(k % 2 ? 16733490 : 16316664, f), 0, W, 0);
+        koi.scale.set(2.4, 0.6, 1);
+        koi.userData = { r: 0.03 + k * 0.01, p: k * 1.3, s: 0.5 + k * 0.08 };
+        fx.koi.push(koi);
+      }
+      fx.pondLamps = [[-0.1, -0.1], [0.1, -0.1], [0.1, 0.1], [-0.1, 0.1]].map(([x, z]) => {
+        add(new T.BoxGeometry(0.012, 0.03, 0.012), std(9078903, f), x, W + 0.015, z);
+        const lamp = add(new T.BoxGeometry(0.016, 0.01, 0.016), glowMat(14540253, f, 16765056, 0), x, W + 0.035, z);
+        add(cone4(0.014, 0.01), std(6710886, f), x, W + 0.045, z);
+        return lamp;
+      });
+      // the finale: a dream orb rises from the pond
+      const dream = fx.dream = new T.Group();
+      dream.visible = false;
+      inner.add(dream);
+      fx.dreamOrb = add(new T.IcosahedronGeometry(0.02, 2), glowMat(16777215, f, 16766586, 1.2), 0, 0.02, 0, dream);
+      const msg = ctx.label("The six worlds are one", { height: 0.014 });
+      dcPortal(msg.material, f);
+      msg.rotation.x = -Math.PI / 2;
+      msg.position.set(0, W + 2e-3, 0.075);
+      dream.add(msg);
     }
     // - back (-Z): a small town under the night sky -
     {
       const f = F.nz;
-      sky(f, 1911632, 461594);
+      sky(f, [[-H, 1911632], [H, 461594]]);
       stars(f, 160, 16777215, 0);
       block(f, 2107450);
       fx.townWindows = [];
@@ -2697,8 +2804,7 @@ var DreamCage = {
         add(new T.BoxGeometry(w, h, w), std(4146536, f), x, G + h / 2, z);
         add(cone4(w * 0.75, w * 0.6), std(roofCol, f), x, G + h + w * 0.3, z);
         for (const sx of [-1, 1]) {
-          const lit = Math.random() < 0.3;
-          // windows on the -Z walls, the side this world is seen from
+          const lit = rnd() < 0.3;
           const win = add(new T.PlaneGeometry(w * 0.2, w * 0.24), basic(lit ? 16765056 : 1316654, f), x + sx * w * 0.22, G + h * 0.55, z - w / 2 - 3e-4);
           win.rotation.y = Math.PI;
           if (!lit) fx.townWindows.push(win);
@@ -2706,35 +2812,34 @@ var DreamCage = {
       };
       house(-0.07, -0.02, 0.035, 0.03, 9124417);
       house(-0.03, 0.06, 0.03, 0.025, 6052985);
-      house(0.075, 0.05, 0.032, 0.035, 9124417);
+      house(0.075, 0.07, 0.032, 0.035, 9124417);
       house(-0.08, 0.07, 0.028, 0.04, 6052985);
-      house(0.02, -0.08, 0.04, 0.028, 7366285);
-      // the clock tower stands behind the clock face, turned towards the clock's line of sight
-      const L2 = DC_LINKS[1], hv = new T.Vector3(L2.v.x, 0, L2.v.z).normalize();
-      const tw = 0.05, top = L2.PB.y + 0.035;
-      const tower = add(new T.BoxGeometry(tw, top - G, tw), std(5590631, f), L2.PB.x - hv.x * 0.03, (top + G) / 2, L2.PB.z - hv.z * 0.03);
-      tower.rotation.y = Math.atan2(hv.x, hv.z);
-      const roof = add(cone4(tw * 0.78, 0.04), std(9124417, f), tower.position.x, top + 0.02, tower.position.z);
-      roof.rotation.y = tower.rotation.y;
+      house(-0.01, -0.08, 0.04, 0.028, 7366285);
+      // the clock (link 3) sits on top of the tower, tilted up towards its line of sight
+      const P3 = L[2].PB, tw = 0.04, top = P3.y - 0.01;
+      add(new T.BoxGeometry(tw, top - G, tw), std(5590631, f), P3.x, (top + G) / 2, P3.z + 0.01);
       fx.hands = [0.8, 0.55].map((len, k) => {
         const piv = new T.Group();
-        piv.position.copy(L2.PB);
-        aim(piv, L2.v);
+        piv.position.copy(P3);
+        aim(piv, L[2].v);
         inner.add(piv);
-        add(new T.BoxGeometry(1.6e-3, L2.rB * len, 1.5e-3).translate(0, L2.rB * len / 2, 0), basic(15658734, f), 0, 0, 2e-3, piv);
+        add(new T.BoxGeometry(1.6e-3, L[2].rB * len, 1.5e-3).translate(0, L[2].rB * len / 2, 0), basic(15658734, f), 0, 0, 2e-3, piv);
         piv.userData.k = k;
         return piv;
       });
     }
-    // - left (-X): a garden on a bright day -
+    // - left (-X): a garden on a bright day, and the soil under it -
     {
       const f = F.nx;
-      sky(f, 13625584, 8369368);
-      block(f, 8368229);
+      sky(f, [[-H, 4864040], [G, 9069638], [G + 1e-3, 13625584], [H, 8369368]]);
+      add(new T.BoxGeometry(2 * H * 0.97, 6e-3, 2 * H * 0.97), std(8368229, f), 0, G - 3e-3, 0);
       const tree = (x, z, h, round) => {
         add(new T.CylinderGeometry(2.5e-3, 3.5e-3, h * 0.45, 6), std(7031354, f), x, G + h * 0.225, z);
         if (round) add(new T.IcosahedronGeometry(h * 0.33, 0), std(5016130, f), x, G + h * 0.65, z);
         else add(new T.ConeGeometry(h * 0.26, h * 0.7, 7), std(3963462, f), x, G + h * 0.72, z);
+        // roots reach down into the soil
+        const root2 = std(9136970, f);
+        for (let k = 0; k < 3; k++) between(V(x, G - 6e-3, z), V(x + rnd(-0.03, 0.03), G - rnd(0.02, 0.045), z + rnd(-0.03, 0.03)), 1.2e-3, root2);
       };
       tree(0.06, -0.07, 0.09, true);
       tree(0.085, 0.04, 0.07, false);
@@ -2742,58 +2847,56 @@ var DreamCage = {
       tree(0.02, 0.085, 0.06, true);
       for (let k = 0; k < 7; k++) add(new T.BoxGeometry(3e-3, 0.018, 3e-3), std(15526361, f), 0.1, G + 9e-3, -0.09 + k * 0.03);
       add(new T.BoxGeometry(2e-3, 3e-3, 0.19), std(15526361, f), 0.1, G + 0.013, 0);
+      for (let k = 0; k < 6; k++) add(new T.DodecahedronGeometry(rnd(5e-3, 0.012), 0), std(6971983, f), rnd(-0.1, 0.1), rnd(-0.11, -0.08), rnd(-0.1, 0.1));
       fx.flowers = [];
       const fc = [16742520, 16771429, 14193663, 16777215];
       for (let k = 0; k < 18; k++) {
-        const fl = add(new T.IcosahedronGeometry(3.5e-3, 0), std(fc[k % 4], f), (Math.random() - 0.5) * 0.2, G + 3e-3, (Math.random() - 0.5) * 0.2);
+        const fl = add(new T.IcosahedronGeometry(3.5e-3, 0), std(fc[k % 4], f), rnd(-0.1, 0.1), G + 3e-3, rnd(-0.1, 0.1));
         fl.scale.setScalar(0.01);
         fx.flowers.push(fl);
       }
-      // the balloon's string runs down to a peg in the lawn
-      const L3 = DC_LINKS[2];
-      fx.string = add(new T.CylinderGeometry(4e-4, 4e-4, 1, 4), std(16777215, f), L3.PB.x, 0, L3.PB.z);
-      fx.peg = new T.Vector3(L3.PB.x + 0.01, G, L3.PB.z - 0.01);
+      fx.string = add(new T.CylinderGeometry(4e-4, 4e-4, 1, 4), std(16777215, f), L[3].PB.x, 0, L[3].PB.z);
+      fx.peg = V(L[3].PB.x + 0.01, G, L[3].PB.z - 0.01);
       add(new T.CylinderGeometry(1.5e-3, 1.5e-3, 8e-3, 5), std(7031354, f), fx.peg.x, G + 4e-3, fx.peg.z);
-      // the cart the wheel belongs to
-      const L4 = DC_LINKS[3], hv = new T.Vector3(L4.v.x, 0, L4.v.z).normalize();
-      const cart = add(new T.BoxGeometry(0.05, 0.02, 0.03), std(10379576, f), L4.PA.x - hv.x * 0.025, L4.PA.y + 4e-3, L4.PA.z - hv.z * 0.025);
-      cart.rotation.y = Math.atan2(hv.x, hv.z) + Math.PI / 2;
     }
-    // - top (+Y): the lid; it shows progress and opens at the end -
+    // - bottom (-Y): a crystal cave, seen looking up. Its roof is the far side; long stalactites, crystals and
+    // drifting spores fill the space down towards the viewer -
     {
-      const f = F.py;
-      fx.topSky = sky(f, 0, 0);
-      const lid = fx.lid = new T.Group();
-      inner.add(lid);
-      add(new T.CylinderGeometry(H * 0.95, H * 0.95, 0.01, 4).rotateY(Math.PI / 4), std(1118481, f), 0, 0.06, 0, lid).scale.set(1.41, 1, 1.41);
-      add(new T.TorusGeometry(0.06, 1.5e-3, 6, 64).rotateX(Math.PI / 2), basic(16777215, f), 0, 0.066, 0, lid);
-      fx.pips = DC_LINKS.map((L) => add(new T.SphereGeometry(7e-3, 16, 10), glowMat(3355443, f, 16766586, 0), L.sx * 0.042, 0.068, L.sz * 0.042, lid));
-      const dream = fx.dream = new T.Group();
-      dream.visible = false;
-      inner.add(dream);
-      dream.add(stars(f, 260, 16777215, -H));
-      fx.dreamOrb = add(new T.IcosahedronGeometry(0.025, 2), glowMat(16777215, f, 16766586, 1.2), 0, -0.02, 0, dream);
-      const msg = ctx.label("The four worlds are one", { height: 0.016 });
-      dcPortal(msg.material, f);
-      msg.rotation.x = -Math.PI / 2;
-      msg.position.set(0, -0.06, 0.07);
-      dream.add(msg);
+      const f = F.ny, C = 0.075;
+      sky(f, [[-H, 1182754], [H, 3876470]]);
+      block(f, 4865370, H, C);
+      for (let k = 0; k < 22; k++) {
+        const h = rnd(0.03, 0.12), s = add(new T.ConeGeometry(rnd(5e-3, 0.012), h, 6), std(6052985, f, { emissive: 1315880 }), rnd(-0.105, 0.105), C - h / 2, rnd(-0.105, 0.105));
+        s.rotation.x = Math.PI;
+      }
+      fx.crystals = [];
+      for (let k = 0; k < 16; k++) {
+        const col = k % 2 ? 6745343 : 12093183, y = k < 8 ? C - 4e-3 : rnd(-0.06, 0.03);
+        const c = add(new T.OctahedronGeometry(rnd(6e-3, 0.012), 0), glowMat(col, f, col, 0.35), rnd(-0.1, 0.1), y, rnd(-0.1, 0.1));
+        c.scale.y = 2.2;
+        if (k >= 8) between(c.position, V(c.position.x, C, c.position.z), 4e-4, std(8947848, f));
+        fx.crystals.push(c);
+      }
+      const sp = [];
+      for (let k = 0; k < 120; k++) sp.push(rnd(-0.11, 0.11), rnd(-0.11, C), rnd(-0.11, 0.11));
+      const sg = new T.BufferGeometry();
+      sg.setAttribute("position", new T.Float32BufferAttribute(sp, 3));
+      fx.spores = new T.Points(sg, dcPortal(new T.PointsMaterial({ color: 10092543, size: 2, sizeAttenuation: false, transparent: true, opacity: 0.7 }), f));
+      inner.add(fx.spores);
+      // both of this world's shapes hang from the cave roof
+      const chain = std(8947848, f);
+      between(L[4].PB, V(L[4].PB.x, C, L[4].PB.z), 5e-4, chain);
+      between(L[5].PA, V(L[5].PA.x, C, L[5].PA.z), 5e-4, chain);
     }
-    // - bottom (-Y): a plain base -
-    {
-      const f = F.ny;
-      sky(f, 0, 0);
-      add(new T.TorusGeometry(0.07, 1.5e-3, 6, 64).rotateX(Math.PI / 2), basic(8947848, f), 0, -0.06, 0);
-    }
-    // the shapes of each link
-    const L = DC_LINKS;
+    // the shapes of each link (A, B)
     this.motifs = [
-      [motif(L[0], "A", 16764794, 16750144, 0.7, F.pz), motif(L[0], "B", 16774348, 16764006, 0.02, F.px)],
-      [motif(L[1], "A", 12157272, 16766586, 0, F.px), motif(L[1], "B", 15654348, 16766586, 0.05, F.nz)],
-      [motif(L[2], "A", 15985872, 15985872, 0.45, F.nz), motif(L[2], "B", 14832970, 16742520, 0, F.nx)],
-      [motif(L[3], "A", 8214070, 16766586, 0, F.nx), motif(L[3], "B", 14699066, 16766586, 0, F.pz)]
+      [motif(L[0], "A", 16764794, 16750144, 0.7), motif(L[0], "B", 16774348, 16764006, 0.02)],
+      [motif(L[1], "A", 12157272, 16766586, 0), motif(L[1], "B", 16756444, 16756444, 0.05)],
+      [motif(L[2], "A", 7189364, 16766586, 0), motif(L[2], "B", 15654348, 16766586, 0.05)],
+      [motif(L[3], "A", 15985872, 15985872, 0.45), motif(L[3], "B", 14832970, 16742520, 0)],
+      [motif(L[4], "A", 8214070, 16766586, 0), motif(L[4], "B", 6745343, 6745343, 0.3)],
+      [motif(L[5], "A", 13431039, 13431039, 0.5), motif(L[5], "B", 16248549, 16777215, 0.15)]
     ];
-    // gear teeth and spokes ride with the gear
     {
       const gear = this.motifs[1][0], r = L[1].rA;
       for (let k = 0; k < 10; k++) {
@@ -2801,16 +2904,13 @@ var DreamCage = {
         add(new T.BoxGeometry(r * 0.28, r * 0.3, r * 0.28), gear.material, Math.cos(a) * r * 1.05, Math.sin(a) * r * 1.05, 0, gear).rotation.z = a;
       }
       for (let k = 0; k < 3; k++) add(new T.BoxGeometry(r * 1.6, r * 0.12, r * 0.12), gear.material, 0, 0, 0, gear).rotation.z = k * Math.PI / 3;
-      const wheel = this.motifs[3][0], rw = L[3].rA;
+      const wheel = this.motifs[4][0], rw = L[4].rA;
       for (let k = 0; k < 4; k++) add(new T.BoxGeometry(rw * 1.6, rw * 0.1, rw * 0.1), wheel.material, 0, 0, 0, wheel).rotation.z = k * Math.PI / 4;
-      // the life ring hangs on a pier post
-      const ringB = this.motifs[3][1];
-      add(new T.CylinderGeometry(2.5e-3, 2.5e-3, ringB.position.y - G, 6), std(7031354, F.pz), ringB.position.x, (ringB.position.y + G) / 2, ringB.position.z - 6e-3);
     }
     inner.traverse((o) => o.userData.noCollider = o.userData.noHighlight = true);
     // - hint: a dashed sight line out of the active edge, ending in a small "eye" ring -
     {
-      const g = new T.BufferGeometry().setFromPoints([new T.Vector3(), new T.Vector3(0, 0, 0.32)]);
+      const g = new T.BufferGeometry().setFromPoints([V(0, 0, 0), V(0, 0, 0.32)]);
       const line = new T.Line(g, new T.LineDashedMaterial({ color: 16766586, dashSize: 0.01, gapSize: 7e-3, transparent: true, opacity: 0.9 }));
       line.computeLineDistances();
       const eye = new T.Mesh(new T.RingGeometry(0.012, 0.016, 32), new T.MeshBasicMaterial({ color: 16766586, side: T.DoubleSide, transparent: true, opacity: 0.9 }));
@@ -2821,36 +2921,49 @@ var DreamCage = {
       hint.traverse((o) => o.userData.noCollider = o.userData.noHighlight = true);
       cube.add(hint);
     }
-    // - interaction -
+    // - interaction: one hand turns it with the wrist; two hands turn it about any axis (twist included) and
+    // scale it once they move apart or together by more than 12 % -
     this.it = ctx.add(cube, {
       draggable: true,
       twoHand: true,
-      box: new T.Box3(new T.Vector3(-H, -H, -H), new T.Vector3(H, H, H)),
+      twist: true,
+      scaleDeadzone: 0.12,
+      minScale: 0.6,
+      maxScale: 2.2,
+      box: new T.Box3(V(-H, -H, -H), V(H, H, H)),
       constrain: ({ position, scale }) => {
-        scale.setScalar(THREE6.MathUtils.clamp(scale.x, 0.6, 2.2));
         position.y = Math.max(position.y, TABLE + H * scale.y);
       }
     });
     this.it.on("dragstart", () => this.spin = null);
+    this.it.on("transformstart", () => this.spin = null);
     // - the panel -
-    const panel = ctx.panel("Dream Cage", { w: 0.2, h: 0.128 });
-    panel.root.position.set(-0.38, TABLE + 0.07, -0.36);
+    const panel = ctx.panel("Dream Cage", { w: 0.22, h: 0.15 });
+    panel.root.position.set(-0.4, TABLE + 0.08, -0.36);
     panel.root.lookAt(0, TABLE + 0.32, 0.3);
     root.add(panel.root);
-    const hintB = ctx.button("Hint", { toggle: true, onClick: (v) => this.hint.visible = v && this.active < 4 });
+    const hintB = ctx.button("Hint", { toggle: true, onClick: (v) => this.hint.visible = v && this.active < 6 });
     const reset = ctx.button("Reset", { onClick: () => app2.worlds.reload() });
-    const left = ctx.button("Turn ⟲", { onClick: () => this.turn(1) });
-    const right = ctx.button("Turn ⟳", { onClick: () => this.turn(-1) });
-    panel.layout([hintB, reset, left, right], { cols: 2, top: 0.03 });
+    const left = ctx.button("Turn ⟲", { onClick: () => this.turn(V(0, 1, 0), 1) });
+    const right = ctx.button("Turn ⟳", { onClick: () => this.turn(V(0, 1, 0), -1) });
+    const over = ctx.button("Tip over", { onClick: () => this.turn(V(1, 0, 0), 1) });
+    const back = ctx.button("Tip back", { onClick: () => this.turn(V(1, 0, 0), -1) });
+    panel.layout([hintB, reset, left, right, over, back], { cols: 2, top: 0.03 });
     this.hintB = hintB;
     this.statusTex = textTexture("", { w: 512, h: 44, size: 22, color: "#ffffff" });
-    const status = new T.Mesh(new T.PlaneGeometry(0.19, 0.19 * 44 / 512), new T.MeshBasicMaterial({ map: this.statusTex, transparent: true, depthWrite: false }));
-    status.position.set(0, -0.049, 2e-3);
+    const status = new T.Mesh(new T.PlaneGeometry(0.21, 0.21 * 44 / 512), new T.MeshBasicMaterial({ map: this.statusTex, transparent: true, depthWrite: false }));
+    status.position.set(0, -0.062, 2e-3);
     panel.root.add(status);
-    const tl = ctx.label("Grab and turn the cube · line up a shape with its partner across an edge to join two worlds", { height: 0.01 });
-    tl.position.set(0, TABLE + 0.02, -0.23);
-    tl.rotation.x = -Math.PI / 2.6;
-    root.add(tl);
+    const goal = [
+      "Goal: turn the cube until the two halves meet across the glowing edge",
+      "and make one whole shape. Each whole shape joins two worlds."
+    ];
+    goal.forEach((text, i) => {
+      const tl = ctx.label(text, { height: 0.011 });
+      tl.position.set(0, TABLE + 0.02 - i * 6e-3, -0.24 + i * 0.016);
+      tl.rotation.x = -Math.PI / 2.6;
+      root.add(tl);
+    });
     // desktop preview: the arrow keys turn the cube
     this.keys = {};
     this._kd = (e) => {
@@ -2867,16 +2980,18 @@ var DreamCage = {
     this.solvedAt = [];
     this.spin = null;
     this.time = 0;
+    this.since = null;
     this._setStatus();
   },
-  turn(dir) {
-    const q = new THREE6.Quaternion().setFromAxisAngle(new THREE6.Vector3(0, 1, 0), dir * Math.PI / 2);
+  // a quarter turn about a world axis (y: turn, x: tip towards / away from the viewer)
+  turn(axis, dir) {
+    const q = new THREE6.Quaternion().setFromAxisAngle(axis, dir * Math.PI / 2);
     const from = this.spin ? this.spin.to.clone() : this.cube.quaternion.clone();
     this.spin = { q0: this.cube.quaternion.clone(), to: q.multiply(from), t: 0 };
   },
   _setStatus() {
     const n = this.active;
-    this.statusTex.userData.draw(n >= 4 ? "All four worlds joined · look in from the top" : `Worlds joined ${n} / 4`);
+    this.statusTex.userData.draw(n >= 6 ? "All six worlds joined · look in from the top" : `Worlds joined ${n} / 6 · find the glowing edge`);
   },
   _chime(final) {
     const c = this.app.sfx.ensure();
@@ -2898,37 +3013,40 @@ var DreamCage = {
     this.solvedAt[k] = this.time;
     this.active = k + 1;
     this.hold = 0;
-    this._chime(k === 3);
+    this.since = this.time;
+    this._chime(k === 5);
     this.app.log(`joined: ${DC_LINKS[k].title}`);
     const fx = this.fx;
-    fx.pips[k].material.color.setHex(16766586);
-    fx.pips[k].material.emissiveIntensity = 1;
+    this.pips[k].material.color.setHex(16766586);
     if (k === 0) {
-      fx.rightSky.userData.set(15315578, 5917278);
+      fx.rightSky.userData.set([[-DC_HALF, 15315578], [DC_HALF, 5917278]]);
       for (const w of fx.windows) w.material.color.setHex(16767104);
       for (const s of fx.smoke) s.visible = true;
     }
-    if (k === 1) for (const w of fx.townWindows) w.material.color.setHex(16765056);
-    if (k === 3) {
+    if (k === 2) {
+      for (const w of fx.townWindows) w.material.color.setHex(16765056);
+      for (const l of fx.pondLamps) l.material.emissiveIntensity = 1.2;
+    }
+    if (k === 4) for (const c of fx.crystals) c.material.emissiveIntensity = 1;
+    if (k === 5) {
       fx.beam.visible = true;
       fx.lantern.material.emissiveIntensity = 2;
-      fx.lid.visible = false;
       fx.dream.visible = true;
-      fx.topSky.userData.set(1709370, 2758218);
     }
-    this.hint.visible = this.hintB.value && this.active < 4;
+    this.hint.visible = this.hintB.value && this.active < 6;
     this._setStatus();
   },
   // how far from lined up, seen from h (cube space): the larger of the angle between the two shapes and each
   // shape's angular distance from the plane through the eye and the edge (the edge has to split them)
   _misalign(L, h) {
     const a = L.PA.clone().sub(h), b = L.PB.clone().sub(h);
-    const n = L.X.clone().sub(h).cross(new THREE6.Vector3(0, 1, 0)).normalize();
+    const n = L.X.clone().sub(h).cross(L.e).normalize();
     const off = (d) => Math.asin(Math.min(1, Math.abs(n.dot(d)) / d.length()));
     return Math.max(a.angleTo(b), off(a), off(b));
   },
   update(dt, t) {
     this.time = t;
+    if (this.since === null) this.since = t;
     const cube = this.cube, fx = this.fx, T = THREE6;
     // turning by panel buttons / arrow keys
     if (this.spin && !this.it.selections.length) {
@@ -2942,14 +3060,14 @@ var DreamCage = {
       this.spin = null;
       const head = this.app.input.head, right = new T.Vector3().subVectors(cube.position, head).cross(new T.Vector3(0, 1, 0)).normalize();
       cube.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), yaw * dt * 1.4));
-      cube.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(right, -pitch * dt * 1.0));
+      cube.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(right, -pitch * dt * 1));
     }
     cube.updateMatrixWorld(true);
     DC_PORTAL.inv.value.copy(cube.matrixWorld).invert();
-    // alignment, measured from the head in the cube's own space
+    // alignment, measured from the head (between the eyes) in the cube's own space
     const h = this.app.input.head.clone().applyMatrix4(DC_PORTAL.inv.value);
     let glow = 0;
-    if (this.active < 4) {
+    if (this.active < 6) {
       const L = DC_LINKS[this.active];
       const outside = h.clone().sub(L.X).dot(L.v) > 0.05;
       const ang = outside ? this._misalign(L, h) : Math.PI;
@@ -2957,22 +3075,22 @@ var DreamCage = {
       if (ang < DC_ALIGN) {
         this.hold += dt;
         if (this.hold >= DC_HOLD) this._solve(this.active);
-      } else this.hold = Math.max(0, this.hold - dt * 2);
+      } else this.hold = Math.max(0, this.hold - dt);
+      if (t - this.since > DC_HINT_AFTER && !this.hintB.value) {
+        this.hintB.setValue(true);
+        this.hint.visible = true;
+      }
     }
     this.motifs.forEach((pair, i) => {
       const since = this.solvedAt[i] !== void 0 ? t - this.solvedAt[i] : -1;
       const g = i === this.active ? glow : 0;
       const flash = since >= 0 ? Math.max(0, 1 - since / 1.5) : 0;
-      for (const m of pair) {
-        const solvedLit = since >= 0 ? 0.6 : 0;
-        m.material.emissiveIntensity = Math.max(m.material.userData.base, solvedLit) + g * 0.9 + flash * 1.5;
-      }
+      for (const m of pair) m.material.emissiveIntensity = Math.max(m.material.userData.base, since >= 0 ? 0.6 : 0) + g * 0.9 + flash * 1.5;
       const seam = this.seams[i].material;
-      const breathe = i === this.active ? 0.18 + 0.12 * Math.sin(t * 3) : 0;
-      seam.opacity = Math.min(1, Math.max(breathe * (1 - g), flash, this.active >= 4 ? 0.35 + 0.25 * Math.sin(t * 2 + i) : 0));
+      const breathe = i === this.active ? 0.3 + 0.2 * Math.sin(t * 3) : 0;
+      seam.opacity = Math.min(1, Math.max(breathe * (1 - g), flash, this.active >= 6 ? 0.35 + 0.25 * Math.sin(t * 2 + i) : 0));
     });
-    // hint: points from the active edge out along the line of sight
-    if (this.hint.visible && this.active < 4) {
+    if (this.hint.visible && this.active < 6) {
       const L = DC_LINKS[this.active];
       this.hint.position.copy(L.X);
       this.hint.quaternion.setFromUnitVectors(new T.Vector3(0, 0, 1), L.v);
@@ -2985,9 +3103,13 @@ var DreamCage = {
     }
     p.needsUpdate = true;
     fx.sea.geometry.computeVertexNormals();
+    for (const fish of fx.fish) {
+      const u = fish.userData, a = u.p + t * u.s;
+      fish.position.set(Math.cos(a) * u.r, u.y + Math.sin(a * 2) * 3e-3, -0.02 + Math.sin(a) * u.r * 0.6);
+      fish.rotation.y = -a - Math.PI / 2;
+    }
     const solved = (i) => this.solvedAt[i] !== void 0;
     const age = (i) => solved(i) ? t - this.solvedAt[i] : 0;
-    // 1: chimney smoke
     if (solved(0)) for (const s of fx.smoke) {
       const u = (s.userData.t + t * 0.12) % 1;
       s.position.copy(s.userData.c).add(new T.Vector3(Math.sin(u * 6 + s.userData.t * 9) * 4e-3 + u * 0.012, u * 0.07, 0));
@@ -2995,33 +3117,38 @@ var DreamCage = {
       s.scale.setScalar(0.6 + u * 1.4);
       s.material.opacity = 0.7 * (1 - u);
     }
-    // 2: the gear and the clock hands turn
-    if (solved(1)) {
-      this.motifs[1][0].rotateZ(dt * 1.2);
-      for (const hnd of fx.hands) hnd.rotateZ(-dt * (hnd.userData.k ? 0.15 : 1.8));
+    // koi drift until the gear turns, then they swim their circles
+    const swim = solved(1) ? 1 : 0.08;
+    fx.koiT = (fx.koiT || 0) + dt * swim;
+    for (const koi of fx.koi) {
+      const u = koi.userData, a = u.p + fx.koiT * u.s;
+      koi.position.set(Math.cos(a) * u.r, koi.position.y, Math.sin(a) * u.r);
+      koi.rotation.y = -a;
     }
-    // 3: the balloon floats free, up to the cube's ceiling
-    const L3 = DC_LINKS[2], bal = this.motifs[2][1];
-    if (solved(2)) {
-      const u = Math.min(1, age(2) / 5), e = u * u * (3 - 2 * u);
-      bal.position.set(L3.PB.x + 0.05 * e + Math.sin(t * 0.8) * 3e-3 * e, L3.PB.y + (DC_HALF - 0.03 - L3.PB.y) * e, L3.PB.z + 0.04 * e);
-    }
-    const top = bal.position.clone().setY(bal.position.y - L3.rB), peg = fx.peg;
-    const stringLen = top.distanceTo(peg);
-    const slack = solved(2) ? Math.min(1, age(2) / 0.6) : 0;
-    fx.string.visible = slack < 1;
-    fx.string.position.copy(top).add(peg).multiplyScalar(0.5);
-    fx.string.scale.set(1, stringLen, 1);
-    fx.string.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), top.clone().sub(peg).normalize());
-    // 4: flowers open, the wheel rolls, the beam sweeps, the boat sails, the dream orb breathes
+    if (solved(1)) this.motifs[1][0].rotateZ(dt * 1.2);
+    if (solved(2)) for (const hnd of fx.hands) hnd.rotateZ(-dt * (hnd.userData.k ? 0.15 : 1.8));
+    const L4 = DC_LINKS[3], bal = this.motifs[3][1];
     if (solved(3)) {
-      fx.flowers.forEach((fl, i) => fl.scale.setScalar(T.MathUtils.clamp((age(3) - i * 0.08) * 2, 0.01, 1)));
-      this.motifs[3][0].rotateZ(-dt * 0.8);
+      const u = Math.min(1, age(3) / 5), e = u * u * (3 - 2 * u);
+      bal.position.set(L4.PB.x + 0.05 * e + Math.sin(t * 0.8) * 3e-3 * e, L4.PB.y + (DC_HALF - 0.03 - L4.PB.y) * e, L4.PB.z + 0.04 * e);
+    }
+    const top = bal.position.clone().setY(bal.position.y - L4.rB), peg = fx.peg;
+    fx.string.visible = !solved(3) || age(3) < 0.6;
+    fx.string.position.copy(top).add(peg).multiplyScalar(0.5);
+    fx.string.scale.set(1, top.distanceTo(peg), 1);
+    fx.string.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), top.clone().sub(peg).normalize());
+    if (solved(4)) {
+      fx.flowers.forEach((fl, i) => fl.scale.setScalar(T.MathUtils.clamp((age(4) - i * 0.08) * 2, 0.01, 1)));
+      this.motifs[4][0].rotateZ(-dt * 0.8);
+      fx.crystals.forEach((c, i) => c.material.emissiveIntensity = 0.8 + 0.4 * Math.sin(t * 2 + i));
+    }
+    fx.spores.rotation.y = t * 0.03;
+    if (solved(5)) {
       fx.beam.rotation.y = t * 0.9;
-      const a = age(3) * 0.25;
-      fx.boat.position.set(0.035 + Math.cos(a) * 0.04, -0.062, 0.02 + Math.sin(a) * 0.05);
+      const a = age(5) * 0.25;
+      fx.boat.position.set(-0.01 + Math.cos(a) * 0.045, -0.062, 0.02 + Math.sin(a) * 0.05);
       fx.boat.rotation.y = -a;
-      fx.dreamOrb.scale.setScalar(1 + 0.08 * Math.sin(t * 2));
+      fx.dreamOrb.position.y = 0.02 + 0.006 * Math.sin(t * 1.5);
       fx.dreamOrb.rotation.y = t * 0.4;
     }
   },

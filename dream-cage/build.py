@@ -26,6 +26,48 @@ s = s[:a] + (P / 'src' / 'dreamcage.js').read_text().rstrip() + '\n\n' + s[b:]
 swap('this.worlds.register(Playground);', 'this.worlds.register(DreamCage);')
 swap('await app.worlds.load("playground");', 'await app.worlds.load("dream-cage");')
 
+# two-hand transform, opt-in per object (candidates for the framework itself):
+#  opts.twist          the framework's two-hand rotation is only the swing of the line between the hands, so
+#                      rolling the object about that line did nothing; add the hands' average roll about it
+#  opts.scaleDeadzone  scale only once the hands move apart / together by more than this fraction, so the size
+#                      does not wobble while rotating
+#  opts.minScale/max   per-object scale limits inside the transform (a clamp in constrain() moved the object)
+swap('      let ratio = len / st.len0;\n',
+     '      let ratio = len / st.len0;\n'
+     '      const dz = it.opts.scaleDeadzone || 0;\n'
+     '      ratio = ratio > 1 + dz ? ratio / (1 + dz) : ratio < 1 - dz ? ratio / (1 - dz) : 1;\n')
+swap('ratio = THREE2.MathUtils.clamp(s0 * ratio, ICFG.minScale, ICFG.maxScale) / s0;',
+     'ratio = THREE2.MathUtils.clamp(s0 * ratio, it.opts.minScale ?? ICFG.minScale, it.opts.maxScale ?? ICFG.maxScale) / s0;')
+swap('      const q = _q1.setFromUnitVectors(st.dir0, dir);\n',
+     '      const q = _q1.setFromUnitVectors(st.dir0, dir);\n'
+     '      if (it.opts.twist) q.premultiply(this._twist(st, dir));\n')
+swap('    o.matrixWorld.decompose(st.pos0, st.quat0, st.scale0);\n    this.twoHand.set(it, st);',
+     '    o.matrixWorld.decompose(st.pos0, st.quat0, st.scale0);\n'
+     '    st.qa0 = this._selectorQuat(a.interactor).invert();\n'
+     '    st.qb0 = this._selectorQuat(b.interactor).invert();\n'
+     '    this.twoHand.set(it, st);')
+swap('  _endTwoHand(it) {',
+     '''  // orientation of a selector: the ray's for far, the pinch / grip's for near
+  _selectorQuat(i) {
+    const s = i.source;
+    if (i.type === "far") return (i.selecting ? i.selecting.vq : s.ray.quat).clone();
+    return s.nearQuat.clone();
+  }
+  // the two selectors' average roll about the axis between them since the two-hand grab began
+  _twist(st, axis) {
+    let sum = 0;
+    for (const [sel, inv0] of [[st.a, st.qa0], [st.b, st.qb0]]) {
+      const d = this._selectorQuat(sel.interactor).multiply(inv0);
+      const s = d.x * axis.x + d.y * axis.y + d.z * axis.z;
+      let ang = 2 * Math.atan2(s, d.w);
+      if (ang > Math.PI) ang -= 2 * Math.PI;
+      if (ang < -Math.PI) ang += 2 * Math.PI;
+      sum += ang;
+    }
+    return new THREE2.Quaternion().setFromAxisAngle(axis, sum / 2);
+  }
+  _endTwoHand(it) {''')
+
 # page chrome (the one Enter button is the framework's, unchanged)
 swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '<!-- Dream Cage - a diorama-sized portal cube in the spirit of Moncage: every face is a window into its own\n'
@@ -34,8 +76,9 @@ swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Dream Cage</h1>')
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
-     '<p class="sub">A portal cube the size of a diorama &middot; every face opens onto its own world &middot; '
-     'turn it until two worlds line up across an edge</p>\n'
+     '<p class="sub">A portal cube the size of a diorama: each of its six faces opens onto its own little world. '
+     '<strong>Goal:</strong> turn the cube until half a shape on one face meets its other half on the next face, '
+     'across the glowing edge, and makes one whole shape. Each whole shape joins two worlds.</p>\n'
      '    <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> '
      '&middot; built on the VibeXR interaction framework</p>')
 swap('  #ver {', '  .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }\n'
@@ -61,8 +104,8 @@ assert not dupes, f'duplicate import bindings: {dupes}'
 assert 'enter-vr' not in s and 'VR only' not in s, 'VibeXR pages have exactly one Enter button'
 
 (P / 'codepen.html').write_text(s)
-desc = ('Dream Cage by Rongxuan Mu: a diorama-sized portal cube in WebXR. Every face opens onto its own small world; '
-        'turn it in your hands until two worlds line up across an edge.')
+desc = ('Dream Cage by Rongxuan Mu: a diorama-sized portal cube in WebXR. Each of its six faces opens onto its own small world; '
+        'turn it in your hands until two half-shapes meet across an edge and join two worlds.')
 page = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
