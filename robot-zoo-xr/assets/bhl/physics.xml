@@ -1,0 +1,151 @@
+<mujoco model="berkeley-humanoid-lite-biped-scene">
+  <compiler angle="radian" meshdir="m/"/>
+
+  <statistic extent="0.8" center="0 0 0.1"/>
+
+  <visual>
+    <global azimuth="120" elevation="-20"/>
+    <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+  </visual>
+
+  <default>
+    <default class="berkeley-humanoid-lite">
+      <joint armature="0.005" frictionloss="0.1"/>
+      <general biastype="affine" gainprm="50" biasprm="0 -50 1"/>
+      <default class="visual">
+        <geom type="mesh" contype="0" conaffinity="0" group="2"/>
+      </default>
+      <default class="collision">
+        <geom group="3"/>
+      </default>
+    </default>
+  </default>
+
+  <worldbody>
+    <geom name="floor" size="0 0 0.05" type="plane"/>
+    <light pos="0 0 1.5" type="directional"/>
+    <body name="base" childclass="berkeley-humanoid-lite">
+      <inertial pos="-0.00461671 0.000372279 0.637874" quat="0.999831 -0.000711578 0.0183507 -0.000181861" mass="3.16059" diaginertia="0.0372718 0.0282653 0.0176203"/>
+      <joint name="base_freejoint" type="free" armature="0" frictionloss="0"/>
+      <geom class="collision" size="0.075 0.07 0.115" pos="0 0 0.71" quat="0.707107 0 0 -0.707107" type="box"/>
+      <body name="imu_2" pos="0.061722 0 0.68" quat="1 0 0 0">
+        <inertial pos="0 0 0.0025" quat="0.5 0.5 -0.5 0.5" mass="0.00197704" diaginertia="1.43815e-07 1.11441e-07 4.06118e-08"/>
+        <site name="imu" pos="0 0 0.005" group="3"/>
+      </body>
+      <body name="leg_left_hip_roll" pos="-0.0290919 0.08 0.542631" quat="0.92388 0 0.382683 0">
+        <inertial pos="-0.00410941 -0.000112596 -0.0464623" quat="0.998579 -0.0134956 0.0323242 0.0401687" mass="0.83786" diaginertia="0.00098151 0.00089565 0.000726479"/>
+        <joint name="leg_left_hip_roll_joint" range="-0.174533 1.5708"/>
+        <body name="leg_left_hip_yaw" pos="0.027 0 -0.052" quat="0.5 -0.5 0.5 -0.5">
+          <inertial pos="-0.00411632 -8.63203e-05 0.0463382" quat="0.999084 -0.0161651 -0.0382793 -0.010234" mass="0.837683" diaginertia="0.000980566 0.000898328 0.00072259"/>
+          <joint name="leg_left_hip_yaw_joint" range="-0.981748 0.589049"/>
+          <body name="leg_left_hip_pitch" pos="0.027 0 0.052" quat="0.653281 0.270598 -0.653281 -0.270598">
+            <inertial pos="0.0030405 0.120388 0.0210924" quat="0.761917 0.646837 0.0270387 0.0188057" mass="0.947974" diaginertia="0.00287266 0.00264321 0.000972851"/>
+            <joint name="leg_left_hip_pitch_joint" range="-1.89805 0.981748"/>
+            <geom class="collision" size="0.05 0.065" pos="0.00597627 0.039 0.0295" quat="0.5 0.5 0.5 -0.5" type="cylinder"/>
+            <body name="leg_left_knee_pitch" pos="0 0.15 -0.018" quat="0 0 0 -1">
+              <inertial pos="-4.14041e-05 -0.112249 0.0257397" quat="0.716105 0.697988 -0.00189175 0.00175183" mass="0.653864" diaginertia="0.00230127 0.00203823 0.000558782"/>
+              <joint name="leg_left_knee_pitch_joint" range="0 2.44346"/>
+              <geom class="collision" size="0.04 0.075" pos="0 -0.115 0.022" quat="0.5 -0.5 0.5 0.5" type="cylinder"/>
+              <body name="leg_left_ankle_pitch" pos="0 -0.16 -0.003" quat="0 0 0 -1">
+                <inertial pos="0.0131065 0.0273743 0.0274153" quat="0.97446 -0.0895638 0.0341084 -0.203084" mass="0.106196" diaginertia="0.000199494 0.000133736 7.96933e-05"/>
+                <joint name="leg_left_ankle_pitch_joint" range="-0.785398 0.785398"/>
+                <body name="leg_left_ankle_roll" pos="0.03 0.05 0.025" quat="0.707107 0 0.707107 0">
+                  <inertial pos="2.29341e-05 0.0226611 0.0197836" quat="0.99849 0.0548312 0.000143945 0.00326776" mass="0.706476" diaginertia="0.00198705 0.00191918 0.000603903"/>
+                  <joint name="leg_left_ankle_roll_joint" range="-0.261799 0.261799"/>
+                  <geom class="collision" size="0.036 0.11 0.02" pos="0 0.03 0.006" quat="0.707107 0.707107 0 0" type="box"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="leg_right_hip_roll" pos="-0.0290919 -0.08 0.542631" quat="0 0.382683 0 0.92388">
+        <inertial pos="0.00410941 -0.00018505 -0.0464478" quat="0.99915 -0.0125114 -0.0311449 -0.0239221" mass="0.83786" diaginertia="0.000980934 0.000896266 0.000726135"/>
+        <joint name="leg_right_hip_roll_joint" range="-1.5708 0.174533"/>
+        <body name="leg_right_hip_yaw" pos="-0.027 0 -0.052" quat="0.5 -0.5 -0.5 0.5">
+          <inertial pos="0.00411632 -1.3851e-05 0.0463238" quat="0.999168 -0.0154252 0.0370844 -0.00703097" mass="0.837683" diaginertia="0.00098034 0.000898597 0.000722286"/>
+          <joint name="leg_right_hip_yaw_joint" range="-0.589049 0.981748"/>
+          <body name="leg_right_hip_pitch" pos="-0.027 0 0.052" quat="0.653281 0.270598 -0.653281 -0.270598">
+            <inertial pos="0.00319928 0.120388 -0.0210924" quat="0.646378 0.762188 0.00805307 0.0346537" mass="0.947974" diaginertia="0.00287232 0.00264204 0.000972473"/>
+            <joint name="leg_right_hip_pitch_joint" range="-1.89805 0.981748"/>
+            <geom class="collision" size="0.05 0.065" pos="0.00597627 0.039 -0.0295" quat="0.5 0.5 0.5 -0.5" type="cylinder"/>
+            <body name="leg_right_knee_pitch" pos="0 0.15 0.018">
+              <inertial pos="-5.09429e-05 0.112249 -0.0257397" quat="0.716106 0.697988 0.00180037 -0.00128014" mass="0.653864" diaginertia="0.00230127 0.00203824 0.00055878"/>
+              <joint name="leg_right_knee_pitch_joint" range="0 2.44346"/>
+              <geom class="collision" size="0.04 0.075" pos="0 0.115 -0.022" quat="0.5 0.5 0.5 -0.5" type="cylinder"/>
+              <body name="leg_right_ankle_pitch" pos="0 0.16 0.003" quat="1 0 0 0">
+                <inertial pos="0.0131065 0.0273743 -0.0274153" quat="0.97446 0.0895638 -0.0341084 -0.203084" mass="0.106196" diaginertia="0.000199494 0.000133736 7.96934e-05"/>
+                <joint name="leg_right_ankle_pitch_joint" range="-0.785398 0.785398"/>
+                <body name="leg_right_ankle_roll" pos="0.03 0.05 -0.025" quat="0.707107 0 0.707107 0">
+                  <inertial pos="2.29341e-05 0.0226611 0.0197836" quat="0.99849 0.0548312 0.000143945 0.00326776" mass="0.706476" diaginertia="0.00198705 0.00191918 0.000603903"/>
+                  <joint name="leg_right_ankle_roll_joint" range="-0.261799 0.261799"/>
+                  <geom class="collision" size="0.036 0.11 0.02" pos="0 0.03 0.006" quat="0.707107 0.707107 0 0" type="box"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <general name="leg_left_hip_roll_joint" class="berkeley-humanoid-lite" joint="leg_left_hip_roll_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_left_hip_yaw_joint" class="berkeley-humanoid-lite" joint="leg_left_hip_yaw_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_left_hip_pitch_joint" class="berkeley-humanoid-lite" joint="leg_left_hip_pitch_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_left_knee_pitch_joint" class="berkeley-humanoid-lite" joint="leg_left_knee_pitch_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_left_ankle_pitch_joint" class="berkeley-humanoid-lite" joint="leg_left_ankle_pitch_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_left_ankle_roll_joint" class="berkeley-humanoid-lite" joint="leg_left_ankle_roll_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_right_hip_roll_joint" class="berkeley-humanoid-lite" joint="leg_right_hip_roll_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_right_hip_yaw_joint" class="berkeley-humanoid-lite" joint="leg_right_hip_yaw_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_right_hip_pitch_joint" class="berkeley-humanoid-lite" joint="leg_right_hip_pitch_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_right_knee_pitch_joint" class="berkeley-humanoid-lite" joint="leg_right_knee_pitch_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_right_ankle_pitch_joint" class="berkeley-humanoid-lite" joint="leg_right_ankle_pitch_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+    <general name="leg_right_ankle_roll_joint" class="berkeley-humanoid-lite" joint="leg_right_ankle_roll_joint" forcerange="-20 20" biastype="none" gainprm="1"/>
+  </actuator>
+
+  <sensor>
+    <jointpos joint="leg_left_hip_roll_joint" name="leg_left_hip_roll_pos"/>
+    <jointpos joint="leg_left_hip_yaw_joint" name="leg_left_hip_yaw_pos"/>
+    <jointpos joint="leg_left_hip_pitch_joint" name="leg_left_hip_pitch_pos"/>
+    <jointpos joint="leg_left_knee_pitch_joint" name="leg_left_knee_pitch_pos"/>
+    <jointpos joint="leg_left_ankle_pitch_joint" name="leg_left_ankle_pitch_pos"/>
+    <jointpos joint="leg_left_ankle_roll_joint" name="leg_left_ankle_roll_pos"/>
+    <jointpos joint="leg_right_hip_roll_joint" name="leg_right_hip_roll_pos"/>
+    <jointpos joint="leg_right_hip_yaw_joint" name="leg_right_hip_yaw_pos"/>
+    <jointpos joint="leg_right_hip_pitch_joint" name="leg_right_hip_pitch_pos"/>
+    <jointpos joint="leg_right_knee_pitch_joint" name="leg_right_knee_pitch_pos"/>
+    <jointpos joint="leg_right_ankle_pitch_joint" name="leg_right_ankle_pitch_pos"/>
+    <jointpos joint="leg_right_ankle_roll_joint" name="leg_right_ankle_roll_pos"/>
+    <jointvel joint="leg_left_hip_roll_joint" name="leg_left_hip_roll_vel"/>
+    <jointvel joint="leg_left_hip_yaw_joint" name="leg_left_hip_yaw_vel"/>
+    <jointvel joint="leg_left_hip_pitch_joint" name="leg_left_hip_pitch_vel"/>
+    <jointvel joint="leg_left_knee_pitch_joint" name="leg_left_knee_pitch_vel"/>
+    <jointvel joint="leg_left_ankle_pitch_joint" name="leg_left_ankle_pitch_vel"/>
+    <jointvel joint="leg_left_ankle_roll_joint" name="leg_left_ankle_roll_vel"/>
+    <jointvel joint="leg_right_hip_roll_joint" name="leg_right_hip_roll_vel"/>
+    <jointvel joint="leg_right_hip_yaw_joint" name="leg_right_hip_yaw_vel"/>
+    <jointvel joint="leg_right_hip_pitch_joint" name="leg_right_hip_pitch_vel"/>
+    <jointvel joint="leg_right_knee_pitch_joint" name="leg_right_knee_pitch_vel"/>
+    <jointvel joint="leg_right_ankle_pitch_joint" name="leg_right_ankle_pitch_vel"/>
+    <jointvel joint="leg_right_ankle_roll_joint" name="leg_right_ankle_roll_vel"/>
+    <jointactuatorfrc joint="leg_left_hip_roll_joint" name="leg_left_hip_roll_torque"/>
+    <jointactuatorfrc joint="leg_left_hip_yaw_joint" name="leg_left_hip_yaw_torque"/>
+    <jointactuatorfrc joint="leg_left_hip_pitch_joint" name="leg_left_hip_pitch_torque"/>
+    <jointactuatorfrc joint="leg_left_knee_pitch_joint" name="leg_left_knee_pitch_torque"/>
+    <jointactuatorfrc joint="leg_left_ankle_pitch_joint" name="leg_left_ankle_pitch_torque"/>
+    <jointactuatorfrc joint="leg_left_ankle_roll_joint" name="leg_left_ankle_roll_torque"/>
+    <jointactuatorfrc joint="leg_right_hip_roll_joint" name="leg_right_hip_roll_torque"/>
+    <jointactuatorfrc joint="leg_right_hip_yaw_joint" name="leg_right_hip_yaw_torque"/>
+    <jointactuatorfrc joint="leg_right_hip_pitch_joint" name="leg_right_hip_pitch_torque"/>
+    <jointactuatorfrc joint="leg_right_knee_pitch_joint" name="leg_right_knee_pitch_torque"/>
+    <jointactuatorfrc joint="leg_right_ankle_pitch_joint" name="leg_right_ankle_pitch_torque"/>
+    <jointactuatorfrc joint="leg_right_ankle_roll_joint" name="leg_right_ankle_roll_torque"/>
+    <framequat objtype="site" objname="imu" name="imu_quat"/>
+    <gyro site="imu" name="imu_gyro"/>
+    <accelerometer site="imu" name="imu_acc"/>
+    <framepos objtype="site" objname="imu" name="frame_pos"/>
+    <framelinvel objtype="site" objname="imu" name="frame_vel"/>
+  </sensor>
+</mujoco>

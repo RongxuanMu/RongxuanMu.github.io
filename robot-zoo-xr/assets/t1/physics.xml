@@ -1,0 +1,91 @@
+<mujoco model="T1">
+  <compiler angle="radian" meshdir="m"/>
+
+  <size njmax="500" nconmax="100"/>
+
+  <worldbody>
+    <geom name="floor" size="0 0 0.05" type="plane" condim="1"/>
+    <light castshadow="false" pos="0 0 5" diffuse="0.4 0.4 0.4" specular="0.1 0.1 0.1" type="directional"/>
+    <light pos="0 0 4" diffuse="0.6 0.6 0.6" specular="0.2 0.2 0.2" type="directional"/>
+    <body name="Trunk" pos="0 0 0.7">
+      <inertial pos="0.054281 8.47449e-06 0.0893932" quat="0.999999 -0.000254757 -0.00132228 -0.000215148" mass="19.4304" diaginertia="0.502019 0.3531 0.207324"/>
+      <joint type="free"/>
+      <geom size="0.075 0.1 0.15" pos="0.06 0 0.12" type="box" rgba="0.76 0.76 0.76 0"/>
+      <site name="imu" size="0.01"/>
+      <body name="Hip_Pitch_Left" pos="0.0625 0.106 -0.1155">
+        <inertial pos="0.000534 -0.007296 -0.018083" quat="0.975141 0.2211 0.0145808 0.0017406" mass="1.021" diaginertia="0.00180547 0.00145926 0.00125327"/>
+        <joint name="Left_Hip_Pitch" range="-1.8 1.57" axis="0 1 0" limited="true"/>
+        <body name="Hip_Roll_Left" pos="0 0 -0.02">
+          <inertial pos="0.001101 2.4e-05 -0.05375" quat="0.707081 -0.00599604 -0.00599604 0.707081" mass="0.385" diaginertia="0.001743 0.00151729 0.000514712"/>
+          <joint name="Left_Hip_Roll" range="-0.3 1.57" axis="1 0 0" limited="true"/>
+          <body name="Hip_Yaw_Left" pos="0 0 -0.081854">
+            <inertial pos="-0.007233 0.000206 -0.089184" quat="0.696808 -0.033953 -0.0315708 0.715758" mass="2.166" diaginertia="0.0257334 0.0253024 0.00259215"/>
+            <joint name="Left_Hip_Yaw" range="-1 1" limited="true"/>
+            <geom size="0.05 0.08" type="cylinder" rgba="0.4 0.4 0.4 0"/>
+            <body name="Shank_Left" pos="-0.014 0 -0.134">
+              <inertial pos="-0.006012 0.000259 -0.124318" quat="0.997573 0.00144024 -0.023949 0.0653706" mass="1.73" diaginertia="0.0346951 0.0345375 0.00185844"/>
+              <joint name="Left_Knee_Pitch" range="0 2.34" axis="0 1 0" limited="true"/>
+              <geom size="0.05 0.075" pos="0 0 -0.12" type="cylinder" rgba="0.4 0.4 0.4 0"/>
+              <body name="Ankle_Cross_Left" pos="0 0 -0.28">
+                <inertial pos="-0.003722 0 -0.007981" quat="0.443136 0.551027 0.551027 0.443136" mass="0.073" diaginertia="2.9e-05 2.56589e-05 1.13411e-05"/>
+                <joint name="Left_Ankle_Pitch" range="-0.87 0.35" axis="0 1 0" limited="true"/>
+                <body name="left_foot_link" pos="0 0.00025 -0.012">
+                  <inertial pos="-0.000249 0 -0.00914" quat="0 0.651138 0 0.75896" mass="0.685" diaginertia="0.00269361 0.002385 0.00171539"/>
+                  <joint name="Left_Ankle_Roll" range="-0.44 0.44" axis="1 0 0" limited="true"/>
+                  <geom size="0.1115 0.05 0.015" pos="0.01 0 -0.015" type="box" rgba="0.4 0.4 0.4 0"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="Hip_Pitch_Right" pos="0.0625 -0.106 -0.1155">
+        <inertial pos="0.000534 0.007514 -0.018082" quat="0.973446 -0.228403 0.0147148 -0.00419349" mass="1.021" diaginertia="0.00180552 0.0014632 0.00124928"/>
+        <joint name="Right_Hip_Pitch" range="-1.8 1.57" axis="0 1 0" limited="true"/>
+        <body name="Hip_Roll_Right" pos="0 0 -0.02">
+          <inertial pos="0.001099 2.4e-05 -0.053748" quat="0.707081 -0.00599604 -0.00599604 0.707081" mass="0.385" diaginertia="0.001743 0.00151729 0.000514712"/>
+          <joint name="Right_Hip_Roll" range="-1.57 0.3" axis="1 0 0" limited="true"/>
+          <body name="Hip_Yaw_Right" pos="0 0 -0.081854">
+            <inertial pos="-0.007191 -0.000149 -0.08922" quat="0.714468 -0.0315638 -0.0336391 0.698146" mass="2.17" diaginertia="0.0257623 0.0253298 0.00259389"/>
+            <joint name="Right_Hip_Yaw" range="-1 1" limited="true"/>
+            <geom size="0.05 0.08" type="cylinder" rgba="0.4 0.4 0.4 0"/>
+            <body name="Shank_Right" pos="-0.014 0 -0.134">
+              <inertial pos="-0.005741 -0.000541 -0.122602" quat="0.99926 -0.000580963 -0.023461 -0.0304754" mass="1.79" diaginertia="0.0351717 0.0349574 0.00196589"/>
+              <joint name="Right_Knee_Pitch" range="0 2.34" axis="0 1 0" limited="true"/>
+              <geom size="0.05 0.075" pos="0 0 -0.12" type="cylinder" rgba="0.4 0.4 0.4 0"/>
+              <body name="Ankle_Cross_Right" pos="0 0 -0.28">
+                <inertial pos="-0.003722 0 -0.007981" quat="0.443136 0.551027 0.551027 0.443136" mass="0.073" diaginertia="2.9e-05 2.56589e-05 1.13411e-05"/>
+                <joint name="Right_Ankle_Pitch" range="-0.87 0.35" axis="0 1 0" limited="true"/>
+                <body name="right_foot_link" pos="0 -0.00025 -0.012">
+                  <inertial pos="-0.000248 0 -0.00914" quat="0 0.651138 0 0.75896" mass="0.685" diaginertia="0.00269361 0.002385 0.00171539"/>
+                  <joint name="Right_Ankle_Roll" range="-0.44 0.44" axis="1 0 0" limited="true"/>
+                  <geom size="0.1115 0.05 0.015" pos="0.01 0 -0.015" type="box" rgba="0.4 0.4 0.4 0"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <general name="Left_Hip_Pitch" joint="Left_Hip_Pitch" ctrlrange="-45 45" ctrllimited="true"/>
+    <general name="Left_Hip_Roll" joint="Left_Hip_Roll" ctrlrange="-45 45" ctrllimited="true"/>
+    <general name="Left_Hip_Yaw" joint="Left_Hip_Yaw" ctrlrange="-30 30" ctrllimited="true"/>
+    <general name="Left_Knee_Pitch" joint="Left_Knee_Pitch" ctrlrange="-65 65" ctrllimited="true"/>
+    <general name="Left_Ankle_Pitch" joint="Left_Ankle_Pitch" ctrlrange="-24 24" ctrllimited="true"/>
+    <general name="Left_Ankle_Roll" joint="Left_Ankle_Roll" ctrlrange="-15 15" ctrllimited="true"/>
+    <general name="Right_Hip_Pitch" joint="Right_Hip_Pitch" ctrlrange="-45 45" ctrllimited="true"/>
+    <general name="Right_Hip_Roll" joint="Right_Hip_Roll" ctrlrange="-45 45" ctrllimited="true"/>
+    <general name="Right_Hip_Yaw" joint="Right_Hip_Yaw" ctrlrange="-30 30" ctrllimited="true"/>
+    <general name="Right_Knee_Pitch" joint="Right_Knee_Pitch" ctrlrange="-65 65" ctrllimited="true"/>
+    <general name="Right_Ankle_Pitch" joint="Right_Ankle_Pitch" ctrlrange="-24 24" ctrllimited="true"/>
+    <general name="Right_Ankle_Roll" joint="Right_Ankle_Roll" ctrlrange="-15 15" ctrllimited="true"/>
+  </actuator>
+
+  <sensor>
+    <framequat objtype="site" objname="imu" name="orientation" noise="0.001"/>
+    <gyro site="imu" name="angular-velocity" noise="0.005"/>
+  </sensor>
+</mujoco>

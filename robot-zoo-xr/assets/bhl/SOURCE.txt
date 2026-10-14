@@ -1,0 +1,1 @@
+HybridRobotics/Berkeley-Humanoid-Lite (MIT); robot model: Berkeley-Humanoid-Lite-Assets (CC BY-SA 4.0)
