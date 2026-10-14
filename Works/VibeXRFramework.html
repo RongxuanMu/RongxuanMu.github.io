@@ -81,6 +81,28 @@
             font-weight: 600;
         }
 
+        .vx-projects {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 16px;
+            margin-top: 1.5rem;
+        }
+
+        .vx-projects .vx-launch {
+            margin-top: 0;
+        }
+
+        .vx-projects .vx-launch-meta {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .vx-projects .vx-open {
+            margin-top: auto;
+            padding-top: 0.85rem;
+        }
+
         .vx-list {
             margin: 0.5rem 0 0;
             padding-left: 1.2rem;
@@ -161,6 +183,7 @@
         <ul>
             <li><a href="#overview">Overview</a></li>
             <li><a href="#play">Try it</a></li>
+            <li><a href="#built-on">Projects</a></li>
             <li><a href="#features">Features</a></li>
             <li><a href="#build">Build on it</a></li>
             <li><a href="#changelog">Changelog</a></li>
@@ -227,6 +250,54 @@
             </ul>
         </section>
 
+        <section id="built-on">
+            <h2>Built on VibeXR</h2>
+            <p>
+                Each of these is one world on the same framework, so the same hands, controllers, gaze and mouse work
+                in all of them. Open them in a headset browser and tap Enter.
+            </p>
+            <div class="vx-projects">
+                <a class="vx-launch" href="../dream-cage/" target="_blank" rel="noopener noreferrer" aria-label="Open Dream Cage">
+                    <img src="../Resources/dream-cage/DreamCage.jpg" alt="Dream Cage: a glass cube on a desk; its left face shows a night town, its right face a garden by day, and a moon and a red balloon meet across the edge between them." loading="lazy" style="width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: #000; display: block;">
+                    <div class="vx-launch-meta">
+                        <h3>Dream Cage</h3>
+                        <p>
+                            A diorama-sized portal cube in the spirit of Moncage. Every face opens onto its own small
+                            world. Turn the cube in your hands until a shape lines up with its partner across an edge,
+                            and the two worlds join.
+                        </p>
+                        <span class="vx-open">Open live demo ↗</span>
+                    </div>
+                </a>
+                <a class="vx-launch" href="../microduck-xr/" target="_blank" rel="noopener noreferrer" aria-label="Open Microduck XR">
+                    <video autoplay muted loop playsinline preload="metadata" poster="../Resources/microduck/MicroduckXR.jpg">
+                        <source src="../Resources/microduck/MicroduckXR.mp4" type="video/mp4">
+                    </video>
+                    <div class="vx-launch-meta">
+                        <h3>Microduck XR</h3>
+                        <p>
+                            Pollen Robotics' Microduck with its real walking policies running in MuJoCo in the browser.
+                            Pick it up, send it walking, make it kick.
+                        </p>
+                        <span class="vx-open">Open live demo ↗</span>
+                    </div>
+                </a>
+                <a class="vx-launch" href="../immersive-vibe/" target="_blank" rel="noopener noreferrer" aria-label="Open the Immersive Vibe gallery">
+                    <video autoplay muted loop playsinline preload="metadata" poster="../Resources/vibexr/StarryNight.jpg">
+                        <source src="../Resources/vibexr/StarryNight.mp4" type="video/mp4">
+                    </video>
+                    <div class="vx-launch-meta">
+                        <h3>Immersive Vibe Gallery</h3>
+                        <p>
+                            Walk into painted worlds: Starry Night, Impression Sunrise, a Qianli Jiangshan scroll and
+                            living ink.
+                        </p>
+                        <span class="vx-open">Open live demo ↗</span>
+                    </div>
+                </a>
+            </div>
+        </section>
+
         <section id="features">
             <h2>Features</h2>
             <ul class="vx-list">
@@ -271,6 +342,7 @@ app.worlds.register(Hello);</code></pre>
             <ul class="vx-list">
                 <li><a href="MicroduckXR.html"><strong>Microduck XR</strong></a>: a real robot RL policy you can pick up with your hands.</li>
                 <li><a href="VibeXRGallery.html"><strong>VibeXR Gallery</strong></a>: immersive WebXR canvases and spatial ink.</li>
+                <li><a href="../dream-cage/"><strong>Dream Cage</strong></a>: a diorama-sized portal cube; line up two worlds across an edge.</li>
             </ul>
         </section>
 

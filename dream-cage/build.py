@@ -70,6 +70,12 @@ page = f'''<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dream Cage</title>
 <meta name="description" content="{desc}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Dream Cage - Rongxuan Mu">
+<meta property="og:description" content="{desc}">
+<meta property="og:url" content="https://rongxuanmu.github.io/dream-cage/">
+<meta property="og:image" content="https://rongxuanmu.github.io/Resources/dream-cage/DreamCage.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../Resources/common/favicon-64.png" type="image/png">
 </head>
 <body>
