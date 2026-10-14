@@ -78,7 +78,8 @@ page = f'''<!DOCTYPE html>
 <meta property="og:title" content="Physics Cabinet - Rongxuan Mu">
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="https://rongxuanmu.github.io/physics-cabinet/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://rongxuanmu.github.io/Resources/physics-cabinet/PhysicsCabinet.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/jpeg">
 </head>
 <body>

@@ -78,7 +78,8 @@ page = f'''<!DOCTYPE html>
 <meta property="og:title" content="Archiscape - Rongxuan Mu">
 <meta property="og:description" content="{desc}">
 <meta property="og:url" content="https://rongxuanmu.github.io/archiscape/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://rongxuanmu.github.io/Resources/archiscape/Archiscape.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/jpeg">
 </head>
 <body>
