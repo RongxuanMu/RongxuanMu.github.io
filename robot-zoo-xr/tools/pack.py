@@ -58,9 +58,12 @@ for b in spec.bodies:
     for g in list(b.geoms):
         if g.contype == 0 and g.conaffinity == 0 and b.name != 'world':
             spec.delete(g)
-used = {g.meshname for b in spec.bodies for g in b.geoms if g.type == mujoco.mjtGeom.mjGEOM_MESH}
+used = {g.meshname for b in spec.bodies for g in b.geoms if g.meshname}  # type may only come from a default class
 meshdir = os.path.join(os.path.dirname(src), spec.meshdir or '')
 for me in list(spec.meshes):
+    # unnamed meshes take their name from the file, as MuJoCo does
+    if not me.name:
+        me.name = os.path.splitext(os.path.basename(me.file))[0]
     if me.name not in used:
         spec.delete(me)
         continue
@@ -74,6 +77,9 @@ spec.texturedir = ''
 # no skybox / textures / materials from the source scene; a plain floor
 for t in list(spec.textures):
     spec.delete(t)
+for b in spec.bodies:
+    for g in b.geoms:
+        g.material = ''
 for mt in list(spec.materials):
     spec.delete(mt)
 # keep the scene's own floor (its contact bits matter: X1's default class has contype 0), drop its material

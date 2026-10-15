@@ -68,6 +68,7 @@ function rzBuildVisual(A, R) {
     }
     return mats.get(k);
   };
+  const part = R.palette ? (m) => new THREE6.Color().setRGB(...RZ_DUCK_COLORS[RZ_DUCK_PART[vis.meshes[m]?.name] ?? "dark"]) : null;
   const root = new THREE6.Group(), bodies = /* @__PURE__ */ new Map();
   for (const g of vis.geoms) {
     const id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY.value, g.body);
@@ -82,7 +83,7 @@ function rzBuildVisual(A, R) {
       const [a, b] = g.size;
       geo = g.type === "sphere" ? new THREE6.SphereGeometry(a, 16, 12) : g.type === "box" ? new THREE6.BoxGeometry(2 * a, 2 * b, 2 * g.size[2]) : g.type === "capsule" ? new THREE6.CapsuleGeometry(a, 2 * b, 6, 12).rotateX(Math.PI / 2) : new THREE6.CylinderGeometry(a, a, 2 * b, 16).rotateX(Math.PI / 2);
     }
-    const m = new THREE6.Mesh(geo, mat(g.rgba[3] < 0.05 ? [0.6, 0.6, 0.6, 1] : g.rgba));
+    const m = new THREE6.Mesh(geo, part && g.mesh !== void 0 ? mat(part(g.mesh).toArray().map((c) => Math.pow(c, 1 / 2.2)).concat(1)) : mat(g.rgba[3] < 0.05 ? [0.6, 0.6, 0.6, 1] : g.rgba));
     m.position.fromArray(g.pos);
     m.quaternion.set(g.quat[1], g.quat[2], g.quat[3], g.quat[0]);
     m.castShadow = true;
@@ -237,7 +238,7 @@ var RobotZoo = {
     this._ku = (e) => delete this.keys[e.key.toLowerCase()];
     addEventListener("keydown", this._kd);
     addEventListener("keyup", this._ku);
-    this.life = this.life ?? false;
+    this.life = this.life ?? true;
     this.goal = { on: false };
     this.mode = null;
     this.center = new T.Vector2();
@@ -263,15 +264,19 @@ var RobotZoo = {
     g.fillText(this.statusText || "", 16, 108);
     this.infoTex.needsUpdate = true;
   },
-  // tabletop: robots stand RZ_TABLE_HEIGHT tall on the plate; life size: 1:1 on the real floor ahead of you
+  // default: life-size on the floor ahead of you, like Microduck XR; tabletop: a plate you can carry, robots up to
+  // RZ_TABLE_HEIGHT tall. Both heights come from the head (fixed offsets), not the headset's tracked floor, which
+  // some headsets get wrong.
   _place() {
-    const head = this.app.input.head, life = this.life;
+    const head = this.app.input.head, life = this.life, R = this.R ?? RZ_ROBOTS[0];
     if (life) {
       const fwd = new THREE6.Vector3(0, 0, -1);
       if (this.app.sessionMode) this.app.camera.getWorldDirection(fwd);
       fwd.y = 0;
+      if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
       fwd.normalize();
-      this.stage.position.set(head.x + fwd.x * 2.2, 0, head.z + fwd.z * 2.2);
+      const dist = 0.9 + 0.8 * R.height, floorY = this.app.sessionMode ? head.y - RZ_FLOOR_BELOW_HEAD : 0;
+      this.stage.position.set(head.x + fwd.x * dist, floorY, head.z + fwd.z * dist);
       this.stage.rotation.set(0, Math.atan2(-fwd.x, -fwd.z), 0);
     } else {
       this.stage.position.set(0, this.table, -0.55);
@@ -280,9 +285,17 @@ var RobotZoo = {
     this.plate.visible = !life;
     this.tableLabel && (this.tableLabel.visible = !life);
     this._scale();
+    // desktop preview: frame the robot
+    if (!this.app.sessionMode) {
+      const k = R.height * this.s, a = this.app, tg = this.stage.position.clone().add(new THREE6.Vector3(0, 0.55 * k, 0));
+      a.controls.target.copy(tg);
+      a.camera.position.copy(tg).add(new THREE6.Vector3(0.25 * k + 0.15, 0.2 * k + 0.12, 1.25 * k + 0.35));
+      a.controls.update();
+    }
   },
   _scale() {
-    const R = this.R ?? RZ_ROBOTS[0], s = this.life ? 1 : RZ_TABLE_HEIGHT / R.height;
+    // on the table big robots shrink to RZ_TABLE_HEIGHT; a small one (Microduck) keeps its real size
+    const R = this.R ?? RZ_ROBOTS[0], s = this.life ? 1 : Math.min(1, RZ_TABLE_HEIGHT / R.height);
     this.s = s;
     this.sim.scale.setScalar(s);
     const gr = this.life ? 3 : 0.3;
@@ -303,7 +316,7 @@ var RobotZoo = {
       b.setValue(k === i);
     });
     this.R = R;
-    this._scale();
+    this._place();
     this._status("Loading MuJoCo and ONNX Runtime…");
     this._buildActions(R);
     try {
@@ -355,10 +368,10 @@ var RobotZoo = {
         this.modeBtns.forEach((b) => b.setValue(false));
       })];
     }
-    const lifeB = btn("Life size", (v) => {
-      this.life = v;
+    const lifeB = btn("Tabletop", (v) => {
+      this.life = !v;
       this._place();
-    }, { toggle: true, value: this.life });
+    }, { toggle: true, value: !this.life });
     list.push(btn("Push", () => this._shove()), lifeB, btn("Reset", () => this.reset()));
     // below the robot list (two rows of four)
     const top = 0.03 + 2 * 0.032 + 0.012;

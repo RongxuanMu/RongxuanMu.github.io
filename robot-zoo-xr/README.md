@@ -3,11 +3,14 @@
 Live: https://rongxuanmu.github.io/robot-zoo-xr/ · Built on the [VibeXR framework](../vibexr/README.md)
 
 Open-source humanoid robots running the policies their makers (and the community) published, simulated in
-MuJoCo WASM with ONNX Runtime Web. You can watch them on the table or life-size on your floor. Point and pinch the floor to send a
+MuJoCo WASM with ONNX Runtime Web. Like Microduck XR, a robot starts life-size on the floor in front of you; Tabletop puts it on a
+plate you can carry. Floor and table heights are measured from your head (1.6 m and 0.5 m below it), not from the headset's
+tracked floor. Point and pinch the floor to send a
 robot walking, grab it to push or lift it, drive with a thumbstick or WASD.
 
 | Robot | Policy | Source (licence) |
 | --- | --- | --- |
+| Pollen Microduck | walking, 50 Hz (as in Microduck XR) | pollen-robotics/microduck + microduck_rl (Apache-2.0) |
 | Unitree G1 · dance | whole-body motion tracking, 50 Hz, 13 clips | Axellwppr/humanoid-policy-viewer (Apache-2.0); G1 model Unitree (BSD-3-Clause) |
 | Unitree G1 · walk | LSTM walking, 50 Hz | unitreerobotics/unitree_rl_gym (BSD-3-Clause) |
 | Unitree H1, H1-2 | LSTM walking, 50 Hz | unitreerobotics/unitree_rl_gym (BSD-3-Clause) |

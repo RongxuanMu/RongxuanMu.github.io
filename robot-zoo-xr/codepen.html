@@ -2387,6 +2387,7 @@ var WorldManager = class {
 // simulated live in MuJoCo WASM with ONNX Runtime Web, on your table or life-size in your room.
 //
 // Every robot runs its published policy with the observation, gains and timing of its own deploy code:
+//   Pollen Microduck   microduck_rl walking, 50 Hz (as in Microduck XR, with its training observation noise)
 //   Unitree G1 dance   whole-body motion tracking (Axellwppr/humanoid-policy-viewer), 50 Hz, 623 inputs
 //   Unitree G1 / H1 / H1-2   unitree_rl_gym walking, LSTM, 50 Hz (deploy_mujoco.py)
 //   Booster T1         booster_gym walking, 50 Hz (play_mujoco.py)
@@ -2407,6 +2408,9 @@ var RZ_URL = {
   ortDir: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/"
 };
 var RZ_TABLE_BELOW_HEAD = 0.5;
+// m: the floor sits this far below the head when you enter (a standing eye height). Anchoring to the head instead
+// of the headset's tracked floor keeps everything consistent on headsets whose floor estimate is off.
+var RZ_FLOOR_BELOW_HEAD = 1.6;
 var RZ_TABLE_HEIGHT = 0.42;
 // m: how tall every robot stands on the table
 var RZ_UNITREE_KP = {
@@ -2425,6 +2429,8 @@ var RZ_UNITREE_DEF = {
   h1_2: [0, -0.16, 0, 0.36, -0.2, 0, 0, -0.16, 0, 0.36, -0.2, 0]
 };
 var RZ_ROBOTS = [
+  { id: "microduck", label: "Microduck", name: "Microduck", maker: "Pollen Robotics", kind: "duck", height: 0.25, dt: 5e-3, dec: 4, vmax: 0.35, root: "trunk_base",
+    policy: "microduck_rl walking \u00b7 Apache-2.0", palette: true },
   { id: "g1", label: "G1 dance", name: "Unitree G1", maker: "Unitree 宇树", kind: "track", height: 1.32, dt: 5e-3, dec: 4, vmax: 0, root: "pelvis",
     policy: "Whole-body motion tracking · humanoid-policy-viewer · Apache-2.0" },
   { id: "g1_walk", label: "G1 walk", name: "Unitree G1", maker: "Unitree 宇树", kind: "unitree", height: 1.32, dt: 2e-3, dec: 10, vmax: 0.8, root: "pelvis",
@@ -2614,6 +2620,44 @@ var RZ_CONTROLLERS = {
       for (let j = 0; j < 12; j++) c[j] = Math.max(-5, Math.min(5, 20 * (S.target[j] - sd[j]) - 2 * sd[12 + j]));
     }
   }
+};
+// Pollen Microduck: position actuators, ctrl = default + action; obs 61 = gyro, gravity, joint pos / vel, last
+// action, command (twist 3 + head 4 + body 6), with the training config's noise (a perfectly still duck otherwise
+// sits in a fixed point of the walking policy)
+var RZ_DUCK_DEF = [0, -0.08726646259971647, -0.457924, -494e-5, 0.452984, 0.3490658503988659, 0.3490658503988659, 0, 0, 0, 0.08726646259971647, 0.457924, 494e-5, -0.452984];
+RZ_CONTROLLERS.duck = {
+  setup(S) {
+    const q = S.data.qpos;
+    q.set([0, 0, 0.12, 1, 0, 0, 0]);
+    RZ_DUCK_DEF.forEach((d, j) => (q[7 + j] = d, S.data.ctrl[j] = d));
+    S.gyroAdr = S.model.sensor("imu_ang_vel").adr;
+    S.last = new Float32Array(14);
+    S.twist = [0, 0, 0];
+  },
+  async policy(S) {
+    const sd = S.data.sensordata, q = S.data.qpos, v = S.data.qvel, o = new Float32Array(61), n = (a) => (Math.random() * 2 - 1) * a;
+    // the policy only starts walking above 0.2 m/s, so any forward command is lifted to that
+    const want = [S.cmd[0] > 0.02 ? Math.max(0.2, S.cmd[0]) : S.cmd[0] < -0.02 ? Math.min(-0.15, S.cmd[0]) : 0, 0, S.cmd[2]];
+    for (let k = 0; k < 3; k++) S.twist[k] += 0.25 * (want[k] - S.twist[k]);
+    const xq = S.data.xquat, b = S.rootId * 4, g = rzGravity(xq, b);
+    for (let i = 0; i < 3; i++) o[i] = sd[S.gyroAdr + i] + n(0.03), o[3 + i] = g[i] + n(0.01);
+    for (let j = 0; j < 14; j++) o[6 + j] = q[7 + j] - RZ_DUCK_DEF[j] + n(1e-3), o[20 + j] = v[6 + j] + n(0.25), o[34 + j] = S.last[j];
+    for (let k = 0; k < 3; k++) o[48 + k] = S.twist[k];
+    const a = await S.pol.run(o);
+    if (!a.every(Number.isFinite)) return;
+    for (let j = 0; j < 14; j++) S.last[j] = a[j], S.data.ctrl[j] = RZ_DUCK_DEF[j] + a[j];
+  },
+  torque() {
+  }
+};
+// the classic colourway of Microduck XR (linear RGB), by part
+var RZ_DUCK_COLORS = { cream: [0.888, 0.86, 0.798], orange: [1, 0.144, 8e-3], amber: [1, 0.413, 7e-3], yellow: [1, 0.608, 0.021], warm: [0.328, 0.312, 0.283], dark: [0.012, 0.012, 0.014], gray: [0.256, 0.256, 0.279], lens: [0.01, 0.012, 0.02] };
+var RZ_DUCK_PART = {
+  top_head_shell: "cream", trunk_base: "cream", left_shell: "cream", right_shell: "cream", upper_leg_left: "cream", upper_leg_right: "cream",
+  bottom_head_shell: "orange", jaw: "orange", foot_left: "orange", foot_right: "orange", ankle_left: "orange", ankle_right: "orange",
+  soft_mouth_top: "amber", jaw_soft: "amber", noenoeil: "amber", sole_left: "yellow", sole_right: "yellow", face_part: "warm", lens: "lens",
+  hip_l: "gray", leg: "gray", neck: "gray", upper_leg_rigidity_plate: "gray", yaw_roll_motion: "gray", neck_pitch: "gray", motor_support: "gray",
+  power_support: "gray", seeed_bearing__configuration__22x16x4: "gray"
 };
 var RZ_BHL_DEF = [0, 0, -0.2, 0.4, -0.3, 0, 0, 0, -0.2, 0.4, -0.3, 0];
 var RZ_X1 = {
@@ -2885,6 +2929,7 @@ function rzBuildVisual(A, R) {
     }
     return mats.get(k);
   };
+  const part = R.palette ? (m) => new THREE6.Color().setRGB(...RZ_DUCK_COLORS[RZ_DUCK_PART[vis.meshes[m]?.name] ?? "dark"]) : null;
   const root = new THREE6.Group(), bodies = /* @__PURE__ */ new Map();
   for (const g of vis.geoms) {
     const id = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY.value, g.body);
@@ -2899,7 +2944,7 @@ function rzBuildVisual(A, R) {
       const [a, b] = g.size;
       geo = g.type === "sphere" ? new THREE6.SphereGeometry(a, 16, 12) : g.type === "box" ? new THREE6.BoxGeometry(2 * a, 2 * b, 2 * g.size[2]) : g.type === "capsule" ? new THREE6.CapsuleGeometry(a, 2 * b, 6, 12).rotateX(Math.PI / 2) : new THREE6.CylinderGeometry(a, a, 2 * b, 16).rotateX(Math.PI / 2);
     }
-    const m = new THREE6.Mesh(geo, mat(g.rgba[3] < 0.05 ? [0.6, 0.6, 0.6, 1] : g.rgba));
+    const m = new THREE6.Mesh(geo, part && g.mesh !== void 0 ? mat(part(g.mesh).toArray().map((c) => Math.pow(c, 1 / 2.2)).concat(1)) : mat(g.rgba[3] < 0.05 ? [0.6, 0.6, 0.6, 1] : g.rgba));
     m.position.fromArray(g.pos);
     m.quaternion.set(g.quat[1], g.quat[2], g.quat[3], g.quat[0]);
     m.castShadow = true;
@@ -3054,7 +3099,7 @@ var RobotZoo = {
     this._ku = (e) => delete this.keys[e.key.toLowerCase()];
     addEventListener("keydown", this._kd);
     addEventListener("keyup", this._ku);
-    this.life = this.life ?? false;
+    this.life = this.life ?? true;
     this.goal = { on: false };
     this.mode = null;
     this.center = new T.Vector2();
@@ -3080,15 +3125,19 @@ var RobotZoo = {
     g.fillText(this.statusText || "", 16, 108);
     this.infoTex.needsUpdate = true;
   },
-  // tabletop: robots stand RZ_TABLE_HEIGHT tall on the plate; life size: 1:1 on the real floor ahead of you
+  // default: life-size on the floor ahead of you, like Microduck XR; tabletop: a plate you can carry, robots up to
+  // RZ_TABLE_HEIGHT tall. Both heights come from the head (fixed offsets), not the headset's tracked floor, which
+  // some headsets get wrong.
   _place() {
-    const head = this.app.input.head, life = this.life;
+    const head = this.app.input.head, life = this.life, R = this.R ?? RZ_ROBOTS[0];
     if (life) {
       const fwd = new THREE6.Vector3(0, 0, -1);
       if (this.app.sessionMode) this.app.camera.getWorldDirection(fwd);
       fwd.y = 0;
+      if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
       fwd.normalize();
-      this.stage.position.set(head.x + fwd.x * 2.2, 0, head.z + fwd.z * 2.2);
+      const dist = 0.9 + 0.8 * R.height, floorY = this.app.sessionMode ? head.y - RZ_FLOOR_BELOW_HEAD : 0;
+      this.stage.position.set(head.x + fwd.x * dist, floorY, head.z + fwd.z * dist);
       this.stage.rotation.set(0, Math.atan2(-fwd.x, -fwd.z), 0);
     } else {
       this.stage.position.set(0, this.table, -0.55);
@@ -3097,9 +3146,17 @@ var RobotZoo = {
     this.plate.visible = !life;
     this.tableLabel && (this.tableLabel.visible = !life);
     this._scale();
+    // desktop preview: frame the robot
+    if (!this.app.sessionMode) {
+      const k = R.height * this.s, a = this.app, tg = this.stage.position.clone().add(new THREE6.Vector3(0, 0.55 * k, 0));
+      a.controls.target.copy(tg);
+      a.camera.position.copy(tg).add(new THREE6.Vector3(0.25 * k + 0.15, 0.2 * k + 0.12, 1.25 * k + 0.35));
+      a.controls.update();
+    }
   },
   _scale() {
-    const R = this.R ?? RZ_ROBOTS[0], s = this.life ? 1 : RZ_TABLE_HEIGHT / R.height;
+    // on the table big robots shrink to RZ_TABLE_HEIGHT; a small one (Microduck) keeps its real size
+    const R = this.R ?? RZ_ROBOTS[0], s = this.life ? 1 : Math.min(1, RZ_TABLE_HEIGHT / R.height);
     this.s = s;
     this.sim.scale.setScalar(s);
     const gr = this.life ? 3 : 0.3;
@@ -3120,7 +3177,7 @@ var RobotZoo = {
       b.setValue(k === i);
     });
     this.R = R;
-    this._scale();
+    this._place();
     this._status("Loading MuJoCo and ONNX Runtime…");
     this._buildActions(R);
     try {
@@ -3172,10 +3229,10 @@ var RobotZoo = {
         this.modeBtns.forEach((b) => b.setValue(false));
       })];
     }
-    const lifeB = btn("Life size", (v) => {
-      this.life = v;
+    const lifeB = btn("Tabletop", (v) => {
+      this.life = !v;
       this._place();
-    }, { toggle: true, value: this.life });
+    }, { toggle: true, value: !this.life });
     list.push(btn("Push", () => this._shove()), lifeB, btn("Reset", () => this.reset()));
     // below the robot list (two rows of four)
     const top = 0.03 + 2 * 0.032 + 0.012;

@@ -72,6 +72,7 @@ var MD_GRAB_K = 100, MD_GRAB_D = Math.sqrt(MD_GRAB_K), MD_GRAB_MAX_ACC = 200;
 var MD_GRAB_KR = 400, MD_GRAB_DR = 2 * Math.sqrt(MD_GRAB_KR), MD_GRAB_MAX_ANG = 800;
 // MuJoCo viewer perturbation gains
 var MD_TABLE_BELOW_HEAD = 0.5;
+var MD_FLOOR_BELOW_HEAD = 1.6;
 // skating brake strength and how early (s at the current speed) to start braking for a goal
 // brake: sheds speed safely from any speed (braking from ~0.8 m/s at -0.15 or harder tipped it over in goal
 // trials); stop: the final brake, only from <= 0.55 m/s, where it halts in ~0.17 m with no falls
@@ -1040,7 +1041,9 @@ var Microduck = {
       st.position.set(0, top - 0.02, -0.75);
       st.scale.setScalar(0.4);
     } else {
-      st.position.set(0, 0, -1.3);
+      // the floor is measured from the head (a standing eye height below it), not the headset's tracked floor,
+      // which some headsets get wrong
+      st.position.set(0, this.app.sessionMode ? this.app.input.head.y - MD_FLOOR_BELOW_HEAD : 0, -1.3);
       st.scale.setScalar(1);
     }
     this.stageY = st.position.y;
