@@ -2,15 +2,21 @@
 
 Live: https://rongxuanmu.github.io/robot-zoo-xr/ · Built on the [VibeXR framework](../vibexr/README.md)
 
-Open-source humanoid robots running the policies their makers (and the community) published, simulated in
-MuJoCo WASM with ONNX Runtime Web. Like Microduck XR, a robot starts life-size on the floor in front of you; Tabletop puts it on a
-plate you can carry. Floor and table heights are measured from your head (1.6 m and 0.5 m below it), not from the headset's
-tracked floor. Point and pinch the floor to send a
-robot walking, grab it to push or lift it, drive with a thumbstick or WASD.
+Open-source robots running the policies their makers (and the community) published, simulated in MuJoCo WASM
+with ONNX Runtime Web.
+
+Robot Zoo is Microduck XR with a robot picker. The world object inherits Microduck XR's (`../microduck-xr/src/microduck.js`
+is built in as is), so every robot gets Microduck's experience: the stage is placed once when you enter, life-size on the
+floor (1.6 m below your head, not the headset's tracked floor) or on a tabletop (0.5 m below your head), and never
+moves on its own; robots walk across it, through your room. The stage bar moves and turns it with the console riding
+along. Point and pinch the floor or drag the flag to send a robot walking. Grab a robot to lift it (two hands turn
+it). Follow me, Boundary, the speed slider, the drive joystick, thumbsticks / WASD and the sounds all work as in
+Microduck XR. Microduck itself runs Microduck XR's own code and assets, with every move (sit, roll, peck, kicks, ball,
+roller skates, colourways); picking another robot swaps what stands on the stage, never the stage.
 
 | Robot | Policy | Source (licence) |
 | --- | --- | --- |
-| Pollen Microduck | walking, 50 Hz (as in Microduck XR) | pollen-robotics/microduck + microduck_rl (Apache-2.0) |
+| Pollen Microduck | every Microduck XR policy, from `../microduck-xr/assets/microduck` | pollen-robotics/microduck + microduck_rl (Apache-2.0) |
 | Unitree G1 · dance | whole-body motion tracking, 50 Hz, 13 clips | Axellwppr/humanoid-policy-viewer (Apache-2.0); G1 model Unitree (BSD-3-Clause) |
 | Unitree G1 · walk | LSTM walking, 50 Hz | unitreerobotics/unitree_rl_gym (BSD-3-Clause) |
 | Unitree H1, H1-2 | LSTM walking, 50 Hz | unitreerobotics/unitree_rl_gym (BSD-3-Clause) |
@@ -26,12 +32,12 @@ Each `assets/<robot>/` folder holds its `SOURCE.txt` and the licence files of th
 | --- | --- |
 | `src/core.js` | robot list, ONNX sessions, one controller per policy family (observation, gains and timing of its deploy code) |
 | `src/tracking.js` | the G1 motion-tracking controller, ported from humanoid-policy-viewer |
-| `src/world.js` | loading, rendering, stage, driving, grabbing, panel |
+| `src/world.js` | the humanoids on Microduck XR's world: loading, rendering, driving, grabbing, robot picker |
 | `build.py` | writes `index.html` (site) and `codepen.html` (CodePen) from the framework and `src/` |
 | `assets/` | packed robots, policies, motion clips, `lib/RoomEnvironment.js` (three.js, MIT) |
 | `tools/` | how `assets/` was made (below) |
 
-`index.html` loads three.js, MuJoCo and ONNX Runtime from Microduck XR's copies (`../microduck-xr/assets/lib`).
+`index.html` loads three.js, MuJoCo, ONNX Runtime and Microduck from Microduck XR's copies (`../microduck-xr/assets`).
 
 ## How the assets were made
 

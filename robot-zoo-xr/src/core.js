@@ -3,7 +3,7 @@
 // simulated live in MuJoCo WASM with ONNX Runtime Web, on your table or life-size in your room.
 //
 // Every robot runs its published policy with the observation, gains and timing of its own deploy code:
-//   Pollen Microduck   microduck_rl walking, 50 Hz (as in Microduck XR, with its training observation noise)
+//   Pollen Microduck   Microduck XR itself (microduck.js): every microduck_rl policy, the same stage and console
 //   Unitree G1 dance   whole-body motion tracking (Axellwppr/humanoid-policy-viewer), 50 Hz, 623 inputs
 //   Unitree G1 / H1 / H1-2   unitree_rl_gym walking, LSTM, 50 Hz (deploy_mujoco.py)
 //   Booster T1         booster_gym walking, 50 Hz (play_mujoco.py)
@@ -11,24 +11,11 @@
 //   Berkeley Humanoid Lite   biped walking, 50 Hz, 2 kHz PD (sim2sim/play_mujoco.py)
 // The Unitree and Booster TorchScript policies were converted to ONNX (weights unchanged, checked against a
 // NumPy forward pass); each policy was checked in desktop MuJoCo walking, turning and standing before shipping.
-import * as THREE6 from "three";
 import { toCreasedNormals as rzCreased } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
-import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
-import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { RoomEnvironment as RzRoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 var RZ_URL = {
-  assets: "https://rongxuanmu.github.io/robot-zoo-xr/assets/",
-  mujoco: "https://cdn.jsdelivr.net/npm/@mujoco/mujoco@3.11.0/mujoco.js",
-  ort: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/ort.wasm.min.mjs",
-  ortDir: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.27.0/dist/"
+  assets: "https://rongxuanmu.github.io/robot-zoo-xr/assets/"
 };
-var RZ_TABLE_BELOW_HEAD = 0.5;
-// m: the floor sits this far below the head when you enter (a standing eye height). Anchoring to the head instead
-// of the headset's tracked floor keeps everything consistent on headsets whose floor estimate is off.
-var RZ_FLOOR_BELOW_HEAD = 1.6;
-var RZ_TABLE_HEIGHT = 0.42;
-// m: how tall every robot stands on the table
 var RZ_UNITREE_KP = {
   g1_walk: [100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40],
   h1: [150, 150, 150, 200, 40, 150, 150, 150, 200, 40],
@@ -45,8 +32,9 @@ var RZ_UNITREE_DEF = {
   h1_2: [0, -0.16, 0, 0.36, -0.2, 0, 0, -0.16, 0, 0.36, -0.2, 0]
 };
 var RZ_ROBOTS = [
-  { id: "microduck", label: "Microduck", name: "Microduck", maker: "Pollen Robotics", kind: "duck", height: 0.25, dt: 5e-3, dec: 4, vmax: 0.35, root: "trunk_base",
-    policy: "microduck_rl walking \u00b7 Apache-2.0", palette: true },
+  // Microduck is Microduck XR itself: its own assets, every policy (walk, sit, roll, peck, kicks, skates)
+  { id: "microduck", label: "Microduck", name: "Microduck", maker: "Pollen Robotics", kind: "duck", height: 0.25,
+    policy: "microduck_rl \u00b7 walk, sit, roll, peck, kick, skate \u00b7 Apache-2.0" },
   { id: "g1", label: "G1 dance", name: "Unitree G1", maker: "Unitree 宇树", kind: "track", height: 1.32, dt: 5e-3, dec: 4, vmax: 0, root: "pelvis",
     policy: "Whole-body motion tracking · humanoid-policy-viewer · Apache-2.0" },
   { id: "g1_walk", label: "G1 walk", name: "Unitree G1", maker: "Unitree 宇树", kind: "unitree", height: 1.32, dt: 2e-3, dec: 10, vmax: 0.8, root: "pelvis",
@@ -236,44 +224,6 @@ var RZ_CONTROLLERS = {
       for (let j = 0; j < 12; j++) c[j] = Math.max(-5, Math.min(5, 20 * (S.target[j] - sd[j]) - 2 * sd[12 + j]));
     }
   }
-};
-// Pollen Microduck: position actuators, ctrl = default + action; obs 61 = gyro, gravity, joint pos / vel, last
-// action, command (twist 3 + head 4 + body 6), with the training config's noise (a perfectly still duck otherwise
-// sits in a fixed point of the walking policy)
-var RZ_DUCK_DEF = [0, -0.08726646259971647, -0.457924, -494e-5, 0.452984, 0.3490658503988659, 0.3490658503988659, 0, 0, 0, 0.08726646259971647, 0.457924, 494e-5, -0.452984];
-RZ_CONTROLLERS.duck = {
-  setup(S) {
-    const q = S.data.qpos;
-    q.set([0, 0, 0.12, 1, 0, 0, 0]);
-    RZ_DUCK_DEF.forEach((d, j) => (q[7 + j] = d, S.data.ctrl[j] = d));
-    S.gyroAdr = S.model.sensor("imu_ang_vel").adr;
-    S.last = new Float32Array(14);
-    S.twist = [0, 0, 0];
-  },
-  async policy(S) {
-    const sd = S.data.sensordata, q = S.data.qpos, v = S.data.qvel, o = new Float32Array(61), n = (a) => (Math.random() * 2 - 1) * a;
-    // the policy only starts walking above 0.2 m/s, so any forward command is lifted to that
-    const want = [S.cmd[0] > 0.02 ? Math.max(0.2, S.cmd[0]) : S.cmd[0] < -0.02 ? Math.min(-0.15, S.cmd[0]) : 0, 0, S.cmd[2]];
-    for (let k = 0; k < 3; k++) S.twist[k] += 0.25 * (want[k] - S.twist[k]);
-    const xq = S.data.xquat, b = S.rootId * 4, g = rzGravity(xq, b);
-    for (let i = 0; i < 3; i++) o[i] = sd[S.gyroAdr + i] + n(0.03), o[3 + i] = g[i] + n(0.01);
-    for (let j = 0; j < 14; j++) o[6 + j] = q[7 + j] - RZ_DUCK_DEF[j] + n(1e-3), o[20 + j] = v[6 + j] + n(0.25), o[34 + j] = S.last[j];
-    for (let k = 0; k < 3; k++) o[48 + k] = S.twist[k];
-    const a = await S.pol.run(o);
-    if (!a.every(Number.isFinite)) return;
-    for (let j = 0; j < 14; j++) S.last[j] = a[j], S.data.ctrl[j] = RZ_DUCK_DEF[j] + a[j];
-  },
-  torque() {
-  }
-};
-// the classic colourway of Microduck XR (linear RGB), by part
-var RZ_DUCK_COLORS = { cream: [0.888, 0.86, 0.798], orange: [1, 0.144, 8e-3], amber: [1, 0.413, 7e-3], yellow: [1, 0.608, 0.021], warm: [0.328, 0.312, 0.283], dark: [0.012, 0.012, 0.014], gray: [0.256, 0.256, 0.279], lens: [0.01, 0.012, 0.02] };
-var RZ_DUCK_PART = {
-  top_head_shell: "cream", trunk_base: "cream", left_shell: "cream", right_shell: "cream", upper_leg_left: "cream", upper_leg_right: "cream",
-  bottom_head_shell: "orange", jaw: "orange", foot_left: "orange", foot_right: "orange", ankle_left: "orange", ankle_right: "orange",
-  soft_mouth_top: "amber", jaw_soft: "amber", noenoeil: "amber", sole_left: "yellow", sole_right: "yellow", face_part: "warm", lens: "lens",
-  hip_l: "gray", leg: "gray", neck: "gray", upper_leg_rigidity_plate: "gray", yaw_roll_motion: "gray", neck_pitch: "gray", motor_support: "gray",
-  power_support: "gray", seeed_bearing__configuration__22x16x4: "gray"
 };
 var RZ_BHL_DEF = [0, 0, -0.2, 0.4, -0.3, 0, 0, 0, -0.2, 0.4, -0.3, 0];
 var RZ_X1 = {

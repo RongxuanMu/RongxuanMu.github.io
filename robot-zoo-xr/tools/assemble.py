@@ -13,19 +13,17 @@ POL = {
     'g1': f'{R}/humanoid-policy-viewer/public/examples/checkpoints/g1/policy_latest.onnx',
     'g1_walk': f'{T}/rz_out/unitree_g1.onnx', 'h1': f'{T}/rz_out/unitree_h1.onnx', 'h1_2': f'{T}/rz_out/unitree_h1_2.onnx',
     't1': f'{T}/rz_out/booster_t1.onnx', 'x1': f'{T}/rz_out/agibot_x1.onnx', 'bhl': f'{T}/rz_out/bhl_biped.onnx',
-    'microduck': f'{T}/rz_out/microduck_walk.onnx',
 }
 LICENSES = {
     'g1': (f'{R}/humanoid-policy-viewer/LICENSE', 'Axellwppr/humanoid-policy-viewer (Apache-2.0); G1 model: Unitree (BSD-3-Clause)'),
     'g1_walk': (None, 'unitreerobotics/unitree_rl_gym (BSD-3-Clause)'), 'h1': (None, 'unitreerobotics/unitree_rl_gym (BSD-3-Clause)'),
     'h1_2': (None, 'unitreerobotics/unitree_rl_gym (BSD-3-Clause)'), 't1': (None, 'BoosterRobotics/booster_gym (Apache-2.0)'),
     'x1': (None, 'AgibotTech/agibot_x1_infer (Mulan PSL v2)'),
-    'microduck': (None, 'pollen-robotics/microduck + microduck_rl (Apache-2.0), via the microduck-simulator Space'), 'bhl': (None, 'HybridRobotics/Berkeley-Humanoid-Lite (MIT); robot model: Berkeley-Humanoid-Lite-Assets (CC BY-SA 4.0)'),
+    'bhl': (None, 'HybridRobotics/Berkeley-Humanoid-Lite (MIT); robot model: Berkeley-Humanoid-Lite-Assets (CC BY-SA 4.0)'),
 }
 LIC_FILES = {k: [f'{R}/unitree_rl_gym/LICENSE'] for k in ('g1_walk', 'h1', 'h1_2')}
 LIC_FILES.update(g1=[f'{R}/humanoid-policy-viewer/LICENSE', f'{R}/humanoid-policy-viewer/LICENSES/Unitree-BSD-3-Clause.txt'],
                  t1=[f'{R}/booster_gym/LICENSE'], x1=[f'{R}/agibot_x1_infer/LICENSE.txt'],
-                 microduck=[f'{R}/microduck/LICENSE'],
                  bhl=[f'{R}/Berkeley-Humanoid-Lite/LICENCE', f'{R}/Berkeley-Humanoid-Lite-Assets/LICENCE'])
 for rid, pol in POL.items():
     src = f'{T}/rz_pack/{rid}'

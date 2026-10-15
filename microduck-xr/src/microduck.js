@@ -130,7 +130,18 @@ function mdPaint(rig, variant) {
   });
 }
 // - asset loading (once per page; world reloads reuse everything) -
-var mdAssets = null;
+var mdAssets = null, mdLib = null;
+// MuJoCo + ONNX Runtime, one instance per page (a world that hosts other robots shares it)
+function mdLoadLib() {
+  mdLib ||= Promise.all([import(MD_URL.mujoco).then((m) => m.default()), import(MD_URL.ort)]).then(([mujoco, ort]) => {
+    ort.env.wasm.wasmPaths = MD_URL.ortDir;
+    // no COOP / COEP on static hosts
+    ort.env.wasm.numThreads = 1;
+    return { mujoco, ort };
+  });
+  mdLib.catch(() => mdLib = null);
+  return mdLib;
+}
 function mdFetch(path, kind) {
   return fetch(`${MD_URL.space}/${path}`).then((r) => {
     if (!r.ok) throw new Error(`${path}: HTTP ${r.status}`);
@@ -229,18 +240,14 @@ function mdLoadAssets(status) {
   if (mdAssets) return mdAssets;
   mdAssets = (async () => {
     status("Loading MuJoCo, ONNX Runtime and the Microduck model…");
-    const [mujoco, ort, gltf, kin, xmlSrc, MS] = await Promise.all([
-      import(MD_URL.mujoco).then((m) => m.default()),
-      import(MD_URL.ort),
+    const [{ mujoco, ort }, gltf, kin, xmlSrc, MS] = await Promise.all([
+      mdLoadLib(),
       new GLTFLoader().loadAsync(`${MD_URL.space}/robot/mjlab/microduck.glb`),
       mdFetch("robot/mjlab/kinematics.json", "json"),
       mdFetch("robot/mjlab/robot_allcollisions.xml", "text"),
       // mesh simplifier for the render copies; without it the full meshes are drawn
       import(MD_URL.meshopt).then((m) => m.MeshoptSimplifier.ready.then(() => m.MeshoptSimplifier)).catch(() => null)
     ]);
-    ort.env.wasm.wasmPaths = MD_URL.ortDir;
-    ort.env.wasm.numThreads = 1;
-    // no COOP / COEP on static hosts
     const geoms = /* @__PURE__ */ new Map();
     gltf.scene.traverse((o) => {
       if (!o.isMesh || !o.geometry) return;
@@ -703,7 +710,10 @@ var Microduck = {
     this.idleGaze = new T.Vector3(0.6, 0, 0.3);
     this.idle = { quackAt: 4, peckAt: 14 };
     if (!app.renderer.xr.isPresenting) this._heroCamera();
-    const token = this.token;
+    this._boot();
+  },
+  _boot() {
+    const token = this.token, app = this.app;
     mdLoadAssets((m) => this.status(m)).then((A) => token === this.token && this._startSim(A)).catch((e) => {
       console.error(e);
       if (token === this.token) this.status(`⚠ ${e.message}`);
@@ -912,7 +922,7 @@ var Microduck = {
     const acc = e.multiplyScalar(MD_GRAB_KR).addScaledVector(w, -MD_GRAB_DR);
     if (acc.length() > MD_GRAB_MAX_ANG) acc.setLength(MD_GRAB_MAX_ANG);
     // inertia of a ~5 cm-radius body: enough to turn the duck crisply without fighting the policy's balance
-    const I = g.mass * 25e-4;
+    const I = g.mass * (g.rad ?? 0.05) ** 2;
     x[a + 3] = I * acc.x;
     x[a + 4] = I * acc.y;
     x[a + 5] = I * acc.z;
@@ -1039,7 +1049,7 @@ var Microduck = {
     const st = this.stage, top = this.tableTop;
     if (tabletop) {
       st.position.set(0, top - 0.02, -0.75);
-      st.scale.setScalar(0.4);
+      st.scale.setScalar(this._tableScale?.() ?? 0.4);
     } else {
       // the floor is measured from the head (a standing eye height below it), not the headset's tracked floor,
       // which some headsets get wrong
@@ -1051,7 +1061,7 @@ var Microduck = {
     st.rotation.set(0, -Math.PI / 2, 0, "YXZ");
     // console at the sides of your reach, out of the line of sight to the stage
     const y = tabletop ? top + 0.02 : T6clamp(top + 0.05);
-    const rel = [this.joyPanel.root, this.panel.root];
+    const rel = [this.joyPanel.root, this.panel.root, ...this._placeConsole?.(y) ?? []];
     this.joyPanel.root.position.set(0.4, y - 0.02, -0.36);
     this.joyPanel.root.lookAt(0, y + 0.45, 0.35);
     this.panel.root.position.set(-0.42, y, -0.36);
@@ -1069,10 +1079,10 @@ var Microduck = {
   // the entry card sits beside it (view offset) instead of on top of it -
   _heroCamera() {
     const a = this.app, st = this.stage, s = st.scale.x;
-    const target = st.position.clone().add(new THREE6.Vector3(0, 0.13 * s, 0));
+    const k = this.camSize ?? 1, target = st.position.clone().add(new THREE6.Vector3(0, 0.13 * s * k, 0));
     this.cam = { sway: true, theta0: st.rotation.y + Math.PI / 2 + 0.35, ox: null, oy: null, W: 0, H: 0 };
     a.controls.target.copy(target);
-    a.camera.position.copy(target).add(new THREE6.Vector3().setFromSphericalCoords(0.46 * s, 1.33, this.cam.theta0));
+    a.camera.position.copy(target).add(new THREE6.Vector3().setFromSphericalCoords(0.46 * s * k, 1.33, this.cam.theta0));
     a.controls.update();
   },
   _desktopCamera(dt, t) {
@@ -1081,9 +1091,10 @@ var Microduck = {
     if (!C || innerWidth < 2 || innerHeight < 2) return;
     if (![cam.position.x, cam.position.y, cam.position.z, ctl.target.x].every(Number.isFinite)) return this._heroCamera();
     // follow the duck (target and camera slide together) until the user takes the camera
-    if (this.rig && C.sway) {
-      const f = this.rig.trunk.getWorldPosition(_mdV);
-      f.y += 0.02 * this.stage.scale.x;
+    const body = this.camBody ?? this.rig?.trunk, k = this.camSize ?? 1;
+    if (body && C.sway) {
+      const f = body.getWorldPosition(_mdV);
+      f.y += 0.02 * this.stage.scale.x * k;
       const d = f.sub(ctl.target).multiplyScalar(1 - Math.exp(-dt * 2.5));
       ctl.target.add(d);
       cam.position.add(d);
@@ -1112,9 +1123,9 @@ var Microduck = {
     if (C.sway) {
       const s = this.stage.scale.x, tan = Math.tan(THREE6.MathUtils.degToRad(cam.fov / 2));
       // duck ~0.3 m tall incl. margin: fill ~62 % of the free height and at most ~70 % of the free width
-      const d = Math.max(0.3 / (0.62 * (rh / H) * 2 * tan), 0.2 / (0.7 * (rw / W) * 2 * tan * cam.aspect));
+      const d = k * Math.max(0.3 / (0.62 * (rh / H) * 2 * tan), 0.2 / (0.7 * (rw / W) * 2 * tan * cam.aspect));
       const off = _mdV.copy(cam.position).sub(ctl.target), len = off.length();
-      const want = T6clamp(d, 0.32, 2.5) * s;
+      const want = T6clamp(d, 0.32 * k, 2.5 * k) * s;
       cam.position.copy(ctl.target).add(off.setLength(len + (want - len) * Math.min(1, dt * 3)));
     }
   },
@@ -1761,13 +1772,19 @@ var Microduck = {
     m[2] = (on("a", "arrowleft") ? 1 : 0) - (on("d", "arrowright") ? 1 : 0);
   },
   update(dt, t) {
+    this._frame(dt, t);
+    this._duckUpdate(dt);
+  },
+  // stage, status line, console riding with the stage, desktop camera
+  _frame(dt, t) {
     const a = this.app.sessionMode === "ar" ? this.app.vst.opacity : 1;
     this.discMat.opacity = 0.55 + 0.4 * a;
     this.gridLines.material.opacity = 0.25 + 0.2 * a;
     // status line floats over the far edge of the stage, facing you
     const st = this.stage;
     st.updateMatrixWorld();
-    this.statusMesh.position.copy(st.position).add(new THREE6.Vector3(0, this.tabletop ? 0.2 : 0.57, 0));
+    const lift = this.statusLift ?? 1;
+    this.statusMesh.position.copy(st.position).add(new THREE6.Vector3(0, (this.tabletop ? 0.2 : 0.57) * lift, 0));
     this.statusMesh.lookAt(this.app.input.head);
     this.statusMesh.scale.setScalar(this.tabletop ? 0.45 : 1);
     this._faceWhileDragged(dt);
@@ -1780,6 +1797,8 @@ var Microduck = {
     if (desktop) this._desktopCamera(dt, t);
     this.statusMesh.visible = !this.attract;
     if (this.attract) this._idle(dt, t);
+  },
+  _duckUpdate(dt) {
     const S = this.S;
     if (!S) return;
     this._readManual();
