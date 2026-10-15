@@ -2531,30 +2531,37 @@ var DreamCage = {
       eg?.dispose();
       return l;
     };
-    const PLATE_H = 0.05;
-    const plate = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, PLATE_H, 64), new T.MeshBasicMaterial({ color: 0 }));
+    // The diorama: the plinth is a handle that carries everything on it. The rig (cube, rims, pips, labels,
+    // panel) follows the plinth every frame, with its origin at the centre of the plinth's top.
+    const PLATE_H = this.plateH = 0.05;
+    const plate = this.plate = new T.Mesh(new T.CylinderGeometry(0.3, 0.3, PLATE_H, 64), new T.MeshBasicMaterial({ color: 0 }));
+    plate.name = "diorama plinth";
     plate.position.set(0, TABLE - PLATE_H / 2, -0.5);
     root.add(plate);
+    const rig = this.rig = new T.Group();
+    rig.position.set(0, TABLE, -0.5);
+    root.add(rig);
+    rig.updateMatrixWorld(true);
     const plateRims = rims(plate.geometry, 0.9, 4);
-    plateRims.position.copy(plate.position);
-    root.add(plateRims);
+    plateRims.position.set(0, -PLATE_H / 2, 0);
+    rig.add(plateRims);
     const ring = new T.Mesh(new T.RingGeometry(0.15, 0.156, 64).rotateX(-Math.PI / 2), new T.MeshBasicMaterial({ color: 16777215, transparent: true, opacity: 0.5 }));
-    ring.position.set(0, TABLE + 1e-3, -0.5);
-    root.add(ring);
+    ring.position.set(0, 1e-3, 0);
+    rig.add(ring);
     // progress: one pip per link around the plinth ring
     this.pips = DC_LINKS.map((L, i) => {
       const a = -Math.PI / 2 + (i - 2.5) * 0.16;
       const p = new T.Mesh(new T.SphereGeometry(6e-3, 16, 10), new T.MeshBasicMaterial({ color: 5592405 }));
-      p.position.set(Math.cos(a) * 0.2, TABLE + 6e-3, -0.5 - Math.sin(a) * 0.2);
-      root.add(p);
+      p.position.set(Math.cos(a) * 0.2, 6e-3, -Math.sin(a) * 0.2);
+      rig.add(p);
       return p;
     });
     const cube = this.cube = new T.Group();
     cube.name = "dream cage";
-    this.home = new T.Vector3(0, TABLE + 0.04 + H, -0.5);
+    this.home = new T.Vector3(0, 0.04 + H, 0);
     cube.position.copy(this.home);
     cube.rotation.y = THREE6.MathUtils.degToRad(20);
-    root.add(cube);
+    rig.add(cube);
     // the shell is the grab / hover target: its material is hidden, so only its hover outline ever draws
     const shellMat = new T.MeshBasicMaterial({ color: 0 });
     shellMat.visible = false;
@@ -2911,20 +2918,33 @@ var DreamCage = {
       twoHand: true,
       twist: true,
       scaleDeadzone: 0.12,
-      minScale: 0.6,
-      maxScale: 2.2,
+      minScale: 0.3,
+      maxScale: 5,
       box: new T.Box3(V(-H, -H, -H), V(H, H, H)),
       constrain: ({ position, scale }) => {
-        position.y = Math.max(position.y, TABLE + H * scale.y);
+        // never below the plinth top, wherever the diorama has been carried
+        position.y = Math.max(position.y, this.rig.position.y + H * scale.y);
       }
     });
     this.it.on("dragstart", () => this.spin = null);
     this.it.on("transformstart", () => this.spin = null);
+    // the plinth: carry it anywhere, turn it about the vertical, two hands scale the whole diorama
+    this.plateIt = ctx.add(plate, {
+      draggable: true,
+      twoHand: true,
+      scaleDeadzone: 0.12,
+      minScale: 0.5,
+      maxScale: 2.5,
+      constrain: ({ quaternion }) => {
+        const e = new T.Euler().setFromQuaternion(quaternion, "YXZ");
+        quaternion.setFromAxisAngle(V(0, 1, 0), e.y);
+      }
+    });
     // - the panel -
     const panel = ctx.panel("Dream Cage", { w: 0.22, h: 0.15 });
-    panel.root.position.set(-0.4, TABLE + 0.08, -0.36);
+    panel.root.position.set(-0.4, 0.08, 0.14);
+    rig.add(panel.root);
     panel.root.lookAt(0, TABLE + 0.32, 0.3);
-    root.add(panel.root);
     const hintB = ctx.button("Hint", { toggle: true, onClick: (v) => this.hint.visible = v && this.active < 6 });
     const reset = ctx.button("Reset", { onClick: () => app2.worlds.reload() });
     const left = ctx.button("Turn ⟲", { onClick: () => this.turn(V(0, 1, 0), 1) });
@@ -2939,13 +2959,14 @@ var DreamCage = {
     panel.root.add(status);
     const goal = [
       "Goal: turn the cube until the two halves meet across the glowing edge",
-      "and make one whole shape. Each whole shape joins two worlds."
+      "and make one whole shape. Each whole shape joins two worlds.",
+      "Grab the plinth to carry, turn or scale the whole diorama."
     ];
     goal.forEach((text, i) => {
       const tl = ctx.label(text, { height: 0.011 });
-      tl.position.set(0, TABLE + 0.02 - i * 6e-3, -0.24 + i * 0.016);
+      tl.position.set(0, 0.02 - i * 6e-3, 0.26 + i * 0.016);
       tl.rotation.x = -Math.PI / 2.6;
-      root.add(tl);
+      rig.add(tl);
     });
     // desktop preview: the arrow keys turn the cube
     this.keys = {};
@@ -3031,6 +3052,11 @@ var DreamCage = {
     this.time = t;
     if (this.since === null) this.since = t;
     const cube = this.cube, fx = this.fx, T = THREE6;
+    const plate = this.plate, rig = this.rig;
+    rig.quaternion.copy(plate.quaternion);
+    rig.scale.copy(plate.scale);
+    rig.position.set(0, this.plateH / 2 * plate.scale.y, 0).applyQuaternion(plate.quaternion).add(plate.position);
+    rig.updateMatrixWorld(true);
     // turning by panel buttons / arrow keys
     if (this.spin && !this.it.selections.length) {
       const s = this.spin;
@@ -3041,8 +3067,9 @@ var DreamCage = {
     const k = this.keys, yaw = (k.ArrowLeft ? 1 : 0) - (k.ArrowRight ? 1 : 0), pitch = (k.ArrowDown ? 1 : 0) - (k.ArrowUp ? 1 : 0);
     if (yaw || pitch) {
       this.spin = null;
-      const head = this.app.input.head, right = new T.Vector3().subVectors(cube.position, head).cross(new T.Vector3(0, 1, 0)).normalize();
+      const head = this.app.input.head, right = new T.Vector3().subVectors(cube.getWorldPosition(new T.Vector3()), head).cross(new T.Vector3(0, 1, 0)).normalize();
       cube.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 1, 0), yaw * dt * 1.4));
+      right.transformDirection(rig.matrixWorld.clone().invert());
       cube.quaternion.premultiply(new T.Quaternion().setFromAxisAngle(right, -pitch * dt * 1));
     }
     cube.updateMatrixWorld(true);
