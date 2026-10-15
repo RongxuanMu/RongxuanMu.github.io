@@ -1,4 +1,6 @@
-// 6 - jelly: an XPBD lattice with stretch / shear / body-diagonal links; the visible block is skinned onto it
+// 6 - jelly: an XPBD lattice with stretch / shear / body-diagonal links, plus a gentle shape-matching pull (Mueller
+// 2005) toward its rest shape. Links alone are equally happy with a folded, inside-out block: a drop, a squash or a
+// jump used to flatten it for good. The visible block is skinned onto the lattice
 PC_EXHIBITS.push({
   id: "jelly",
   label: "Jelly",
@@ -13,6 +15,9 @@ PC_EXHIBITS.push({
       v.fill(0);
     };
     reset();
+    // rest shape about the centre of mass, and the rotation found last time (warm start)
+    const r0 = new Float32Array(N * 3), rq = new T.Quaternion();
+    for (let i = 0; i < N * 3; i++) r0[i] = x[i] - (i % 3 === 1 ? S / 2 + 1e-3 : 0);
     const C = [];
     const dirs = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, -1, 0], [1, 0, 1], [1, 0, -1], [0, 1, 1], [0, 1, -1], [1, 1, 1], [1, 1, -1], [1, -1, 1], [1, -1, -1]];
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) for (let k = 0; k < n; k++) for (const [a, b, c] of dirs) {
@@ -79,9 +84,45 @@ PC_EXHIBITS.push({
     X.action("Firm", (on) => comp = on ? 8e-6 : 1.2e-4, { toggle: true });
     X.action("Reset", () => reset());
     const SUB = 16, tmp = new T.Vector3();
+    // shape matching: the best rotation of the rest shape onto the current one (Mueller et al. 2016, robust to
+    // inverted shapes: it always returns a proper rotation), then every point moves part way to its goal
+    const A = new Float64Array(9), R = new T.Matrix4(), dq = new T.Quaternion(), om = new T.Vector3(), rc = new T.Vector3(), ac = new T.Vector3();
+    const shapeMatch = (k) => {
+      let cx = 0, cy = 0, cz = 0;
+      for (let i = 0; i < N; i++) cx += x[i * 3], cy += x[i * 3 + 1], cz += x[i * 3 + 2];
+      cx /= N, cy /= N, cz /= N;
+      A.fill(0);
+      for (let i = 0; i < N; i++) {
+        const px = x[i * 3] - cx, py = x[i * 3 + 1] - cy, pz = x[i * 3 + 2] - cz, ax = r0[i * 3], ay = r0[i * 3 + 1], az = r0[i * 3 + 2];
+        A[0] += px * ax, A[1] += px * ay, A[2] += px * az, A[3] += py * ax, A[4] += py * ay, A[5] += py * az, A[6] += pz * ax, A[7] += pz * ay, A[8] += pz * az;
+      }
+      for (let it2 = 0; it2 < 6; it2++) {
+        const e = R.makeRotationFromQuaternion(rq).elements;
+        om.set(0, 0, 0);
+        let den = 0;
+        for (let j = 0; j < 3; j++) {
+          rc.set(e[j * 4], e[j * 4 + 1], e[j * 4 + 2]);
+          ac.set(A[j], A[3 + j], A[6 + j]);
+          den += rc.dot(ac);
+          om.add(rc.cross(ac));
+        }
+        om.multiplyScalar(1 / (Math.abs(den) + 1e-9));
+        const wl = om.length();
+        if (wl < 1e-9) break;
+        rq.premultiply(dq.setFromAxisAngle(om.divideScalar(wl), wl)).normalize();
+      }
+      const e = R.makeRotationFromQuaternion(rq).elements;
+      for (let i = 0; i < N; i++) {
+        if (!w[i]) continue;
+        const ax = r0[i * 3], ay = r0[i * 3 + 1], az = r0[i * 3 + 2], k3 = i * 3;
+        x[k3] += (cx + e[0] * ax + e[4] * ay + e[8] * az - x[k3]) * k;
+        x[k3 + 1] += (cy + e[1] * ax + e[5] * ay + e[9] * az - x[k3 + 1]) * k;
+        x[k3 + 2] += (cz + e[2] * ax + e[6] * ay + e[10] * az - x[k3 + 2]) * k;
+      }
+    };
     return {
       update(dt) {
-        const h = dt / SUB, a2 = 1 / (h * h), tips = X.tips();
+        const h = dt / SUB, a2 = 1 / (h * h), tips = X.tips(), ksm = 1 - Math.exp(-12 * h);
         for (let s = 0; s < SUB; s++) {
           for (let i = 0; i < N; i++) {
             const k = i * 3;
@@ -111,6 +152,7 @@ PC_EXHIBITS.push({
             x[kb + 1] -= dy * lam * wb;
             x[kb + 2] -= dz * lam * wb;
           }
+          shapeMatch(ksm);
           for (let i = 0; i < N; i++) {
             const k = i * 3;
             if (x[k + 1] < 0) {

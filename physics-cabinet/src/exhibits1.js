@@ -1,19 +1,23 @@
 // - the exhibits. build(X) fills X.root (stage-local: y up from the plate top, metres) and returns
 // { update(dt, t) }. X.add registers interactables, X.action adds a button to the panel's action row -
 var PC_EXHIBITS = [];
-// 1 - water ball: position-based fluid (Macklin & Mueller 2013) in a glass sphere you can carry and shake
+// 1 - water ball: a liquid with a free surface in a glass sphere you can carry and shake. The surface is the first
+// sloshing mode of a part-filled sphere (a damped pendulum driven by gravity minus the glass's acceleration), with
+// ripples on top (the damped wave equation on a grid, pinned at the glass); Swirl spins up a whirlpool (paraboloid
+// surface, ripples carried round), and in zero g the water gathers into a floating, wobbling droplet
 PC_EXHIBITS.push({
   id: "water",
   label: "Water ball",
   title: "Water ball",
-  blurb: "900 particles of position-based fluid in a glass sphere · pick it up, tilt it, shake it",
+  blurb: "Liquid in a glass sphere: it sloshes, ripples and whirls · pick it up, tilt it, shake it, try zero g",
   build(X) {
-    const T = THREE6, R = 0.095, N = 900, S = 0.0112, H = S * 1.9, PR = 4.5e-3;
+    const T = THREE6, R = 0.095, RI = R - 1.5e-3, FILL = 0.42;
     const ball = new T.Group();
     ball.position.set(0, R + 0.035, 0);
     ball.name = "water ball";
     X.root.add(ball);
     const glass = new T.Mesh(new T.SphereGeometry(R + 2e-3, 48, 32), PC_MAT.glass(0.14));
+    glass.renderOrder = 3;
     ball.add(glass);
     const back = new T.Mesh(new T.SphereGeometry(R + 2e-3, 48, 32), PC_MAT.glass(0.08));
     back.material.side = T.BackSide;
@@ -29,207 +33,242 @@ PC_EXHIBITS.push({
         scale.setScalar(1);
         position.y = Math.max(position.y, X.stageY + R + 0.02);
       } });
-    // particles: a loose lattice filling the lower part of the sphere
-    const pos = new Float32Array(N * 3), prd = new Float32Array(N * 3), vel = new Float32Array(N * 3);
-    const lam = new Float32Array(N), dp = new Float32Array(N * 3);
-    const fill = () => {
-      let n = 0;
-      for (let y = -R + S; y < R && n < N; y += S) for (let x = -R + S; x < R && n < N; x += S) for (let z = -R + S; z < R && n < N; z += S) {
-        if (x * x + y * y + z * z > (R - S) ** 2) continue;
-        pos.set([ball.position.x + x + (Math.random() - 0.5) * 1e-3, ball.position.y + y, ball.position.z + z + (Math.random() - 0.5) * 1e-3], n * 3);
-        n++;
-      }
-      vel.fill(0);
-    };
-    fill();
-    // kernels
-    const H2 = H * H, POLY6 = 315 / (64 * Math.PI * H ** 9), SPIKY = -45 / (Math.PI * H ** 6);
-    const W = (r2) => r2 >= H2 ? 0 : POLY6 * (H2 - r2) ** 3;
-    // rest density and a relaxation constant from a full lattice around one particle
-    let RHO0 = 0, DEN0 = 0;
-    {
-      let gx = 0, gy = 0, gz = 0, g2 = 0;
-      for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) for (let k = -3; k <= 3; k++) {
-        const r2 = (i * i + j * j + k * k) * S * S;
-        RHO0 += W(r2);
-      }
-      for (let i = -3; i <= 3; i++) for (let j = -3; j <= 3; j++) for (let k = -3; k <= 3; k++) {
-        const r = Math.sqrt(i * i + j * j + k * k) * S;
-        if (!r || r >= H) continue;
-        const g = SPIKY * (H - r) ** 2 / r / RHO0;
-        gx += g * i * S;
-        g2 += g * g * r * r;
-      }
-      DEN0 = g2 + gx * gx;
+    // the pool: a cap of the sphere whose volume is FILL of the ball; its flat surface sits S along the surface
+    // normal from the centre (the same at any tilt: the sphere is round)
+    const V = FILL * 4 / 3 * Math.PI * RI ** 3;
+    let lo = 0, hi = 2 * RI;
+    for (let k = 0; k < 50; k++) {
+      const m = (lo + hi) / 2;
+      if (Math.PI * m * m * (3 * RI - m) / 3 < V) lo = m;
+      else hi = m;
     }
-    const EPS = DEN0 * 0.05, WQd = H2 - (0.25 * H) ** 2, CORR = 2e-3 / DEN0;
-    // uniform grid around the ball (particles never leave it)
-    const GC = Math.ceil(2 * (R + H) / H) + 1, cellStart = new Int32Array(GC ** 3 + 1), cellIdx = new Int32Array(N), sorted = new Int32Array(N);
-    let ox = 0, oy = 0, oz = 0;
-    const cellOf = (x, y, z) => {
-      const i = Math.min(GC - 1, Math.max(0, Math.floor((x - ox) / H))), j = Math.min(GC - 1, Math.max(0, Math.floor((y - oy) / H))), k = Math.min(GC - 1, Math.max(0, Math.floor((z - oz) / H)));
-      return (i * GC + j) * GC + k;
+    const S = lo - RI, RC = Math.sqrt(RI * RI - S * S), RB = Math.cbrt(3 * V / (4 * Math.PI));
+    // liquid space: the ball's centre, the stage's axes (the water does not turn with the glass)
+    const liquid = new T.Group();
+    liquid.userData.noCollider = true;
+    X.root.add(liquid);
+    const water = { color: 2124754, roughness: 0.06, metalness: 0, transparent: true, envMap: pcEnv, envMapIntensity: 1.1 };
+    // body: the inside of the sphere, cut off above the surface plane in the shader
+    const cut = { uN: { value: new T.Vector3(0, 1, 0) }, uS: { value: S } };
+    const bodyMat = new T.MeshStandardMaterial({ ...water, opacity: 0.78, side: T.DoubleSide, depthWrite: false });
+    bodyMat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, cut);
+      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vLiq;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvLiq = position;");
+      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vLiq;\nuniform vec3 uN;\nuniform float uS;").replace("void main() {", "void main() {\n  if (dot(vLiq, uN) > uS) discard;");
     };
-    const buildGrid = (c) => {
-      ox = c.x - R - H;
-      oy = c.y - R - H;
-      oz = c.z - R - H;
-      cellStart.fill(0);
-      for (let i = 0; i < N; i++) {
-        cellIdx[i] = cellOf(prd[i * 3], prd[i * 3 + 1], prd[i * 3 + 2]);
-        cellStart[cellIdx[i] + 1]++;
+    const body = new T.Mesh(new T.SphereGeometry(RI, 64, 40), bodyMat);
+    body.renderOrder = 1;
+    body.userData.noCollider = body.userData.noHighlight = true;
+    liquid.add(body);
+    // surface: a polar mesh over the cut disc, heights from the wave grid
+    const NR = 22, NS = 72, NV = 1 + NR * NS;
+    const capGeo = new T.BufferGeometry(), cp = new Float32Array(NV * 3), ccol = new Float32Array(NV * 3), cidx = [];
+    for (let s = 0; s < NS; s++) cidx.push(0, 1 + (s + 1) % NS, 1 + s);
+    for (let r = 1; r < NR; r++) for (let s = 0; s < NS; s++) {
+      const a = 1 + (r - 1) * NS + s, b = 1 + (r - 1) * NS + (s + 1) % NS, c = a + NS, d = b + NS;
+      cidx.push(a, b, d, a, d, c);
+    }
+    capGeo.setIndex(cidx);
+    capGeo.setAttribute("position", new T.BufferAttribute(cp, 3));
+    capGeo.setAttribute("color", new T.BufferAttribute(ccol, 3));
+    const cap = new T.Mesh(capGeo, new T.MeshStandardMaterial({ ...water, color: 16777215, vertexColors: true, opacity: 0.82, side: T.DoubleSide, depthWrite: false }));
+    cap.renderOrder = 2;
+    cap.frustumCulled = false;
+    cap.userData.noCollider = cap.userData.noHighlight = true;
+    liquid.add(cap);
+    // zero g: one droplet, its l = 2 wobble (Rayleigh) about the last kick's axis
+    const blobGeo = new T.SphereGeometry(RB, 48, 32), bp0 = blobGeo.attributes.position.array.slice();
+    const blob = new T.Mesh(blobGeo, new T.MeshStandardMaterial({ ...water, opacity: 0.8, depthWrite: false }));
+    blob.renderOrder = 2;
+    blob.visible = false;
+    blob.userData.noCollider = blob.userData.noHighlight = true;
+    liquid.add(blob);
+    // ripples: damped wave equation on a G x G grid across the disc (pinned outside it)
+    const G = 40, DX = 2 * RC / (G - 1), CW = 0.24, GAM = 1.6, NU = 2.5e-5, AMP = 6e-3;
+    const hgt = new Float32Array(G * G), hv = new Float32Array(G * G), tmpH = new Float32Array(G * G), inside = new Uint8Array(G * G);
+    for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) inside[i * G + j] = Math.hypot(-RC + i * DX, -RC + j * DX) < RC * 0.97 ? 1 : 0;
+    const sample = (u, v) => {
+      const fi = (u + RC) / DX, fj = (v + RC) / DX, i = Math.floor(fi), j = Math.floor(fj);
+      if (i < 0 || j < 0 || i >= G - 1 || j >= G - 1) return 0;
+      const a = fi - i, b = fj - j, k = i * G + j;
+      return (hgt[k] * (1 - a) + hgt[k + G] * a) * (1 - b) + (hgt[k + 1] * (1 - a) + hgt[k + G + 1] * a) * b;
+    };
+    const splash = (u, v, amp, rad = 2.5) => {
+      const ci = (u + RC) / DX, cj = (v + RC) / DX;
+      for (let i = Math.max(0, Math.floor(ci - 3 * rad)); i <= Math.min(G - 1, Math.ceil(ci + 3 * rad)); i++) for (let j = Math.max(0, Math.floor(cj - 3 * rad)); j <= Math.min(G - 1, Math.ceil(cj + 3 * rad)); j++) {
+        if (inside[i * G + j]) hv[i * G + j] += amp * Math.exp(-((i - ci) ** 2 + (j - cj) ** 2) / (rad * rad));
       }
-      for (let c2 = 0; c2 < GC ** 3; c2++) cellStart[c2 + 1] += cellStart[c2];
-      const fillp = cellStart.slice();
-      for (let i = 0; i < N; i++) sorted[fillp[cellIdx[i]]++] = i;
     };
-    // neighbour lists, built once per step (flat: up to MAXN per particle)
-    const MAXN = 48, nbI = new Int32Array(N * MAXN), nbC = new Int32Array(N);
-    const findNeighbours = () => {
-      for (let i = 0; i < N; i++) {
-        const x = prd[i * 3], y = prd[i * 3 + 1], z = prd[i * 3 + 2];
-        const ci = Math.floor((x - ox) / H), cj = Math.floor((y - oy) / H), ck = Math.floor((z - oz) / H);
-        let c = 0;
-        const base = i * MAXN;
-        for (let a2 = Math.max(0, ci - 1); a2 <= Math.min(GC - 1, ci + 1); a2++) for (let b2 = Math.max(0, cj - 1); b2 <= Math.min(GC - 1, cj + 1); b2++) for (let c2 = Math.max(0, ck - 1); c2 <= Math.min(GC - 1, ck + 1); c2++) {
-          const cell = (a2 * GC + b2) * GC + c2;
-          for (let s2 = cellStart[cell]; s2 < cellStart[cell + 1] && c < MAXN; s2++) {
-            const j = sorted[s2];
-            if (j === i) continue;
-            const dx = x - prd[j * 3], dy = y - prd[j * 3 + 1], dz = z - prd[j * 3 + 2];
-            if (dx * dx + dy * dy + dz * dz < H2) nbI[base + c++] = j;
-          }
-        }
-        nbC[i] = c;
+    // state
+    const n = new T.Vector3(0, 1, 0), nv = new T.Vector3(), up = new T.Vector3(), eu = new T.Vector3(), ev = new T.Vector3();
+    const prevP = new T.Vector3().copy(ball.position), vel = new T.Vector3(), prevV = new T.Vector3(), acc = new T.Vector3(), accLP = new T.Vector3(), accHP = new T.Vector3();
+    const geff = new T.Vector3(), down = new T.Vector3(), qi = new T.Quaternion(), tv = new T.Vector3();
+    const bpos = new T.Vector3(), bvel = new T.Vector3(), bax = new T.Vector3(0, 1, 0);
+    let gravity = true, shake = 0, omega = 0, mode = "pool", A = 0, Av = 0, first = true;
+    const basis = () => {
+      tv.set(Math.abs(n.z) < 0.9 ? 0 : 1, 0, Math.abs(n.z) < 0.9 ? 1 : 0);
+      eu.crossVectors(tv, n).normalize();
+      ev.crossVectors(n, eu);
+    };
+    const toPool = (kick) => {
+      mode = "pool";
+      hgt.fill(0);
+      hv.fill(0);
+      if (kick) {
+        nv.copy(kick);
+        basis();
+        splash(0, 0, -0.3, 5);
       }
+      body.visible = cap.visible = true;
+      blob.visible = false;
     };
-    // render: instanced droplets, coloured by speed (deep blue -> foam white)
-    const drops = new T.InstancedMesh(new T.IcosahedronGeometry(6.6e-3, 1), new T.MeshStandardMaterial({ color: 16777215, roughness: 0.12, metalness: 0.05, envMap: pcEnv }), N);
-    drops.userData.noCollider = drops.userData.noHighlight = true;
-    drops.frustumCulled = false;
-    X.root.add(drops);
-    const deep = new T.Color(1924273), foam = new T.Color(13824511), col = new T.Color(), M = new T.Matrix4();
-    for (let i = 0; i < N; i++) drops.setColorAt(i, deep);
-    let gravity = true, shake = 0, swirl = 0;
-    const center = new T.Vector3(), c0 = new T.Vector3(), cc = new T.Vector3();
-    c0.copy(ball.position);
-    X.action("Swirl", () => swirl = 0.6);
+    const toBlob = () => {
+      mode = "blob";
+      bpos.copy(n).multiplyScalar(-(RI - RB) * 0.9);
+      bvel.set(0, 0, 0);
+      A = 0;
+      Av = 1.2;
+      bax.copy(n);
+      body.visible = cap.visible = false;
+      blob.visible = true;
+    };
+    X.action("Swirl", () => mode === "pool" ? omega = 9 : bvel.add(tv.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.25)));
     X.action("Shake", () => shake = 0.8);
-    X.action("Zero g", (v) => gravity = !v, { toggle: true });
+    X.action("Zero g", (v) => {
+      gravity = !v;
+      if (!gravity && mode === "pool") toBlob();
+    }, { toggle: true });
     X.action("Refill", () => {
       ball.position.set(0, R + 0.035, 0);
       ball.quaternion.identity();
-      c0.copy(ball.position);
-      fill();
+      n.set(0, 1, 0);
+      nv.set(0, 0, 0);
+      omega = 0;
+      first = true;
+      if (gravity) toPool();
+      else toBlob();
     });
+    const W0 = Math.sqrt(1.3 * PC_G / R), ZETA = 0.045, WB = 1.7, ZB = 0.06;
     return {
       update(dt, t) {
         // a shake moves the ball itself, so the glass pushes the water around
         if (shake > 0 && !it.selections.length) {
           shake = Math.max(0, shake - dt);
-          ball.position.x += Math.sin(t * 40) * 0.004 * shake;
-          ball.position.y += Math.cos(t * 33) * 0.003 * shake;
+          ball.position.x += Math.sin(t * 40) * 4e-3 * shake;
+          ball.position.y += Math.cos(t * 33) * 3e-3 * shake;
         }
-        const steps = 1, h = dt / steps, g = gravity ? -PC_G : 0;
-        center.copy(ball.position);
-        for (let st = 0; st < steps; st++) {
-          cc.lerpVectors(c0, center, (st + 1) / steps);
-          for (let i = 0; i < N; i++) {
-            const k = i * 3;
-            vel[k + 1] += g * h;
-            if (swirl > 0) {
-              const dx = pos[k] - cc.x, dz = pos[k + 2] - cc.z;
-              vel[k] += -dz * 14 * h;
-              vel[k + 2] += dx * 14 * h;
-            }
-            prd[k] = pos[k] + vel[k] * h;
-            prd[k + 1] = pos[k + 1] + vel[k + 1] * h;
-            prd[k + 2] = pos[k + 2] + vel[k + 2] * h;
-          }
-          buildGrid(cc);
-          findNeighbours();
-          const W0 = W(0), lim = R - PR;
-          for (let iter = 0; iter < 3; iter++) {
-            for (let i = 0; i < N; i++) {
-              const x = prd[i * 3], y = prd[i * 3 + 1], z = prd[i * 3 + 2], base = i * MAXN;
-              let rho = W0, sx = 0, sy = 0, sz = 0, s2 = 0;
-              for (let q = 0; q < nbC[i]; q++) {
-                const j = nbI[base + q], dx = x - prd[j * 3], dy = y - prd[j * 3 + 1], dz = z - prd[j * 3 + 2], r2 = dx * dx + dy * dy + dz * dz;
-                if (r2 >= H2 || r2 < 1e-12) continue;
-                const d = H2 - r2;
-                rho += POLY6 * d * d * d;
-                const r = Math.sqrt(r2), gw = SPIKY * (H - r) * (H - r) / r / RHO0;
-                sx += gw * dx;
-                sy += gw * dy;
-                sz += gw * dz;
-                s2 += gw * gw * r2;
+        liquid.position.copy(ball.position);
+        // the glass's acceleration (smoothed: hand tracking is noisy), and gravity in stage axes
+        if (first) prevP.copy(ball.position), vel.set(0, 0, 0), first = false;
+        vel.subVectors(ball.position, prevP).divideScalar(dt);
+        prevP.copy(ball.position);
+        acc.subVectors(vel, prevV).divideScalar(dt);
+        prevV.copy(vel);
+        if (acc.length() > 60) acc.setLength(60);
+        accLP.lerp(acc, Math.min(1, dt / 0.04));
+        accHP.lerp(accLP, Math.min(1, dt / 0.25));
+        X.root.getWorldQuaternion(qi).invert();
+        down.set(0, -1, 0).applyQuaternion(qi);
+        geff.copy(down).multiplyScalar(gravity ? PC_G : 0).sub(accLP);
+        if (mode === "blob") {
+          // free fall in the glass's frame: gravity (if back on) minus the glass's acceleration
+          bvel.addScaledVector(geff, dt);
+          bpos.addScaledVector(bvel, dt);
+          const lim = RI - RB * (1 + 0.5 * Math.abs(A)), d = bpos.length();
+          if (d > lim) {
+            const nrm = tv.copy(bpos).divideScalar(d), vn = bvel.dot(nrm);
+            bpos.multiplyScalar(lim / d);
+            if (vn > 0) {
+              bvel.addScaledVector(nrm, -1.25 * vn);
+              bax.copy(nrm);
+              Av -= 4 * vn / RB * 0.1;
+              // gravity is back: the droplet lands and becomes a pool again
+              if (gravity && geff.lengthSq() > 4) {
+                n.copy(geff).negate().normalize();
+                toPool(tv.copy(bvel).cross(n).multiplyScalar(-4));
               }
-              const C = rho / RHO0 - 1;
-              lam[i] = C > 0 ? -C / (s2 + sx * sx + sy * sy + sz * sz + EPS) : 0;
-            }
-            for (let i = 0; i < N; i++) {
-              const x = prd[i * 3], y = prd[i * 3 + 1], z = prd[i * 3 + 2], base = i * MAXN, li = lam[i];
-              let ax = 0, ay = 0, az = 0;
-              for (let q = 0; q < nbC[i]; q++) {
-                const j = nbI[base + q], dx = x - prd[j * 3], dy = y - prd[j * 3 + 1], dz = z - prd[j * 3 + 2], r2 = dx * dx + dy * dy + dz * dz;
-                if (r2 >= H2 || r2 < 1e-12) continue;
-                const d = (H2 - r2) / WQd, r = Math.sqrt(r2), wq = d * d * d;
-                const gw = SPIKY * (H - r) * (H - r) / r * (li + lam[j] - CORR * wq * wq * wq * wq) / RHO0;
-                ax += gw * dx;
-                ay += gw * dy;
-                az += gw * dz;
-              }
-              dp[i * 3] = ax;
-              dp[i * 3 + 1] = ay;
-              dp[i * 3 + 2] = az;
-            }
-            for (let i = 0; i < N; i++) {
-              const k = i * 3;
-              let x = prd[k] + dp[k] - cc.x, y = prd[k + 1] + dp[k + 1] - cc.y, z = prd[k + 2] + dp[k + 2] - cc.z;
-              const d2 = x * x + y * y + z * z;
-              if (d2 > lim * lim) {
-                const f = lim / Math.sqrt(d2);
-                x *= f;
-                y *= f;
-                z *= f;
-              }
-              prd[k] = cc.x + x;
-              prd[k + 1] = cc.y + y;
-              prd[k + 2] = cc.z + z;
             }
           }
-          for (let i = 0; i < N * 3; i++) {
-            vel[i] = (prd[i] - pos[i]) / h * 0.999;
-            pos[i] = prd[i];
+          bvel.multiplyScalar(Math.exp(-0.3 * dt));
+          Av += (-WB * WB * A - 2 * ZB * WB * Av) * dt;
+          A += Av * dt;
+          A = Math.max(-0.35, Math.min(0.35, A));
+          blob.position.copy(bpos);
+          const P = blobGeo.attributes.position.array;
+          for (let k = 0; k < P.length; k += 3) {
+            const x = bp0[k], y = bp0[k + 1], z = bp0[k + 2], c = (x * bax.x + y * bax.y + z * bax.z) / RB;
+            const f = 1 + A * 0.5 * (3 * c * c - 1);
+            P[k] = x * f;
+            P[k + 1] = y * f;
+            P[k + 2] = z * f;
           }
-          // XSPH viscosity: each particle drifts towards its neighbours' mean velocity
-          for (let i = 0; i < N; i++) {
-            const x = pos[i * 3], y = pos[i * 3 + 1], z = pos[i * 3 + 2], base = i * MAXN;
-            let ax = 0, ay = 0, az = 0;
-            for (let q = 0; q < nbC[i]; q++) {
-              const j = nbI[base + q], dx = x - pos[j * 3], dy = y - pos[j * 3 + 1], dz = z - pos[j * 3 + 2], r2 = dx * dx + dy * dy + dz * dz;
-              if (r2 >= H2) continue;
-              const d = H2 - r2, wv = POLY6 * d * d * d / RHO0 * 0.06;
-              ax += (vel[j * 3] - vel[i * 3]) * wv;
-              ay += (vel[j * 3 + 1] - vel[i * 3 + 1]) * wv;
-              az += (vel[j * 3 + 2] - vel[i * 3 + 2]) * wv;
-            }
-            dp[i * 3] = ax;
-            dp[i * 3 + 1] = ay;
-            dp[i * 3 + 2] = az;
-          }
-          for (let i = 0; i < N * 3; i++) vel[i] += dp[i];
+          blobGeo.attributes.position.needsUpdate = true;
+          blobGeo.computeVertexNormals();
+          return;
         }
-        c0.copy(center);
-        swirl = Math.max(0, swirl - dt);
-        for (let i = 0; i < N; i++) {
-          const k = i * 3, sp = Math.hypot(vel[k], vel[k + 1], vel[k + 2]);
-          M.makeTranslation(pos[k], pos[k + 1], pos[k + 2]);
-          drops.setMatrixAt(i, M);
-          drops.setColorAt(i, col.lerpColors(deep, foam, Math.min(1, sp / 1.1)));
+        // sloshing: the surface normal swings toward "up" of the effective gravity
+        const gl = geff.length();
+        if (gl > 0.5) {
+          up.copy(geff).divideScalar(-gl);
+          const w0 = W0 * Math.sqrt(gl / PC_G);
+          nv.addScaledVector(tv.subVectors(up, n), w0 * w0 * dt).multiplyScalar(Math.exp(-2 * ZETA * w0 * dt));
         }
-        drops.instanceMatrix.needsUpdate = true;
-        drops.instanceColor.needsUpdate = true;
+        n.addScaledVector(nv, dt).normalize();
+        nv.addScaledVector(n, -nv.dot(n));
+        basis();
+        cut.uN.value.copy(n);
+        // ripples: forced by sudden moves of the glass, shaken drops, carried round by a whirlpool
+        const fu = (accLP.x - accHP.x) * eu.x + (accLP.y - accHP.y) * eu.y + (accLP.z - accHP.z) * eu.z;
+        const fv = (accLP.x - accHP.x) * ev.x + (accLP.y - accHP.y) * ev.y + (accLP.z - accHP.z) * ev.z;
+        if (shake > 0 && Math.random() < 0.6) splash((Math.random() * 2 - 1) * RC * 0.6, (Math.random() * 2 - 1) * RC * 0.6, -0.12 * shake, 3.5);
+        const SUB = 2, h = dt / SUB;
+        for (let s = 0; s < SUB; s++) {
+          for (let i = 1; i < G - 1; i++) for (let j = 1; j < G - 1; j++) {
+            const k = i * G + j;
+            if (!inside[k]) continue;
+            const lap = (hgt[k - G] + hgt[k + G] + hgt[k - 1] + hgt[k + 1] - 4 * hgt[k]) / (DX * DX);
+            // NU: a little viscosity on the surface speed, so grid-size wiggles die out first
+            const lapv = (hv[k - G] + hv[k + G] + hv[k - 1] + hv[k + 1] - 4 * hv[k]) / (DX * DX);
+            hv[k] += (CW * CW * lap + NU * lapv - GAM * hv[k] - 0.12 * (fu * (-RC + i * DX) + fv * (-RC + j * DX))) * h;
+          }
+          for (let k = 0; k < G * G; k++) hgt[k] = inside[k] ? Math.max(-AMP, Math.min(AMP, hgt[k] + hv[k] * h)) : 0;
+        }
+        if (omega > 0.3) {
+          // whirlpool: the ripples ride round with the water
+          const a = omega * dt, c = Math.cos(a), sn = Math.sin(a);
+          tmpH.set(hgt);
+          for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) {
+            const u = -RC + i * DX, v = -RC + j * DX;
+            hgt[i * G + j] = inside[i * G + j] ? 0 : 0;
+            if (!inside[i * G + j]) continue;
+            const fi = (c * u + sn * v + RC) / DX, fj = (-sn * u + c * v + RC) / DX, i0 = Math.floor(fi), j0 = Math.floor(fj);
+            if (i0 < 0 || j0 < 0 || i0 >= G - 1 || j0 >= G - 1) continue;
+            const x = fi - i0, y = fj - j0, k = i0 * G + j0;
+            hgt[i * G + j] = (tmpH[k] * (1 - x) + tmpH[k + G] * x) * (1 - y) + (tmpH[k + 1] * (1 - x) + tmpH[k + G + 1] * x) * y;
+          }
+          if (Math.random() < 0.2) splash((Math.random() - 0.5) * RC, (Math.random() - 0.5) * RC, -0.04, 3);
+        }
+        omega *= Math.exp(-dt / 2.5);
+        // the surface mesh
+        const deep = 0.28, k2 = omega * omega / (2 * PC_G);
+        let vi = 0;
+        const put = (rho, th) => {
+          const u = rho * Math.cos(th), v = rho * Math.sin(th), y = S + sample(u, v) + k2 * (rho * rho - RC * RC);
+          cp[vi * 3] = n.x * y + eu.x * u + ev.x * v;
+          cp[vi * 3 + 1] = n.y * y + eu.y * u + ev.y * v;
+          cp[vi * 3 + 2] = n.z * y + eu.z * u + ev.z * v;
+          const fi = Math.round((u + RC) / DX), fj = Math.round((v + RC) / DX);
+          const foam = Math.min(1, Math.abs(hv[Math.max(0, Math.min(G - 1, fi)) * G + Math.max(0, Math.min(G - 1, fj))] || 0) / 0.08);
+          ccol[vi * 3] = deep + (1 - deep) * foam * 0.9 + 0.1;
+          ccol[vi * 3 + 1] = 0.62 + 0.38 * foam;
+          ccol[vi * 3 + 2] = 1;
+          vi++;
+        };
+        put(0, 0);
+        for (let r = 1; r <= NR; r++) for (let s = 0; s < NS; s++) put(RC * r / NR, s / NS * Math.PI * 2);
+        capGeo.attributes.position.needsUpdate = true;
+        capGeo.attributes.color.needsUpdate = true;
+        capGeo.computeVertexNormals();
       }
     };
   }
