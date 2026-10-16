@@ -4632,14 +4632,14 @@ var Archiscape = {
     title.traverse((o) => o.userData.noCollider = o.userData.noHighlight = true);
     root.add(title);
     // - the panel: one button per style, then the tools -
-    const PW = 0.39, PH = 0.252;
+    const PW = 0.39, PH = 0.284;
     const panel = ctx.panel("Archiscape · one town, every era", { w: PW, h: PH });
     panel.root.position.set(-0.5, TABLE + 0.1, -0.34);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
     // eighteen eras in five columns, the tools in a row of six under them
     this.styleBtns = AS_STYLES.map((s, i) => ctx.button(s.label, { w: 0.07, fontSize: s.label.length > 10 ? 22 : 26, onClick: () => this.setStyle(i) }));
-    const tool = (label, o) => ctx.button(label, { w: 0.057, fontSize: 24, ...o });
+    const tool = (label, o) => ctx.button(label, { w: 0.0885, fontSize: 24, ...o });
     const gen = tool("New town", { onClick: () => this.generate() });
     this.eraseB = tool("Erase", { toggle: true, onClick: (v) => {
       this.erase = v;
@@ -4647,18 +4647,25 @@ var Archiscape = {
     } });
     const undo = tool("Undo", { onClick: () => this.undo() });
     const clear = tool("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
-    this.tourB = tool("Tour", { toggle: true, onClick: (v) => {
-      this.tour = v ? 0 : null;
+    // tours: eras cycle through the styles, towns through new layouts; both on = a new town in a new era
+    const tour = () => this.tour = this.tourEras || this.tourTowns ? this.tour ?? 0 : null;
+    this.tourErasB = tool("Tour eras", { w: 0.0885, toggle: true, onClick: (v) => {
+      this.tourEras = v;
+      tour();
+    } });
+    this.tourTownsB = tool("Tour towns", { w: 0.0885, toggle: true, onClick: (v) => {
+      this.tourTowns = v;
+      tour();
     } });
     asMusic ||= new AsMusic(app2.sfx);
     this.music = asMusic;
-    const music = tool("Music", { toggle: true, value: asMusic.on, onClick: (v) => {
+    const music = tool("Music", { w: 0.0885, toggle: true, value: asMusic.on, onClick: (v) => {
       app2.sfx.ensure();
       asMusic.setOn(v);
     } });
     panel.layout(this.styleBtns, { cols: 5, top: 0.03 });
     const rows = Math.ceil(AS_STYLES.length / 5);
-    panel.layout([gen, this.eraseB, undo, clear, this.tourB, music], { cols: 6, top: 0.03 + rows * 0.032 + 8e-3 });
+    panel.layout([gen, this.eraseB, undo, clear, this.tourErasB, this.tourTownsB, music], { cols: 4, top: 0.03 + rows * 0.032 + 8e-3 });
     this.infoTex = textTexture("", { w: 1024, h: 56, size: 24, color: "#ffffff" });
     const info = new T.Mesh(new T.PlaneGeometry(PW - 0.016, (PW - 0.016) * 56 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
     info.position.set(0, -PH / 2 + 0.02, 2e-3);
@@ -4680,6 +4687,7 @@ var Archiscape = {
     addEventListener("keydown", this._kd);
     this.erase = false;
     this.tour = null;
+    this.tourEras = this.tourTowns = false;
     this.time = 0;
     this.setStyle(this.styleIdx, true);
   },
@@ -4745,6 +4753,25 @@ var Archiscape = {
     this._rebuild();
     this._rebuildPick();
     this.ghostKey = "";
+  },
+  // one step of the tour: the next era, a new town, or both at once (one rise)
+  _tourStep() {
+    if (this.tourTowns) {
+      const next = this.tourEras ? (this.styleIdx + 1) % AS_STYLES.length : this.styleIdx;
+      this.history.push(this.h);
+      if (this.history.length > 60) this.history.shift();
+      this.h = new Int8Array(this._layout(AS_STYLES[next]));
+      this._rebuildPick();
+      this.ghostKey = "";
+      if (this.tourEras) return this.setStyle(next);
+      return this._rebuild("era");
+    }
+    this.setStyle((this.styleIdx + 1) % AS_STYLES.length);
+  },
+  // a new layout: a style's own preset now and then (Stonehenge's rings, the tulou), otherwise a fresh town
+  _layout(s) {
+    this._seed = (this._seed || 7) + 1;
+    return s.preset && this._seed % 2 ? s.preset(this.grid.cells) : asGenerate(this.grid.cells, this._seed * 7919);
   },
   generate() {
     const s = AS_STYLES[this.styleIdx];
@@ -4871,9 +4898,9 @@ var Archiscape = {
     }
     if (this.tour !== null) {
       this.tour += dt;
-      if (this.tour > 5) {
+      if (this.tour > AS_TOUR_S) {
         this.tour = 0;
-        this.setStyle((this.styleIdx + 1) % AS_STYLES.length);
+        this._tourStep();
       }
     }
     this._updateGhost();
@@ -4891,6 +4918,8 @@ var Archiscape = {
   }
 };
 var asEnv = null, asMusic = null;
+// s: how long the tour stays on each era / town
+var AS_TOUR_S = 3.2;
 function asMaterials() {
   const cache = {};
   const kind = (k) => {

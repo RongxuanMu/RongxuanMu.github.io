@@ -2510,7 +2510,7 @@ PC_EXHIBITS.push({
   id: "water",
   label: "Water ball",
   title: "Water ball",
-  blurb: "Liquid in a glass sphere: it sloshes, ripples and whirls · pick it up, tilt it, shake it, try zero g",
+  blurb: "Liquid in a glass sphere: it sloshes, ripples and whirls · pick it up, shake it, dip a finger in, try zero g",
   build(X) {
     const T = THREE6, R = 0.095, RI = R - 1.5e-3, FILL = 0.42;
     const ball = new T.Group();
@@ -2572,7 +2572,8 @@ PC_EXHIBITS.push({
     capGeo.setIndex(cidx);
     capGeo.setAttribute("position", new T.BufferAttribute(cp, 3));
     capGeo.setAttribute("color", new T.BufferAttribute(ccol, 3));
-    const cap = new T.Mesh(capGeo, new T.MeshStandardMaterial({ ...water, color: 16777215, vertexColors: true, opacity: 0.82, side: T.DoubleSide, depthWrite: false }));
+    // the surface is glossier than the body, so every wave catches the light
+    const cap = new T.Mesh(capGeo, new T.MeshStandardMaterial({ ...water, color: 16777215, vertexColors: true, opacity: 0.9, roughness: 0.1, envMapIntensity: 0.35, side: T.DoubleSide, depthWrite: false }));
     cap.renderOrder = 2;
     cap.frustumCulled = false;
     cap.userData.noCollider = cap.userData.noHighlight = true;
@@ -2585,7 +2586,7 @@ PC_EXHIBITS.push({
     blob.userData.noCollider = blob.userData.noHighlight = true;
     liquid.add(blob);
     // ripples: damped wave equation on a G x G grid across the disc (pinned outside it)
-    const G = 40, DX = 2 * RC / (G - 1), CW = 0.24, GAM = 1.6, NU = 2.5e-5, AMP = 6e-3;
+    const G = 44, DX = 2 * RC / (G - 1), CW = 0.26, GAM = 1.1, NU = 9e-5, AMP = 0.012;
     const hgt = new Float32Array(G * G), hv = new Float32Array(G * G), tmpH = new Float32Array(G * G), inside = new Uint8Array(G * G);
     for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) inside[i * G + j] = Math.hypot(-RC + i * DX, -RC + j * DX) < RC * 0.97 ? 1 : 0;
     const sample = (u, v) => {
@@ -2603,6 +2604,7 @@ PC_EXHIBITS.push({
     // state
     const n = new T.Vector3(0, 1, 0), nv = new T.Vector3(), up = new T.Vector3(), eu = new T.Vector3(), ev = new T.Vector3();
     const prevP = new T.Vector3().copy(ball.position), vel = new T.Vector3(), prevV = new T.Vector3(), acc = new T.Vector3(), accLP = new T.Vector3(), accHP = new T.Vector3();
+    const prevTip = [];
     const geff = new T.Vector3(), down = new T.Vector3(), qi = new T.Quaternion(), tv = new T.Vector3();
     const bpos = new T.Vector3(), bvel = new T.Vector3(), bax = new T.Vector3(0, 1, 0);
     let gravity = true, shake = 0, omega = 0, mode = "pool", A = 0, Av = 0, first = true;
@@ -2721,7 +2723,23 @@ PC_EXHIBITS.push({
         // ripples: forced by sudden moves of the glass, shaken drops, carried round by a whirlpool
         const fu = (accLP.x - accHP.x) * eu.x + (accLP.y - accHP.y) * eu.y + (accLP.z - accHP.z) * eu.z;
         const fv = (accLP.x - accHP.x) * ev.x + (accLP.y - accHP.y) * ev.y + (accLP.z - accHP.z) * ev.z;
-        if (shake > 0 && Math.random() < 0.6) splash((Math.random() * 2 - 1) * RC * 0.6, (Math.random() * 2 - 1) * RC * 0.6, -0.12 * shake, 3.5);
+        if (shake > 0 && Math.random() < 0.6) splash((Math.random() * 2 - 1) * RC * 0.6, (Math.random() * 2 - 1) * RC * 0.6, -0.22 * shake, 4.5);
+        // a still glass is never quite still: now and then a faint ripple
+        if (Math.random() < dt * 1.2) splash((Math.random() * 2 - 1) * RC * 0.5, (Math.random() * 2 - 1) * RC * 0.5, -0.05, 3.5);
+        // fingertips / controller tips dipped in the water push it down and stir it
+        const tips = X.tips();
+        tips.forEach((tp, ti) => {
+          const rel = tv.subVectors(tp, ball.position), y = rel.dot(n) - S, pv = prevTip[ti] ?? (prevTip[ti] = tp.clone());
+          const sp = pv.distanceTo(tp) / Math.max(dt, 1e-3);
+          pv.copy(tp);
+          if (rel.length() > RI || y > 8e-3 || y < -0.04) return;
+          const u = rel.dot(eu), v = rel.dot(ev);
+          if (Math.hypot(u, v) > RC * 0.92) return;
+          splash(u, v, -Math.min(1.2, 0.08 + sp * 1.5) * dt * 60 * 0.12, 3);
+        });
+        prevTip.length = tips.length;
+        // the slosh itself makes waves: the swing of the surface pushes on the water it leaves behind
+        const su = nv.dot(eu) * 2.4, sv = nv.dot(ev) * 2.4;
         const SUB = 2, h = dt / SUB;
         for (let s = 0; s < SUB; s++) {
           for (let i = 1; i < G - 1; i++) for (let j = 1; j < G - 1; j++) {
@@ -2730,9 +2748,10 @@ PC_EXHIBITS.push({
             const lap = (hgt[k - G] + hgt[k + G] + hgt[k - 1] + hgt[k + 1] - 4 * hgt[k]) / (DX * DX);
             // NU: a little viscosity on the surface speed, so grid-size wiggles die out first
             const lapv = (hv[k - G] + hv[k + G] + hv[k - 1] + hv[k + 1] - 4 * hv[k]) / (DX * DX);
-            hv[k] += (CW * CW * lap + NU * lapv - GAM * hv[k] - 0.12 * (fu * (-RC + i * DX) + fv * (-RC + j * DX))) * h;
+            hv[k] += (CW * CW * lap + NU * lapv - GAM * hv[k] - (0.55 * (fu * (-RC + i * DX) + fv * (-RC + j * DX)) + 0.9 * (su * (-RC + i * DX) + sv * (-RC + j * DX)))) * h;
           }
-          for (let k = 0; k < G * G; k++) hgt[k] = inside[k] ? Math.max(-AMP, Math.min(AMP, hgt[k] + hv[k] * h)) : 0;
+          // heights saturate softly (a hard clip would turn every crest into a spike)
+          for (let k = 0; k < G * G; k++) hgt[k] = inside[k] ? AMP * Math.tanh((hgt[k] + hv[k] * h) / AMP) : 0;
         }
         if (omega > 0.3) {
           // whirlpool: the ripples ride round with the water
@@ -2751,7 +2770,7 @@ PC_EXHIBITS.push({
         }
         omega *= Math.exp(-dt / 2.5);
         // the surface mesh
-        const deep = 0.28, k2 = omega * omega / (2 * PC_G);
+        const k2 = omega * omega / (2 * PC_G);
         let vi = 0;
         const put = (rho, th) => {
           const u = rho * Math.cos(th), v = rho * Math.sin(th), y = S + sample(u, v) + k2 * (rho * rho - RC * RC);
@@ -2759,10 +2778,14 @@ PC_EXHIBITS.push({
           cp[vi * 3 + 1] = n.y * y + eu.y * u + ev.y * v;
           cp[vi * 3 + 2] = n.z * y + eu.z * u + ev.z * v;
           const fi = Math.round((u + RC) / DX), fj = Math.round((v + RC) / DX);
-          const foam = Math.min(1, Math.abs(hv[Math.max(0, Math.min(G - 1, fi)) * G + Math.max(0, Math.min(G - 1, fj))] || 0) / 0.08);
-          ccol[vi * 3] = deep + (1 - deep) * foam * 0.9 + 0.1;
-          ccol[vi * 3 + 1] = 0.62 + 0.38 * foam;
-          ccol[vi * 3 + 2] = 1;
+          const k = Math.max(0, Math.min(G - 1, fi)) * G + Math.max(0, Math.min(G - 1, fj));
+          // troughs deep blue, crests pale, fast-moving water whitens: the waves read even where the light is flat
+          const crest = Math.max(-1, Math.min(1, (hgt[k] || 0) / (AMP * 0.3))), foam = Math.min(1, Math.max(0, Math.abs(hv[k] || 0) / 0.35 - 0.3));
+          // (linear colours) trough (0.02, 0.1, 0.32) -> crest (0.22, 0.5, 0.8) -> foam white
+          const lv = 0.5 + 0.5 * crest, cr = 0.02 + 0.2 * lv, cg = 0.1 + 0.4 * lv, cb = 0.32 + 0.48 * lv;
+          ccol[vi * 3] = cr + (0.9 - cr) * foam;
+          ccol[vi * 3 + 1] = cg + (0.95 - cg) * foam;
+          ccol[vi * 3 + 2] = cb + (1 - cb) * foam;
           vi++;
         };
         put(0, 0);
@@ -2774,14 +2797,18 @@ PC_EXHIBITS.push({
     };
   }
 });
-// 2 - Newton's cradle: pendulums with exact elastic exchanges, swept along the row
+// 2 - Newton's cradle: steel balls on pendulums, touching. Contacts are Hertzian (force ~ overlap^1.5, a few
+// microseconds long, with a little Hunt-Crossley damping), integrated in 5 us steps: so one ball in sends one ball
+// out, then, as in a real cradle, the middle balls slowly join in until the whole row swings together
 PC_EXHIBITS.push({
   id: "cradle",
   label: "Cradle",
   title: "Newton's cradle",
   blurb: "Momentum and energy pass down the row · pull balls back and let go",
   build(X) {
-    const T = THREE6, NB = 5, r = 0.0175, L = 0.12, TOP = 0.19, ZS = 0.04, E = 0.997;
+    const T = THREE6, NB = 5, r = 0.0175, L = 0.12, TOP = 0.19, ZS = 0.04;
+    // steel: mass of one ball, contact stiffness (N / m^1.5), contact damping (s / m), air + string losses (1 / s)
+    const MASS = 7850 * 4 / 3 * Math.PI * r ** 3, KH = 1e10, CH = 0.03, DAMP = 0.012, DT = 5e-6;
     const chrome = PC_MAT.chrome(), str = PC_MAT.string(), wood = PC_MAT.wood();
     X.root.add(new T.Mesh(new T.BoxGeometry(0.26, 0.014, 0.12), wood).translateY(7e-3));
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
@@ -2789,7 +2816,8 @@ PC_EXHIBITS.push({
       X.root.add(p);
     }
     for (const sz of [-1, 1]) X.root.add(pcRod(2.5e-3, chrome, 10).set(new T.Vector3(-0.115, TOP, sz * ZS), new T.Vector3(0.115, TOP, sz * ZS)));
-    const x0 = (i) => (i - (NB - 1) / 2) * 2 * r * 1.0005;
+    const x0 = (i) => (i - (NB - 1) / 2) * 2 * r;
+    const F = new Float64Array(NB), touching = new Uint8Array(NB);
     const th = new Float64Array(NB), w = new Float64Array(NB), held = new Array(NB).fill(null);
     const balls = [], strings = [];
     for (let i = 0; i < NB; i++) {
@@ -2835,45 +2863,42 @@ PC_EXHIBITS.push({
     let clack = 0;
     return {
       update(dt) {
-        const n = Math.ceil(dt / 1e-3), h = dt / n;
-        for (let s = 0; s < n; s++) {
+        // fine 5 us steps only while two balls press or are about to meet; otherwise 1 ms pendulum steps
+        const near = () => {
+          for (let i = 0; i + 1 < NB; i++) {
+            const gap = pos(i + 1) - pos(i) - 2 * r, vrel = L * w[i] * Math.cos(th[i]) - L * w[i + 1] * Math.cos(th[i + 1]);
+            // pressing, or closing in within the next coarse step (resting contact at zero gap needs neither)
+            if (gap < -1e-7 || vrel > 1e-4 && gap < vrel * 1.2e-3 + 1e-6) return true;
+          }
+          return false;
+        };
+        for (let left = dt, guard = 0; left > 1e-9 && guard < 20000; guard++) {
+          const h = Math.min(left, near() || held.some((x) => x !== null) ? DT : 1e-3);
+          left -= h;
+          F.fill(0);
+          for (let i = 0; i + 1 < NB; i++) {
+            const d = 2 * r - (pos(i + 1) - pos(i));
+            if (d <= 0) {
+              touching[i] = 0;
+              continue;
+            }
+            const vrel = L * w[i] * Math.cos(th[i]) - L * w[i + 1] * Math.cos(th[i + 1]);
+            // a new contact clacks as loud as it hits
+            if (!touching[i]) clack = Math.max(clack, Math.abs(vrel)), touching[i] = 1;
+            const f = Math.max(0, KH * d * Math.sqrt(d) * (1 + CH * vrel));
+            F[i] -= f;
+            F[i + 1] += f;
+          }
           for (let i = 0; i < NB; i++) {
             if (held[i] !== null) {
+              // a held ball follows the hand and is as heavy as the hand: contacts don't move it
               const prev = th[i];
               th[i] += (held[i] - th[i]) * Math.min(1, h * 40);
               w[i] = (th[i] - prev) / h;
               continue;
             }
-            w[i] += (-PC_G / L * Math.sin(th[i]) - 0.04 * w[i]) * h;
+            w[i] += (-PC_G / L * Math.sin(th[i]) - DAMP * w[i] + F[i] * Math.cos(th[i]) / (MASS * L)) * h;
             th[i] += w[i] * h;
-          }
-          // sweep the contacts both ways until nothing approaches: equal masses swap their velocities
-          for (let pass = 0; pass < 2 * NB; pass++) {
-            let any = false;
-            for (let q = 0; q < 2 * (NB - 1); q++) {
-              const i = q < NB - 1 ? q : 2 * (NB - 1) - 1 - q, j = i + 1;
-              const gap = pos(j) - pos(i) - 2 * r;
-              if (gap > 0) continue;
-              const vi = L * w[i] * Math.cos(th[i]), vj = L * w[j] * Math.cos(th[j]);
-              const hi = held[i] !== null, hj = held[j] !== null;
-              if (vi - vj > 1e-6) {
-                let ni, nj;
-                if (hi && !hj) ni = vi, nj = vi + E * (vi - vj);
-                else if (hj && !hi) nj = vj, ni = vj - E * (vi - vj);
-                else ni = ((1 - E) * vi + (1 + E) * vj) / 2, nj = ((1 + E) * vi + (1 - E) * vj) / 2;
-                if (!hi) w[i] = ni / (L * Math.cos(th[i]));
-                if (!hj) w[j] = nj / (L * Math.cos(th[j]));
-                clack = Math.max(clack, Math.abs(vi - vj));
-                any = true;
-              }
-              // overlap: push the free ball(s) apart along the swing
-              if (gap < -1e-5 && !(hi && hj)) {
-                const si = hi ? 0 : hj ? 1 : 0.5, sj = 1 - si;
-                th[i] += gap * si / (L * Math.cos(th[i]));
-                th[j] -= gap * sj / (L * Math.cos(th[j]));
-              }
-            }
-            if (!any) break;
           }
         }
         if (clack > 0.02) X.tone(2600 + Math.random() * 300, Math.min(0.25, clack * 0.5), 0.05, "triangle");

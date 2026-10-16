@@ -4872,11 +4872,14 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     this.walkPanel = make("Humanoid · pinch the floor, grab, drive", [follow, ...common()], 0.15, true);
     this.trackPanel = make("Unitree G1 · pick a motion", [...RZ_TRACK_CLIPS.map((l) => ctx.button(l, { w: 0.078, h: 0.026, fontSize: 24, onClick: () => this._play(l) })), ...common()], 0.25, false);
   },
+  // the picker sits on your left with the commands, stacked above them as one console (as Microduck XR keeps
+  // everything you press on the left and only the drive joystick on the right)
   _placeConsole(y) {
-    this.picker.root.position.set(0.44, y + 0.14, -0.38);
+    this.picker.root.position.set(-0.42, y + 0.29 / 2 + 0.155 / 2 + 0.012, -0.36);
     this.picker.root.lookAt(0, y + 0.45, 0.35);
-    this.humSlot.position.copy(this.panel.root.position);
-    this.humSlot.quaternion.copy(this.panel.root.quaternion);
+    // where Microduck XR puts its command panel (_placeStage sets that one only after asking us)
+    this.humSlot.position.set(-0.42, y, -0.36);
+    this.humSlot.lookAt(0, y + 0.45, 0.35);
     return [this.picker.root, this.humSlot];
   },
   _drawInfo() {
