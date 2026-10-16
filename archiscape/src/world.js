@@ -174,6 +174,8 @@ function asGenerate(cells, seed) {
 var Archiscape = {
   id: "archiscape",
   title: "Archiscape",
+  // keys the world uses itself (VibeXR 0.9+ leaves them to it instead of flying the camera)
+  claimKeys: "enz",
   init(ctx) {
     const { root, THREE: T } = ctx;
     const app2 = this.app = ctx.app;

@@ -47,12 +47,13 @@ swap('  _hands() {\n    return this.app.input.list()',
 swap('    if (this.owner === src) return;', '    if (this.owner === src) return;\n    this.show(this.home);')
 
 # page chrome
-swap('<!-- VibeXR Interaction Framework v0.8.25 - single-file build',
+version = re.search(r'var VERSION = "([^"]+)";', s).group(1)
+swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '<!-- Microduck XR - drive the Pollen Robotics Microduck (real RL policies in MuJoCo WASM + ONNX Runtime Web)\n'
-     '  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v0.8.25.\n'
+     f'  with hands, controllers or a mouse. Built on the VibeXR Interaction Framework v{version}.\n'
      '  Robot: Pollen Robotics Microduck - pollen-robotics/microduck + microduck_rl (Apache-2.0). Model, visual mesh\n'
      '  and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.\n\n'
-     '  VibeXR Interaction Framework v0.8.25 - single-file build')
+     f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
 # author credit on the landing card
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
@@ -72,7 +73,7 @@ swap('@media (max-width: 600px) { #overlay { align-items: flex-end; padding-bott
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">The real Microduck walking policies in MuJoCo &middot; point, pinch &amp; grab to play &middot; '
      'built on the VibeXR interaction framework</p>')
-swap('"WebXR not available - desktop preview (left-click = ray pinch, wheel while dragging = push / pull, right-drag = orbit)"',
+swap(re.search(r'"WebXR not available - desktop preview \([^"]*\)"', s).group(0),
      '"Desktop preview: click the floor to walk, drag the duck, WASD drive, Q quack, right-drag orbit"')
 swap('document.getElementById("ver").textContent = `v${VERSION}`;',
      'document.getElementById("ver").textContent = `Microduck XR \\u00b7 VibeXR v${VERSION}`;')

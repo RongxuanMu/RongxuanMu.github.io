@@ -3083,6 +3083,8 @@ var Microduck = {
   id: "microduck",
   skate: MD_SKATE,
   title: "Microduck",
+  // keys the world uses itself (VibeXR 0.9+ leaves them to it instead of flying the camera)
+  claimKeys: "wasdqrf ",
   init(ctx) {
     const T = THREE6, { root, app } = ctx;
     this.ctx = ctx;

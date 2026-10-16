@@ -60,7 +60,7 @@ swap('<p class="sub">Interaction framework &middot; see-through by default &midd
 swap('  #ver {', '  .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }\n'
      '  .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }\n'
      '  #ver {')
-swap('"WebXR not available - desktop preview (left-click = ray pinch, wheel while dragging = push / pull, right-drag = orbit)"',
+swap(re.search(r'"WebXR not available - desktop preview \([^"]*\)"', s).group(0),
      '"Desktop preview: click the floor to walk there, drag the robot, WASD drives, Space resets, right-drag orbits"')
 swap('document.getElementById("ver").textContent = `v${VERSION}`;',
      'document.getElementById("ver").textContent = `Robot Zoo XR \\u00b7 VibeXR v${VERSION}`;')
