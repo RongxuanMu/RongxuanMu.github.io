@@ -278,7 +278,7 @@ var Archiscape = {
     panel.root.position.set(-0.5, TABLE + 0.1, -0.34);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
-    // eighteen eras in five columns, the tools in a row of six under them
+    // nineteen eras in five columns, the tools in two rows under them
     this.styleBtns = AS_STYLES.map((s, i) => ctx.button(s.label, { w: 0.07, fontSize: s.label.length > 10 ? 22 : 26, onClick: () => this.setStyle(i) }));
     const tool = (label, o) => ctx.button(label, { w: 0.0885, fontSize: 24, ...o });
     const gen = tool("New town", { onClick: () => this.generate() });
@@ -288,7 +288,8 @@ var Archiscape = {
     } });
     const undo = tool("Undo", { onClick: () => this.undo() });
     const clear = tool("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
-    // tours: eras cycle through the styles, towns through new layouts; both on = a new town in a new era
+    // tours. Eras: each era reforms its town twice (New town, grown out of the last shape), then the next era
+    // takes over the same shape. Towns: stay in this era, reforming again and again
     const tour = () => this.tour = this.tourEras || this.tourTowns ? this.tour ?? 0 : null;
     this.tourErasB = tool("Tour eras", { w: 0.0885, toggle: true, onClick: (v) => {
       this.tourEras = v;
@@ -379,6 +380,7 @@ var Archiscape = {
     if (this.townIt) this.townIt.localBox = computeLocalBox(this.pickRoot);
   },
   _commit(h, flash = null) {
+    this.morph = null;
     this.history.push(this.h);
     if (this.history.length > 60) this.history.shift();
     this.h = h;
@@ -388,6 +390,7 @@ var Archiscape = {
     if (flash) this._flash(flash.cell, flash.level, flash.del);
   },
   undo() {
+    this.morph = null;
     const h = this.history.pop();
     if (!h) return;
     this.h = h;
@@ -395,29 +398,52 @@ var Archiscape = {
     this._rebuildPick();
     this.ghostKey = "";
   },
-  // one step of the tour: the next era, a new town, or both at once (one rise)
   _tourStep() {
-    if (this.tourTowns) {
-      const next = this.tourEras ? (this.styleIdx + 1) % AS_STYLES.length : this.styleIdx;
-      this.history.push(this.h);
-      if (this.history.length > 60) this.history.shift();
-      this.h = new Int8Array(this._layout(AS_STYLES[next]));
-      this._rebuildPick();
-      this.ghostKey = "";
-      if (this.tourEras) return this.setStyle(next);
-      return this._rebuild("era");
-    }
-    this.setStyle((this.styleIdx + 1) % AS_STYLES.length);
+    this.tourK = (this.tourK ?? 0) + 1;
+    if (this.tourEras && this.tourK % (AS_TOUR_REFORMS + 1) === 0) return this.setStyle((this.styleIdx + 1) % AS_STYLES.length);
+    this.generate();
   },
-  // a new layout: a style's own preset now and then (Stonehenge's rings, the tulou), otherwise a fresh town
+  // a new layout: a style's own preset now and then (Stonehenge's ring), otherwise a fresh town
   _layout(s) {
     this._seed = (this._seed || 7) + 1;
     return s.preset && this._seed % 2 ? s.preset(this.grid.cells) : asGenerate(this.grid.cells, this._seed * 7919);
   },
   generate() {
-    const s = AS_STYLES[this.styleIdx];
-    this._seed = (this._seed || 7) + 1;
-    this._commit(new Int8Array(s.preset ? s.preset(this.grid.cells) : asGenerate(this.grid.cells, this._seed * 7919)));
+    this._morphTo(new Int8Array(this._layout(AS_STYLES[this.styleIdx])));
+  },
+  // reshape the town into h: a wave sweeps across the island from a random side and each column it passes steps
+  // one storey at a time towards its new height, so the old town grows into the new one
+  _morphTo(h) {
+    this.history.push(this.h);
+    if (this.history.length > 60) this.history.shift();
+    const a = Math.random() * Math.PI * 2, dx = Math.cos(a), dz = Math.sin(a);
+    const key = this.grid.cells.map((c) => (c.c.x * dx + c.c.y * dz) / (2 * AS_R) + 0.5 + Math.random() * 0.08);
+    this.morph = { target: h, key, t: 0, acc: 0 };
+  },
+  _morphStep(dt) {
+    const m = this.morph;
+    m.t += dt;
+    m.acc += dt;
+    if (m.acc < 0.07) return;
+    m.acc = 0;
+    const front = m.t / AS_MORPH_S, next = Int8Array.from(this.h);
+    let changed = false, left = false;
+    for (let i = 0; i < next.length; i++) {
+      if (next[i] === m.target[i]) continue;
+      left = true;
+      if (m.key[i] > front) continue;
+      next[i] += Math.sign(m.target[i] - next[i]);
+      changed = true;
+    }
+    if (changed) {
+      this.h = next;
+      this._rebuild();
+    }
+    if (!left) {
+      this.morph = null;
+      this._rebuildPick();
+      this.ghostKey = "";
+    }
   },
   // what a ray would build / remove: the top of a column builds on it, a wall builds in the column beside it
   _target(origin, dir) {
@@ -537,6 +563,7 @@ var Archiscape = {
       this.flash.material.opacity = 0.55 * Math.max(0, 1 - this.flashT);
       if (this.flashT >= 1) this.flash.visible = false;
     }
+    if (this.morph) this._morphStep(dt);
     if (this.tour !== null) {
       this.tour += dt;
       if (this.tour > AS_TOUR_S) {
@@ -560,7 +587,9 @@ var Archiscape = {
 };
 var asEnv = null, asMusic = null;
 // s: how long the tour stays on each era / town
-var AS_TOUR_S = 3.2;
+var AS_TOUR_S = 6.4;
+// how many times each era reforms its town on the tour before the next era; s: how long a reform takes to sweep
+var AS_TOUR_REFORMS = 2, AS_MORPH_S = 1.4;
 function asMaterials() {
   const cache = {};
   const kind = (k) => {

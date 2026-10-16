@@ -31,8 +31,8 @@ swap('await app.worlds.load("playground");', 'await app.worlds.load("archiscape"
 # page chrome (the one Enter button is the framework's, unchanged)
 swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '<!-- Archiscape - a Townscaper-style town builder for your table: tap to build, hold to remove, and rebuild the\n'
-     '  same town in any of eighteen eras, from Stonehenge, Athens, Rome and Hagia Sophia through the Forbidden City,\n'
-     '  Jiangnan after Wu Guanzhong, the Hakka tulou and the Kremlin to Gaudi, Wright, Le Corbusier, Meier, Ando, I. M. Pei,\n'
+     '  same town in any of nineteen eras, from Stonehenge, Athens, Rome and Hagia Sophia through the Forbidden City,\n'
+     '  Jiangnan after Wu Guanzhong, Kyoto, the Kremlin and the Thai temples to Gaudi, Wright, Le Corbusier, Meier, Ando, I. M. Pei,\n'
      '  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v' + version + '.\n\n'
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Archiscape</h1>')
@@ -67,7 +67,7 @@ assert 'enter-vr' not in s and 'VR only' not in s, 'VibeXR pages have exactly on
 
 (P / 'codepen.html').write_text(s)
 desc = ('Archiscape by Rongxuan Mu: a Townscaper-style town builder in WebXR. Build a town on your table, then '
-        'rebuild it in any of eighteen eras of architecture, from Stonehenge and the Forbidden City to Gaudi, I. M. Pei and Zaha Hadid, each with its own music.')
+        'rebuild it in any of nineteen eras of architecture, from Stonehenge and the Forbidden City to Gaudi, I. M. Pei and Zaha Hadid, each with its own music.')
 page = f'''<!DOCTYPE html>
 <html lang="en">
 <head>

@@ -511,14 +511,14 @@ var AS_MUSIC = {
       if (M.chance(0.18)) M.drip(t + M.rnd() * 0.2, { vol: 0.035, x: M.rnd() * 2 - 1 });
     }
   },
-  // Tulou: a Hakka folk tune on the dizi over a small drum and woodblock
-  tulou: {
-    bpm: 100, root: 62, scale: AS_SCALES.zhi, wet: 0.3, swing: 0.08, level: 1.3,
+  // Kyoto: a koto in the yo scale, a shakuhachi, a temple bell far off and a soft taiko
+  kyoto: {
+    bpm: 62, root: 62, scale: [0, 2, 5, 7, 9], wet: 0.6, level: 1.3,
     beat(M, t, i) {
-      if (i % 4 === 0) M.drum("dum", t, 0.18);
-      if (i % 2 === 1 && M.chance(0.6)) M.drum("wood", t, 0.1, 0.3);
-      if (M.chance(i % 2 ? 0.45 : 0.85)) M.flute(M.f(M.walk("d", 3, 11), 0), t, 0.32, { vol: 0.07, breath: 0.35, depth: 8e-3, attack: 0.02, x: 0.15, bend: M.chance(0.1) ? 1 : 0 });
-      if (i % 8 === 0) M.pluck(M.f(0, -1), t, { vol: 0.16, damp: 0.3, x: -0.3 });
+      if (i % 2 === 0 && M.chance(0.6)) M.pluck(M.f(M.walk("k", 2, 11), 0), t, { vol: 0.24, damp: 0.1, decay: 0.997, dur: 2.6, bend: M.chance(0.25) ? 2 : 0, bendT: 0.18, x: -0.25 });
+      if (i % 16 === 4 && M.chance(0.7)) M.flute(M.f(M.walk("s", 3, 9), 0), t, 2.8, { vol: 0.07, breath: 1, depth: 0.022, vib: 4.5, attack: 0.35, x: 0.3, bend: M.chance(0.4) ? 1 : 0 });
+      if (i % 64 === 0) M.bell(M.f(0, -2), t, { vol: 0.2, dur: 9, partials: [[1, 1, 1], [2.32, 0.5, 0.6], [4.25, 0.3, 0.4], [6.1, 0.15, 0.25]], attack: 6e-3 });
+      if (i % 16 === 8) M.drum("taiko", t, 0.12);
     }
   },
   // Kremlin and St Basil's: the zvon - bells pealing in patterns - over a low choir
@@ -532,6 +532,18 @@ var AS_MUSIC = {
       for (const d of z) M.bell(M.f(d, 1), t, { vol: 0.07, dur: 2.2, x: (d - 2) * 0.2 });
       if (i % 8 === 0) M.bell(M.f(0, -1), t, { vol: 0.2, dur: 6, partials: [[1, 1, 1], [1.2, 0.6, 0.7], [2.0, 0.5, 0.6], [2.6, 0.3, 0.4], [4.1, 0.2, 0.3]] });
       if (i % 32 === 16) M.pad([M.f(M.walk("ch", 0, 7), 0), M.f(2, 0)], t, 3.5, { vol: 0.04, cutoff: 1400, formant: true, attack: 1 });
+    }
+  },
+  // Thai temples: a ranat ek (wooden xylophone) running in octaves over a gong circle, a pi oboe, the ching
+  thai: {
+    bpm: 96, root: 60, scale: AS_SCALES.gong, wet: 0.35, level: 1.6,
+    beat(M, t, i) {
+      const d = M.walk("r", 3, 12, 0.25);
+      M.bell(M.f(d, 0), t, { vol: 0.07, dur: 0.5, partials: [[1, 1, 1], [3.9, 0.35, 0.3], [9.2, 0.1, 0.12]], x: -0.2 });
+      if (i % 2 === 0) M.bell(M.f(d, -1), t, { vol: 0.05, dur: 0.5, partials: [[1, 1, 1], [3.9, 0.3, 0.3]], x: -0.25 });
+      if (i % 4 === 0) M.bell(M.f([0, 2, 4, 1][i / 4 % 4], -1), t, { vol: 0.09, dur: 2.2, partials: [[1, 1, 1], [2.0, 0.4, 0.5], [3.2, 0.2, 0.3]], x: 0.25 });
+      if (i % 16 === 8 && M.chance(0.7)) M.flute(M.f(M.walk("pi", 5, 10), 0), t, 1.6, { vol: 0.05, wave: "sawtooth", nasal: 1, breath: 0.1, depth: 0.015, attack: 0.05, x: 0.35 });
+      if (i % 4 === 2) M.drum("tick", t, 0.15, 0.3);
     }
   },
   // Prussian brick Gothic: a pipe organ chorale

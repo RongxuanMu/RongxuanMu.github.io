@@ -337,7 +337,7 @@ function asPointed(K, E, kind, hex, u, y, w, hh, out = 4e-4) {
 // edge k is at least as tall (no eave there, the roof runs on) -
 // a pitched roof whose ridge runs across the cell towards its joined neighbours, so rows of houses share one
 // ridge line; free ends are hipped, or closed by a gable (a callback draws the gable wall)
-function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 0, gable = null, ridge = null, end = null, dir = null }) {
+function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 0, gable = null, ridge = null, end = null, dir = null, flush = false }) {
   const v = R.v3, j = R.join, n = R.n3;
   const mids = [0, 1, 2, 3].map((k) => v[k].clone().lerp(v[(k + 1) % 4], 0.5));
   const sA = j[0] + j[2], sB = j[1] + j[3];
@@ -346,11 +346,14 @@ function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 
   const a = dir ? Math.abs(_asA.subVectors(mids[2], mids[0]).normalize().dot(dir)) >= Math.abs(_asB.subVectors(mids[3], mids[1]).normalize().dot(dir)) ? 0 : 1 : sA !== sB ? sA > sB ? 0 : 1 : mids[0].distanceTo(mids[2]) >= mids[1].distanceTo(mids[3]) ? 0 : 1;
   const i0 = a, i1 = (a + 1) % 4, i2 = (a + 2) % 4, i3 = (a + 3) % 4;
   const rise = pitch * mids[i1].distanceTo(mids[i3]) / 2;
+  // flush: a gable wall rises above the roof's free ends (horse-head walls), so the roof stops at it instead of
+  // overhanging past it
+  const gableEdge = (k) => flush && gable && (k === i0 || k === i2);
   const E = v.map((p, i) => {
     const q = p.clone();
     let ex = 0;
     for (const k of [(i + 3) % 4, i]) if (!j[k]) {
-      q.addScaledVector(n[k], over);
+      if (!gableEdge(k)) q.addScaledVector(n[k], over);
       ex++;
     }
     if (ex === 2) q.y += up;
@@ -359,7 +362,7 @@ function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 
   const ridgeEnd = (k) => {
     const m = mids[k].clone();
     if (!j[k]) {
-      if (gable) m.addScaledVector(n[k], over);
+      if (gable && !flush) m.addScaledVector(n[k], over);
       else m.lerp(R.cen, hip);
     }
     m.y = R.y + rise;

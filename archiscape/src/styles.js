@@ -49,43 +49,59 @@ var AS_STYLES = [
     id: "greek",
     label: "Greek",
     title: "Classical Greece",
-    era: "Athens · 5th century BC · the Parthenon",
-    blurb: "Marble colonnades on stepped bases, painted friezes, low pediments",
-    palette: [15459800, 15524061, 14802626],
-    ground: { hex: 13483935, side: 10392180 },
+    era: "Athens · 5th century BC · the Acropolis",
+    blurb: "White marble temples ringed by Doric columns, low pediments - and the ruins they became",
+    palette: [14275781, 14012866],
+    ground: { hex: 14077887, side: 9081720 },
     wall(K, E) {
+      const marble = 15921122, ruin = asHash(E.ci, 77) < 0.2;
+      // the cella wall, set back behind the colonnade
+      asWall(K, E, "satin", E.bh, 0, ruin && E.top ? AS_H * 0.45 : AS_H, -5.5e-3, 0.03);
       if (E.L === 0) {
-        asWall(K, E, "satin", 14274493, 0, AS_H, -5.5e-3);
-        asBand(K, E, "satin", 15459800, 0, 2.4e-3, 2.2e-3, 6e-3, 6e-3);
-        asBand(K, E, "satin", 14802626, 0, 1.2e-3, 4.5e-3, 6e-3, 0.011);
-        for (const u of asSlots(E.len, 8.5e-3, 0.3)) {
-          const p = asAt(E, u, 2.4e-3, 1.5e-3);
-          K.cyl("satin", 15985624, p, p.clone().setY(E.y1 - 4.2e-3), 1.7e-3, 1.4e-3, 8);
-          K.box("satin", 15985624, p.clone().setY(E.y1 - 4.6e-3), E.t3, AS_UP, E.n3, 4.4e-3, 1.1e-3, 4.4e-3);
-        }
-      } else {
-        asWall(K, E, "satin", E.bh, 0, AS_H, 0, 0.04);
-        for (const u of [0.02, 0.98]) asOn(K, E, "satin", 15985624, u, AS_H / 2, 2.2e-3, AS_H, 8e-4, 1.6e-3);
-        for (const u of asSlots(E.len, 0.014)) asOn(K, E, "satin", 4867133, u, 0.014, 4e-3, 8e-3, 4e-4, 1e-3);
+        // the stylobate: three steps
+        for (let i = 0; i < 3; i++) asBand(K, E, "satin", marble, i * 1.1e-3, 1.1e-3, 3.6e-3 - i * 1.2e-3, 6e-3, 0.012 - i * 2e-3);
       }
-      // entablature: architrave, a painted frieze, cornice
-      asBand(K, E, "satin", 15459800, AS_H - 4.4e-3, 2.2e-3, 1.5e-3, 3e-3, 1e-3);
-      asBand(K, E, "satin", E.top ? 3376266 : 15459800, AS_H - 2.2e-3, 1.4e-3, 1.6e-3, 3e-3, 1e-3);
-      if (E.top) asBand(K, E, "satin", 11811396, AS_H - 1e-3, 6e-4, 2.2e-3, 3e-3, 1e-3);
+      const y0 = E.L === 0 ? 3.3e-3 : 0, top = E.y1 - E.a3.y - 4.4e-3;
+      for (const u of asSlots(E.len, 7.5e-3, 0.3)) {
+        const p = asAt(E, u, y0, 1.6e-3);
+        // a ruin: broken columns of uneven height, the entablature gone
+        const hh = ruin && E.top ? (top - y0) * (0.25 + 0.75 * asHash(E.ci, E.k, Math.round(u * 50))) : top - y0;
+        K.cyl("satin", marble, p, p.clone().setY(p.y + hh), 1.6e-3, 1.35e-3, 10, 0.03, E.r);
+        if (!(ruin && E.top)) K.box("satin", marble, p.clone().setY(p.y + hh - 4e-4), E.t3, AS_UP, E.n3, 4.2e-3, 1e-3, 4.2e-3);
+      }
+      if (ruin && E.top) return;
+      // entablature: architrave, a frieze of triglyphs, cornice - all marble
+      asBand(K, E, "satin", marble, AS_H - 4.4e-3, 1.8e-3, 1.6e-3, 3.2e-3, 2e-3);
+      asBand(K, E, "satin", 15329769, AS_H - 2.6e-3, 1.6e-3, 1.7e-3, 3.2e-3, 2e-3);
+      for (const u of asSlots(E.len, 3.75e-3, 0.3)) asOn(K, E, "satin", 13421250, u, AS_H - 1.8e-3, 1e-3, 1.4e-3, 3.4e-3, 4e-4);
+      if (E.top) asBand(K, E, "satin", marble, AS_H - 1e-3, 1e-3, 2.4e-3, 3.4e-3, 2.5e-3);
     },
     roof(K, R) {
+      if (asHash(R.ci, 77) < 0.2) {
+        // fallen: the cella open to the sky, a few drums lying where they fell
+        const dy = AS_H * 0.55;
+        R = { ...R, y: R.y - dy, cen: R.cen.clone().setY(R.y - dy), v3: R.v3.map((p) => p.clone().setY(R.y - dy)), join: R.join.map(() => true) };
+        asFlat(K, R, { kind: "satin", hex: 14209992 });
+        for (let i = 0; i < 2; i++) {
+          const p = R.cen.clone().add(new THREE6.Vector3((asHash(R.ci, i) - 0.5) * R.ins, 1.4e-3, (asHash(R.ci, i, 3) - 0.5) * R.ins));
+          const d = new THREE6.Vector3(Math.cos(i * 2 + R.r * 9), 0, Math.sin(i * 2 + R.r * 9));
+          K.cyl("satin", 15921122, p.clone().addScaledVector(d, -2.4e-3), p.clone().addScaledVector(d, 2.4e-3), 1.5e-3, 1.5e-3, 10);
+        }
+        return;
+      }
       asPitched(K, R, {
-        kind: "satin", hex: 12085055, pitch: 0.3, over: 3.5e-3,
+        kind: "satin", hex: 15000287, pitch: 0.28, over: 3.5e-3, ridge: 15921122,
         gable: (K2, p, q, apex) => {
-          K2.tri("satin", 15524061, p, q, apex);
-          K2.sphere("gold", 13280596, apex.clone().setY(apex.y + 1.6e-3), 1.6e-3, 1.6e-3, 1.6e-3, 0);
+          // the pediment: a marble triangle and its acroterion
+          K2.tri("satin", 15921122, p, q, apex);
+          K2.box("satin", 15921122, apex.clone().setY(apex.y + 1.2e-3), new THREE6.Vector3(1, 0, 0), AS_UP, new THREE6.Vector3(0, 0, 1), 1.6e-3, 2.4e-3, 1.6e-3);
         }
       });
-      if (R.tower) K.sphere("gold", 13280596, R.cen.clone().setY(R.y + 0.012), 2.4e-3, 4.5e-3, 2.4e-3, 1);
     },
     prop(K, x, z, r) {
-      if (r < 0.12) asTree(K, "cypress", x, z, 1, r);
-      else if (r < 0.28) asTree(K, "olive", x, z, 1, r);
+      if (r < 0.1) asTree(K, "olive", x, z, 1, r);
+      else if (r < 0.16) asTree(K, "cypress", x, z, 1, r);
+      else if (r > 0.96) K.cyl("satin", 15921122, new THREE6.Vector3(x, 1.4e-3, z - 2.5e-3), new THREE6.Vector3(x + 1e-3, 1.4e-3, z + 2.5e-3), 1.5e-3, 1.5e-3, 10);
     }
   },
   {
@@ -293,8 +309,9 @@ var AS_STYLES = [
     roof(K, R) {
       // every ridge in the town runs the same way: rows of black roofs, the order of the paintings
       asPitched(K, R, {
-        kind: "matte", hex: 3092532, pitch: 0.62, over: 4e-3, up: 1.4e-3, ridge: 1907744, dir: AS_JIANGNAN_DIR,
-        gable: (K2, p, q, apex) => R.h >= 2 ? asHorseHead(K2, p, q, apex, R) : K2.tri("matte", R.wall, p, q, apex)
+        kind: "matte", hex: 3092532, pitch: 0.62, over: 4e-3, up: 1.4e-3, ridge: 1907744, dir: AS_JIANGNAN_DIR, flush: true,
+        // every gable end is a horse-head wall standing above the roof, which stops at it
+        gable: (K2, p, q, apex) => asHorseHead(K2, p, q, apex, R)
       });
       // a red lantern here and there: the one warm note
       if (R.r < 0.05) {
@@ -324,50 +341,58 @@ var AS_STYLES = [
     }
   },
   {
-    id: "tulou",
-    label: "Tulou",
-    title: "Hakka Tulou",
-    era: "Fujian, China · 12th–20th century",
-    blurb: "Rammed-earth rings that house a whole clan: blind lower walls, small high windows, deep dark eaves",
-    palette: [12884579, 12160343, 13608563],
-    ground: { hex: 8228686, side: 7035454 },
+    id: "kyoto",
+    label: "Kyoto",
+    title: "Kyoto temples",
+    era: "Japan · Kiyomizu-dera (1633) and the five-storey pagodas",
+    blurb: "Vermilion posts and beams, white plaster, deep dark eaves; pagodas of five roofs",
+    palette: [15724519, 15590633],
+    ground: { hex: 8362845, side: 6044214 },
     wall(K, E) {
-      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.09);
-      // a stone footing; no windows on the ground floor (defence), small ones above
-      if (E.L === 0) asBand(K, E, "matte", 9276034, 0, 5e-3, 5e-4, 1.4e-3);
-      else for (const u of asSlots(E.len, 0.0105, 0.4)) asOn(K, E, "matte", 2892829, u, 0.016, 2.8e-3, 4.6e-3, 4e-4);
-      if (E.L === 0 && E.r < 0.06) asArch(K, E, "matte", 3811359, 0.5, 9e-3, 6e-3, 0.012, 5e-4);
-      // the top floor's timber gallery shows as a dark band under the eaves
-      if (E.top && E.h >= 2) asBand(K, E, "matte", 6040870, AS_H - 6e-3, 4.2e-3, 3e-4, 1e-3);
+      const red = 12729890;
+      asWall(K, E, "matte", E.bh, 0, AS_H, -1.2e-3, 0.02);
+      if (E.L === 0) asBand(K, E, "matte", 9079431, 0, 2.6e-3, 6e-4, 1.6e-3, 1e-3);
+      // the vermilion frame: posts at the bays, a tie beam halfway, a head beam under the eaves
+      const bays = Math.max(1, Math.round(E.len / 0.011));
+      for (let i = 0; i <= bays; i++) asOn(K, E, "satin", red, i / bays, AS_H / 2, 1.6e-3, AS_H, 6e-4, 1.6e-3);
+      asBand(K, E, "satin", red, AS_H * 0.55, 1.4e-3, 5e-4, 1.4e-3);
+      asBand(K, E, "satin", red, AS_H - 2.4e-3, 2.4e-3, 6e-4, 1.6e-3);
+      // lattice shoji in some bays
+      for (let i = 0; i < bays; i++) if (asHash(E.ci, E.k, E.L, i) < 0.4) {
+        const u = (i + 0.5) / bays;
+        asOn(K, E, "satin", 3815994, u, AS_H * 0.3, E.len / bays * 0.7, AS_H * 0.36, 3e-4, 8e-4);
+      }
     },
     roof(K, R) {
-      asPitched(K, R, { kind: "matte", hex: 4012599, pitch: 0.42, over: 8.5e-3, hip: 0.5, ridge: 2762790 });
+      const tile = 3880754;
+      if (R.tower) {
+        // a five-storey pagoda: five deep roofs, each over a smaller vermilion storey, and the bronze sorin
+        asFlat(K, R, { hex: tile });
+        const b = R.cen.clone(), r0 = R.ins * 0.62;
+        let y = b.y;
+        for (let i = 0; i < 5; i++) {
+          const r = r0 * (1 - i * 0.1), hh = 6.2e-3;
+          K.cyl("satin", 12729890, b.clone().setY(y), b.clone().setY(y + hh), r * 0.62, r * 0.6, 4);
+          K.cyl("matte", tile, b.clone().setY(y + hh), b.clone().setY(y + hh + 2.4e-3), r * 1.25, r * 0.55, 4);
+          y += hh + 2.4e-3;
+        }
+        K.cyl("gold", 9135158, b.clone().setY(y), b.clone().setY(y + 0.016), 6e-4, 4e-4, 6);
+        for (let i = 0; i < 5; i++) K.cyl("gold", 9135158, b.clone().setY(y + 3e-3 + i * 2e-3), b.clone().setY(y + 3.6e-3 + i * 2e-3), 1.4e-3, 1.4e-3, 8);
+        return;
+      }
+      // irimoya: a hipped roof with deep, gently lifted eaves
+      asPitched(K, R, { kind: "matte", hex: tile, pitch: 0.62, over: 7e-3, up: 3e-3, hip: 0.42, ridge: 2238238 });
     },
     prop(K, x, z, r) {
-      if (r < 0.1) {
-        // bamboo
-        for (let i = 0; i < 5; i++) {
-          const a = i * 2.4 + r * 30, p = new THREE6.Vector3(x + Math.cos(a) * 2.5e-3, 0, z + Math.sin(a) * 2.5e-3);
-          K.cyl("matte", 7650876, p, p.clone().add(new THREE6.Vector3(Math.cos(a) * 2e-3, 0.024 + i * 2e-3, Math.sin(a) * 2e-3)), 5e-4, 3e-4, 4);
-          K.sphere("matte", 6328643, p.clone().add(new THREE6.Vector3(Math.cos(a) * 2.5e-3, 0.024 + i * 2e-3, Math.sin(a) * 2.5e-3)), 2.6e-3, 4e-3, 2.6e-3, 0, 0.1, r);
-        }
-      } else if (r < 0.5) {
-        // rows of tea bushes
-        for (let i = -1; i <= 1; i++) K.sphere("matte", 4880689, new THREE6.Vector3(x + i * 4.5e-3, 1.8e-3, z), 2.4e-3, 2e-3, 2.4e-3, 1, 0.1, asHash(i, r * 1e5));
-      } else if (r > 0.95) asTree(K, "palm", x, z, 0.8, r, 6596928);
-    },
-    // a clan's round earth houses: two rings and a small square lou, ancestral halls in the courtyards
-    preset(cells) {
-      const rings = [[-0.07, 0.05, 0.135, 0.042, 4], [0.15, -0.11, 0.075, 0.035, 3]];
-      return cells.map((c) => {
-        for (const [x, z, R, w, h] of rings) {
-          const d = Math.hypot(c.c.x - x, c.c.y - z);
-          if (Math.abs(d - R) < w / 2) return h;
-          if (d < 0.025) return 1;
-        }
-        if (Math.abs(c.c.x - 0.13) < 0.045 && Math.abs(c.c.y - 0.14) < 0.045 && (Math.abs(c.c.x - 0.13) > 0.02 || Math.abs(c.c.y - 0.14) > 0.02)) return 3;
-        return 0;
-      });
+      // maples in autumn red, and pines
+      if (r < 0.1) asTree(K, "round", x, z, 0.95, r, asPick([12597547, 14049837, 11481638], r * 10));
+      else if (r < 0.16) asTree(K, "pine", x, z, 1, r, 3364145);
+      else if (r > 0.97) {
+        // a stone lantern
+        K.cyl("matte", 9079431, new THREE6.Vector3(x, 0, z), new THREE6.Vector3(x, 6e-3, z), 1e-3, 1e-3, 6);
+        K.ybox("matte", 9079431, x, 7e-3, z, 3.4e-3, 2.4e-3, 3.4e-3, r * 9);
+        K.cyl("matte", 9079431, new THREE6.Vector3(x, 8.2e-3, z), new THREE6.Vector3(x, 0.0105, z), 3e-3, 2e-4, 6);
+      }
     }
   },
   {
@@ -432,6 +457,67 @@ var AS_STYLES = [
     prop(K, x, z, r) {
       if (r < 0.12) asTree(K, "fir", x, z, 1, r);
       else if (r < 0.2) asTree(K, "birch", x, z, 1, r, 10203226);
+    }
+  },
+  {
+    id: "thai",
+    label: "Thai temple",
+    title: "Thai temples",
+    era: "Ayutthaya to Bangkok · 14th–19th century · Wat Phra Kaew, Wat Arun",
+    blurb: "White walls trimmed in gold, steep tiered roofs with chofa horns, golden chedis",
+    palette: [16184300, 15988964],
+    ground: { hex: 14208436, side: 10129002 },
+    wall(K, E) {
+      const gold = 14268984;
+      asWall(K, E, "satin", E.bh, 0, AS_H, 0, 0.015);
+      if (E.L === 0) asBand(K, E, "gloss", gold, 0, 2.2e-3, 6e-4, 1.4e-3);
+      asBand(K, E, "gloss", gold, AS_H - 2e-3, 2e-3, 7e-4, 1.6e-3);
+      for (const u of [0.02, 0.98]) asOn(K, E, "gloss", gold, u, AS_H / 2, 1.8e-3, AS_H, 7e-4, 1.4e-3);
+      // tall doors and windows: deep red leaves in gold frames under pointed gold crowns
+      for (const u of asSlots(E.len, 0.012)) {
+        const hh = E.L === 0 ? 0.017 : 0.012, y = E.L === 0 ? 0.0105 : 0.014;
+        asOn(K, E, "gloss", gold, u, y, 6.4e-3, hh + 1.6e-3, 4e-4, 1e-3);
+        asOn(K, E, "satin", 9051930, u, y, 4.4e-3, hh, 8e-4, 1e-3);
+        asPointed(K, E, "gloss", gold, u, y + hh / 2 + 1.4e-3, 3e-3, 1e-3, 6e-4);
+      }
+    },
+    roof(K, R) {
+      const gold = 14268984, tile = 13194028, edge = 3054152;
+      if (R.tower) {
+        // a golden chedi: stacked rings, the bell, a slender spire
+        asFlat(K, R, { hex: gold, parapet: 1.6e-3, phex: R.wall });
+        const b = R.cen.clone(), r = R.ins * 0.8;
+        for (let i = 0; i < 3; i++) K.cyl("gloss", gold, b.clone().setY(b.y + i * 2.4e-3), b.clone().setY(b.y + (i + 1) * 2.4e-3), r * (1 - i * 0.12), r * (1 - i * 0.12), 16);
+        K.lathe("gold", gold, b.clone().setY(b.y + 7.2e-3), "bell", r * 0.75, r * 1.1, 16, 0, 0, R.r);
+        K.cyl("gold", gold, b.clone().setY(b.y + 7.2e-3 + r * 1.0), b.clone().setY(b.y + 7.2e-3 + r * 1.0 + 0.034), r * 0.16, 2e-4, 10);
+        for (let i = 0; i < 6; i++) K.cyl("gold", gold, b.clone().setY(b.y + 7.2e-3 + r + i * 2.6e-3), b.clone().setY(b.y + 7.2e-3 + r + i * 2.6e-3 + 8e-4), r * 0.16 * (1 - i / 7) + 4e-4, r * 0.16 * (1 - i / 7) + 4e-4, 8);
+        return;
+      }
+      // two tiers: a lower skirt, then the steep main roof with green-edged orange tiles, gold ridges, chofa
+      asSkirt(K, R, R.y - AS_H * 0.3, 5e-3, tile);
+      asPitched(K, R, {
+        kind: "gloss", hex: tile, pitch: 1.05, over: 4e-3, up: 3e-3, hip: 0.15, ridge: gold,
+        gable: (K2, p, q, apex) => K2.tri("gloss", gold, p, q, apex),
+        end: (K2, p) => {
+          // the chofa: a slender golden horn curling up from the gable peak
+          K2.cyl("gold", gold, p, p.clone().add(new THREE6.Vector3(0, 6e-3, 0)), 7e-4, 5e-4, 5);
+          K2.sphere("gold", gold, p.clone().add(new THREE6.Vector3(0, 6.4e-3, 0)), 9e-4, 1.2e-3, 9e-4, 0);
+        }
+      });
+      // a green line along the eaves
+      R.n3.forEach((n, k) => {
+        if (R.join[k]) return;
+        const a = R.v3[k].clone().addScaledVector(n, 4e-3), b = R.v3[(k + 1) % 4].clone().addScaledVector(n, 4e-3);
+        K.cyl("satin", edge, a.setY(a.y + 4e-4), b.setY(b.y + 4e-4), 6e-4, 6e-4, 4);
+      });
+    },
+    prop(K, x, z, r) {
+      if (r < 0.12) asTree(K, "palm", x, z, 1, r);
+      else if (r > 0.96) {
+        // a small golden stupa
+        K.cyl("gloss", 14268984, new THREE6.Vector3(x, 0, z), new THREE6.Vector3(x, 2e-3, z), 3e-3, 3e-3, 10);
+        K.lathe("gold", 14268984, new THREE6.Vector3(x, 2e-3, z), "bell", 2.4e-3, 5e-3, 10);
+      }
     }
   },
   {
@@ -829,7 +915,9 @@ var AS_TRENCADIS = [3112897, 4694875, 14721082, 13784638, 8176841, 15848299, 159
 function asHorseHead(K, p, q, apex, R) {
   const t = q.clone().sub(p), len = t.length(), n = new THREE6.Vector3(t.z, 0, -t.x).normalize();
   t.normalize();
-  const H0 = apex.y - p.y, hs = [0.5, 1.12, 0.5];
+  // each step stands above the gable triangle over its whole width: the triangle already reaches 2/3 of the apex
+  // height at the inner end of an outer step
+  const H0 = apex.y - p.y, hs = [0.76, 1.18, 0.76];
   hs.forEach((f, i) => {
     const u = (i + 0.5) / hs.length, hgt = H0 * f + 2.5e-3;
     const c = p.clone().addScaledVector(t, u * len).addScaledVector(n, -1.2e-3);
