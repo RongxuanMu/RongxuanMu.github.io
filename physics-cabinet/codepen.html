@@ -3260,7 +3260,7 @@ PC_EXHIBITS.push({
   id: "jelly",
   label: "Jelly",
   title: "Jelly",
-  blurb: "A soft body on 125 points · grab a corner and stretch, throw it, poke it with a fingertip",
+  blurb: "A soft body on 125 points · grab it with both hands and stretch it, throw it, poke it with a fingertip",
   build(X) {
     const T = THREE6, n = 5, S = 0.08, sp = S / (n - 1), N = n * n * n;
     const x = new Float32Array(N * 3), p0 = new Float32Array(N * 3), v = new Float32Array(N * 3), w = new Float32Array(N).fill(1);
@@ -3280,7 +3280,10 @@ PC_EXHIBITS.push({
       if (i2 < 0 || j2 < 0 || k2 < 0 || i2 >= n || j2 >= n || k2 >= n) continue;
       C.push([id(i, j, k), id(i2, j2, k2), Math.hypot(a, b, c) * sp]);
     }
-    let comp = 1.2e-4, held = [];
+    let comp = 1.2e-4;
+    // one grip per hand (multi: both hands can hold it at once and pull it apart): the points near the grab, their
+    // offsets, and where the hand is now
+    const grips = /* @__PURE__ */ new Map();
     const geo = new T.BoxGeometry(S, S, S, 10, 10, 10);
     // each render vertex: its lattice cell and trilinear weights
     const P = geo.attributes.position, skin = [];
@@ -3313,24 +3316,25 @@ PC_EXHIBITS.push({
       const c0 = u.map((c) => Math.min(n - 2, Math.floor(c)));
       return { e, c0, f: u.map((c, a) => c - c0[a]) };
     });
-    const it = X.add(mesh, { precise: true, highlight: false, box: new T.Box3(new T.Vector3(-0.25, 0, -0.25), new T.Vector3(0.25, 0.45, 0.25)) });
-    const target = new T.Vector3();
+    const it = X.add(mesh, { precise: true, highlight: false, multi: true, box: new T.Box3(new T.Vector3(-0.25, 0, -0.25), new T.Vector3(0.25, 0.45, 0.25)) });
     it.on("press", (e) => {
-      const p = X.local(e.point);
-      held = [];
-      let best = 1, bi = 0;
+      const p = X.local(e.point), list = [], taken = new Set();
+      for (const g of grips.values()) for (const [i] of g.list) taken.add(i);
+      let best = 1, bi = -1;
       for (let i = 0; i < N; i++) {
+        if (taken.has(i)) continue;
         const d = Math.hypot(x[i * 3] - p.x, x[i * 3 + 1] - p.y, x[i * 3 + 2] - p.z);
-        if (d < 0.028) held.push([i, x[i * 3] - p.x, x[i * 3 + 1] - p.y, x[i * 3 + 2] - p.z]);
+        if (d < 0.028) list.push([i, x[i * 3] - p.x, x[i * 3 + 1] - p.y, x[i * 3 + 2] - p.z]);
         if (d < best) best = d, bi = i;
       }
-      if (!held.length) held.push([bi, 0, 0, 0]);
-      target.copy(p);
+      if (!list.length && bi >= 0) list.push([bi, 0, 0, 0]);
+      grips.set(e.interactor, { list, target: p.clone() });
     });
-    it.on("drag", (e) => target.copy(X.local(e.point)));
-    it.on("release", () => {
-      for (const [i] of held) w[i] = 1;
-      held = [];
+    it.on("drag", (e) => grips.get(e.interactor)?.target.copy(X.local(e.point)));
+    it.on("release", (e) => {
+      const g = grips.get(e.interactor);
+      if (g) for (const [i] of g.list) w[i] = 1;
+      grips.delete(e.interactor);
     });
     X.action("Drop", () => reset(0.22));
     X.action("Jump", () => {
@@ -3389,7 +3393,7 @@ PC_EXHIBITS.push({
             x[k + 1] += v[k + 1] * h;
             x[k + 2] += v[k + 2] * h;
           }
-          for (const [i, ox, oy, oz] of held) {
+          for (const { list, target } of grips.values()) for (const [i, ox, oy, oz] of list) {
             w[i] = 0;
             x.set([target.x + ox, target.y + oy, target.z + oz], i * 3);
           }
@@ -4047,6 +4051,9 @@ var PhysicsCabinet = {
     tl.position.set(0, TABLE + 0.012, -0.17);
     tl.rotation.x = -Math.PI / 2.6;
     root.add(tl);
+    // the hint rides on the plate: moved, turned or scaled, it goes along
+    stage.updateWorldMatrix(true, false);
+    stage.attach(tl);
     this._kd = (e) => {
       const k = "1234567890".indexOf(e.key);
       if (k >= 0) this.load(k);

@@ -316,6 +316,9 @@ var Archiscape = {
     tl.position.set(0, TABLE + 0.012, -0.22);
     tl.rotation.x = -Math.PI / 2.6;
     root.add(tl);
+    // the hint rides on the plate: moved, turned or scaled, it goes along
+    this.island.updateWorldMatrix(true, false);
+    this.island.attach(tl);
     // desktop keys: arrows change era, N new town, E erase, Z undo
     this._kd = (e) => {
       if (e.key === "ArrowRight") this.setStyle((this.styleIdx + 1) % AS_STYLES.length);

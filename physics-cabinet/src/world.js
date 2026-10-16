@@ -61,6 +61,9 @@ var PhysicsCabinet = {
     tl.position.set(0, TABLE + 0.012, -0.17);
     tl.rotation.x = -Math.PI / 2.6;
     root.add(tl);
+    // the hint rides on the plate: moved, turned or scaled, it goes along
+    stage.updateWorldMatrix(true, false);
+    stage.attach(tl);
     this._kd = (e) => {
       const k = "1234567890".indexOf(e.key);
       if (k >= 0) this.load(k);

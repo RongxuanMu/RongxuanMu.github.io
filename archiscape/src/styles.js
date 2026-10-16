@@ -292,11 +292,12 @@ var AS_STYLES = [
     title: "Jiangnan · after Wu Guanzhong",
     era: "Water towns south of the Yangtze, as Wu Guanzhong painted them",
     blurb: "Planes of white wall, lines of black tile, a few dots of colour over still water",
-    palette: [16053999, 15988457, 15790320],
+    // one white for every wall and horse-head: a face reads as one plane, as in the paintings
+    palette: [16053999],
     ground: { water: true, hex: 9348524, side: 4605510 },
     found: 6052956,
     wall(K, E) {
-      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.015);
+      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0);
       // the dark line where the wall meets the water
       if (E.L === 0) asBand(K, E, "matte", 3816253, 0, 1.8e-3, 3e-4, 1e-3);
       // few openings, like ink dots: a black door on some ground floors, one small window on some faces
@@ -922,7 +923,7 @@ function asHorseHead(K, p, q, apex, R) {
     const u = (i + 0.5) / hs.length, hgt = H0 * f + 2.5e-3;
     const c = p.clone().addScaledVector(t, u * len).addScaledVector(n, -1.2e-3);
     c.y = p.y + hgt / 2;
-    K.box("matte", R.wall, c, t, AS_UP, n, len / hs.length + 3e-4, hgt, 2.4e-3, 0.01, R.r);
+    K.box("matte", R.wall, c, t, AS_UP, n, len / hs.length + 3e-4, hgt, 2.4e-3);
     K.box("matte", 2302755, c.clone().setY(p.y + hgt + 5e-4), t, AS_UP, n, len / hs.length + 1.4e-3, 1e-3, 4e-3);
   });
 }
