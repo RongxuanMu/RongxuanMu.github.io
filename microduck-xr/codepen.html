@@ -2871,6 +2871,29 @@ function mdCircle(r, z, n = 96) {
   }
   return p;
 }
+// a grab bar under (or over) a floating panel: drag it to put the panel anywhere - it keeps facing you - and
+// onMoved is told where it ended up. Its box covers only the bar, so buttons on the panel are untouched.
+var _mdLook = new THREE6.Object3D();
+function mdPanelHandle(ctx, root, { w = 0.12, y = -0.16, onMoved = null } = {}) {
+  const T = THREE6, bar = new T.Mesh(new T.CapsuleGeometry(5e-3, w, 4, 12).rotateZ(Math.PI / 2), new T.MeshBasicMaterial({ color: 12632256 }));
+  bar.position.set(0, y, 4e-3);
+  bar.name = "panel-handle";
+  bar.userData.noCollider = bar.userData.noHighlight = true;
+  root.add(bar);
+  const it = ctx.add(root, {
+    draggable: true, highlight: false,
+    box: new T.Box3(new T.Vector3(-w / 2 - 0.012, y - 0.013, -0.012), new T.Vector3(w / 2 + 0.012, y + 0.013, 0.016)),
+    constrain: ({ position, quaternion, scale }) => {
+      _mdLook.position.copy(position);
+      _mdLook.lookAt(ctx.app.input.head);
+      quaternion.copy(_mdLook.quaternion);
+      scale?.setScalar(1);
+    }
+  });
+  it.on("statechange", ({ level }) => bar.material.color.setHex(level ? 16777215 : 12632256));
+  if (onMoved) it.on("dragend", onMoved);
+  return it;
+}
 // Robot voice + mechanics, all synthesized (WebAudio, no samples), WALL-E flavoured: vibrato chirps for
 // emotions, servo whirs and metal ticks for the body. Everything is spatialized at the duck (HRTF panner,
 // listener on your head). Silent until the page has had a user gesture (browser autoplay rules).
@@ -3453,12 +3476,26 @@ var Microduck = {
     });
     ctx.add(joy.root.children[0], { near: false, highlight: false });
     ctx.root.add(joy.root);
+    // every console panel can be dragged by its bar; it then rides with the stage from where you left it
+    this.panelIts = /* @__PURE__ */ new Map();
+    this._handle(ctx, this.panel.root, { w: 0.14, y: -0.29 / 2 - 0.014 });
+    this._handle(ctx, joy.root, { w: 0.08, y: -0.15 / 2 - 0.014 });
     if (inMenu) {
       app.menu.addPage("duck", this.menuPanel);
       const m = app.menuButtons;
       this.menuBack = ctx.button("\u2039 Microduck", { w: 0.075, h: 0.026, fontSize: 26, onClick: () => app.menu.show("duck") });
       app.menu.setItems([this.menuBack, m.vst, m.gain, m.mesh, m.joints, m.ray, m.reset, m.clear, m.exit], app.opacitySlider);
     }
+  },
+  _handle(ctx, root, opts) {
+    this.panelIts.set(root, mdPanelHandle(ctx, root, { ...opts, onMoved: () => this._remember(root) }));
+  },
+  // a console panel was dragged: store its new pose relative to the stage frame
+  _remember(o) {
+    const e = this.consoleRel?.find((x) => x.o === o);
+    if (!e) return;
+    o.updateMatrix();
+    e.m = this._stageFrame(new THREE6.Matrix4()).invert().multiply(o.matrix);
   },
   // colourway: repaint both rigs (legs and skates) and mark the chip
   setVariant(name) {
@@ -4218,6 +4255,8 @@ var Microduck = {
     this._faceWhileDragged(dt);
     const F = this._stageFrame(_mdM);
     for (const { o, m } of this.consoleRel) {
+      // (a panel being dragged by its bar follows the hand, not the stage)
+      if (this.panelIts?.get(o)?.selections.length) continue;
       _mdM2.multiplyMatrices(F, m).decompose(o.position, o.quaternion, o.scale);
     }
     const desktop = !this.app.renderer.xr.isPresenting;

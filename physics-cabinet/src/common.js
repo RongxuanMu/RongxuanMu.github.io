@@ -103,6 +103,27 @@ function pcTracker() {
     }
   };
 }
+// a grab bar under a floating panel: drag it to put the panel anywhere (it keeps facing you); the panel is a
+// child of the plate, so wherever you leave it, it then travels with the plate. The box covers only the bar.
+var _pcLook = new THREE6.Object3D();
+function pcPanelHandle(ctx, root, { w = 0.12, y = -0.16 } = {}) {
+  const T = THREE6, bar = new T.Mesh(new T.CapsuleGeometry(5e-3, w, 4, 12).rotateZ(Math.PI / 2), new T.MeshBasicMaterial({ color: 12632256 }));
+  bar.position.set(0, y, 4e-3);
+  bar.name = "panel-handle";
+  bar.userData.noCollider = bar.userData.noHighlight = true;
+  root.add(bar);
+  const it = ctx.add(root, {
+    draggable: true, highlight: false,
+    box: new T.Box3(new T.Vector3(-w / 2 - 0.012, y - 0.013, -0.012), new T.Vector3(w / 2 + 0.012, y + 0.013, 0.016)),
+    constrain: ({ position, quaternion }) => {
+      _pcLook.position.copy(position);
+      _pcLook.lookAt(ctx.app.input.head);
+      quaternion.copy(_pcLook.quaternion);
+    }
+  });
+  it.on("statechange", ({ level }) => bar.material.color.setHex(level ? 16777215 : 12632256));
+  return it;
+}
 var PC_MAT = {
   chrome: () => new THREE6.MeshStandardMaterial({ color: 15263976, metalness: 1, roughness: 0.12, envMap: pcEnv }),
   steel: () => new THREE6.MeshStandardMaterial({ color: 12632256, metalness: 0.9, roughness: 0.3, envMap: pcEnv }),

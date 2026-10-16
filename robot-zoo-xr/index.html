@@ -2868,6 +2868,29 @@ function mdCircle(r, z, n = 96) {
   }
   return p;
 }
+// a grab bar under (or over) a floating panel: drag it to put the panel anywhere - it keeps facing you - and
+// onMoved is told where it ended up. Its box covers only the bar, so buttons on the panel are untouched.
+var _mdLook = new THREE6.Object3D();
+function mdPanelHandle(ctx, root, { w = 0.12, y = -0.16, onMoved = null } = {}) {
+  const T = THREE6, bar = new T.Mesh(new T.CapsuleGeometry(5e-3, w, 4, 12).rotateZ(Math.PI / 2), new T.MeshBasicMaterial({ color: 12632256 }));
+  bar.position.set(0, y, 4e-3);
+  bar.name = "panel-handle";
+  bar.userData.noCollider = bar.userData.noHighlight = true;
+  root.add(bar);
+  const it = ctx.add(root, {
+    draggable: true, highlight: false,
+    box: new T.Box3(new T.Vector3(-w / 2 - 0.012, y - 0.013, -0.012), new T.Vector3(w / 2 + 0.012, y + 0.013, 0.016)),
+    constrain: ({ position, quaternion, scale }) => {
+      _mdLook.position.copy(position);
+      _mdLook.lookAt(ctx.app.input.head);
+      quaternion.copy(_mdLook.quaternion);
+      scale?.setScalar(1);
+    }
+  });
+  it.on("statechange", ({ level }) => bar.material.color.setHex(level ? 16777215 : 12632256));
+  if (onMoved) it.on("dragend", onMoved);
+  return it;
+}
 // Robot voice + mechanics, all synthesized (WebAudio, no samples), WALL-E flavoured: vibrato chirps for
 // emotions, servo whirs and metal ticks for the body. Everything is spatialized at the duck (HRTF panner,
 // listener on your head). Silent until the page has had a user gesture (browser autoplay rules).
@@ -3450,12 +3473,26 @@ var Microduck = {
     });
     ctx.add(joy.root.children[0], { near: false, highlight: false });
     ctx.root.add(joy.root);
+    // every console panel can be dragged by its bar; it then rides with the stage from where you left it
+    this.panelIts = /* @__PURE__ */ new Map();
+    this._handle(ctx, this.panel.root, { w: 0.14, y: -0.29 / 2 - 0.014 });
+    this._handle(ctx, joy.root, { w: 0.08, y: -0.15 / 2 - 0.014 });
     if (inMenu) {
       app.menu.addPage("duck", this.menuPanel);
       const m = app.menuButtons;
       this.menuBack = ctx.button("\u2039 Microduck", { w: 0.075, h: 0.026, fontSize: 26, onClick: () => app.menu.show("duck") });
       app.menu.setItems([this.menuBack, m.vst, m.gain, m.mesh, m.joints, m.ray, m.reset, m.clear, m.exit], app.opacitySlider);
     }
+  },
+  _handle(ctx, root, opts) {
+    this.panelIts.set(root, mdPanelHandle(ctx, root, { ...opts, onMoved: () => this._remember(root) }));
+  },
+  // a console panel was dragged: store its new pose relative to the stage frame
+  _remember(o) {
+    const e = this.consoleRel?.find((x) => x.o === o);
+    if (!e) return;
+    o.updateMatrix();
+    e.m = this._stageFrame(new THREE6.Matrix4()).invert().multiply(o.matrix);
   },
   // colourway: repaint both rigs (legs and skates) and mark the chip
   setVariant(name) {
@@ -4215,6 +4252,8 @@ var Microduck = {
     this._faceWhileDragged(dt);
     const F = this._stageFrame(_mdM);
     for (const { o, m } of this.consoleRel) {
+      // (a panel being dragged by its bar follows the hand, not the stage)
+      if (this.panelIts?.get(o)?.selections.length) continue;
       _mdM2.multiplyMatrices(F, m).decompose(o.position, o.quaternion, o.scale);
     }
     const desktop = !this.app.renderer.xr.isPresenting;
@@ -4844,6 +4883,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     pk.root.add(info);
     ctx.add(pk.root.children[0], { near: false, highlight: false });
     ctx.root.add(pk.root);
+    this._handle(ctx, pk.root, { w: 0.14, y: 0.155 / 2 + 0.014 });
     // humanoid commands, where Microduck's console sits; the shared toggles stay in sync with Microduck's copies
     this.humSlot = new T.Group();
     ctx.root.add(this.humSlot);
@@ -4885,11 +4925,41 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
       this.follow = v;
       if (v) this.goal.active = false;
     });
+    this._handle(ctx, this.humSlot, { w: 0.14, y: -0.25 / 2 - 0.014 });
     this.walkPanel = make("Humanoid · pinch the floor, grab, drive", [follow, ...common()], 0.15, true);
+    if (this.inMenu) this._zooMenu(ctx);
     this.trackPanel = make("Unitree G1 · pick a motion", [...RZ_TRACK_CLIPS.map((l) => ctx.button(l, { w: 0.078, h: 0.026, fontSize: 24, onClick: () => this._play(l) })), ...common()], 0.25, false);
   },
   // the picker sits on your left with the commands, stacked above them as one console (as Microduck XR keeps
   // everything you press on the left and only the drive joystick on the right)
+  // the hand menu (XR): a Robot Zoo home page - the robots and the commands every robot shares - with
+  // Microduck's own moves one page away and the framework's Settings page
+  _zooMenu(ctx) {
+    const app = ctx.app, b = (label, o) => ctx.button(label, { w: 0.075, h: 0.026, fontSize: 24, ...o });
+    const page = this.zooPage = ctx.panel("Robot Zoo", { w: 0.26, h: 0.25 });
+    this.menuRobots = RZ_ROBOTS.map((R, i) => b(R.label, { toggle: true, value: i === this.idx, onClick: () => this.pick(i) }));
+    const shared = (key, label, fn) => {
+      const x = b(label, { toggle: true, value: !!this.btn[key].value, onClick: (v) => {
+        this.btn[key].setValue(v);
+        fn(v);
+      } });
+      this.btn[key].add(x);
+      return x;
+    };
+    this.duckMovesB = b("Duck moves \u203a", { onClick: () => app.menu.show("duck") });
+    page.layout([...this.menuRobots,
+      shared("follow", "Follow me", (v) => {
+        this.follow = v;
+        if (v) this.goal.active = false;
+      }),
+      shared("table", "Tabletop", (v) => this._placeStage(v)),
+      shared("bound", "Boundary", (v) => this.setBoundary(v)),
+      shared("sound", "Sound", (v) => this.sound.setOn(this.soundOn = v)),
+      b("Reset", { onClick: () => this.reset() }), this.duckMovesB, b("Settings \u203a", { onClick: () => app.menu.show("settings") })], { cols: 3, top: 0.03 });
+    app.menu.addPage("zoo", page);
+    this.menuBack.setLabel("\u2039 Robot Zoo");
+    this.menuBack.onClick = () => app.menu.show("zoo");
+  },
   _placeConsole(y) {
     this.picker.root.position.set(-0.42, y + 0.29 / 2 + 0.155 / 2 + 0.012, -0.36);
     this.picker.root.lookAt(0, y + 0.45, 0.35);
@@ -4916,6 +4986,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     this.idx = i;
     this.R = R;
     this.robotBtns.forEach((b, k) => b.setValue(k === i));
+    this.menuRobots?.forEach((b, k) => b.setValue(k === i));
+    if (this.duckMovesB) this.duckMovesB.root.visible = duck;
     this._drawInfo();
     this._sizeFor(R);
     if (this.tabletop) this.stage.scale.setScalar(this._tableScale());
@@ -5129,7 +5201,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     // thrown off the stage: back to the middle, as Microduck
     if (!S.grab && Math.hypot(q[0], q[1]) > this._lim() + 0.35) return this._hReset();
     // a fall: the walkers have no get-up policy, so it stands back up at the spot it started from
-    const up = rzGravity(q, 3)[2] < -0.5 && q[2] > 0.45 * S.z0;
+    // (Berkeley Humanoid Lite's root sits at ground level when standing: its height is no test, only its tilt)
+    const up = rzGravity(q, 3)[2] < -0.5 && (S.z0 < 0.1 || q[2] > 0.45 * S.z0);
     const was = S.fallen;
     S.fallen = up || S.grab ? 0 : S.fallen + S.ctrlDt;
     if (was < 0.3 && S.fallen >= 0.3) snd.uhoh(), this.status("Fell over · standing it back up");
@@ -5204,6 +5277,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     }
   },
   exit(ctx) {
+    if (this.inMenu) ctx.app.menu.removePage("zoo");
     if (this.hvis) this.hvis.root.removeFromParent();
     Microduck.exit.call(this, ctx);
     this.hvis = null;

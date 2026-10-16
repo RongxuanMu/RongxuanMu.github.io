@@ -133,6 +133,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     pk.root.add(info);
     ctx.add(pk.root.children[0], { near: false, highlight: false });
     ctx.root.add(pk.root);
+    this._handle(ctx, pk.root, { w: 0.14, y: 0.155 / 2 + 0.014 });
     // humanoid commands, where Microduck's console sits; the shared toggles stay in sync with Microduck's copies
     this.humSlot = new T.Group();
     ctx.root.add(this.humSlot);
@@ -174,11 +175,41 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
       this.follow = v;
       if (v) this.goal.active = false;
     });
+    this._handle(ctx, this.humSlot, { w: 0.14, y: -0.25 / 2 - 0.014 });
     this.walkPanel = make("Humanoid · pinch the floor, grab, drive", [follow, ...common()], 0.15, true);
+    if (this.inMenu) this._zooMenu(ctx);
     this.trackPanel = make("Unitree G1 · pick a motion", [...RZ_TRACK_CLIPS.map((l) => ctx.button(l, { w: 0.078, h: 0.026, fontSize: 24, onClick: () => this._play(l) })), ...common()], 0.25, false);
   },
   // the picker sits on your left with the commands, stacked above them as one console (as Microduck XR keeps
   // everything you press on the left and only the drive joystick on the right)
+  // the hand menu (XR): a Robot Zoo home page - the robots and the commands every robot shares - with
+  // Microduck's own moves one page away and the framework's Settings page
+  _zooMenu(ctx) {
+    const app = ctx.app, b = (label, o) => ctx.button(label, { w: 0.075, h: 0.026, fontSize: 24, ...o });
+    const page = this.zooPage = ctx.panel("Robot Zoo", { w: 0.26, h: 0.25 });
+    this.menuRobots = RZ_ROBOTS.map((R, i) => b(R.label, { toggle: true, value: i === this.idx, onClick: () => this.pick(i) }));
+    const shared = (key, label, fn) => {
+      const x = b(label, { toggle: true, value: !!this.btn[key].value, onClick: (v) => {
+        this.btn[key].setValue(v);
+        fn(v);
+      } });
+      this.btn[key].add(x);
+      return x;
+    };
+    this.duckMovesB = b("Duck moves \u203a", { onClick: () => app.menu.show("duck") });
+    page.layout([...this.menuRobots,
+      shared("follow", "Follow me", (v) => {
+        this.follow = v;
+        if (v) this.goal.active = false;
+      }),
+      shared("table", "Tabletop", (v) => this._placeStage(v)),
+      shared("bound", "Boundary", (v) => this.setBoundary(v)),
+      shared("sound", "Sound", (v) => this.sound.setOn(this.soundOn = v)),
+      b("Reset", { onClick: () => this.reset() }), this.duckMovesB, b("Settings \u203a", { onClick: () => app.menu.show("settings") })], { cols: 3, top: 0.03 });
+    app.menu.addPage("zoo", page);
+    this.menuBack.setLabel("\u2039 Robot Zoo");
+    this.menuBack.onClick = () => app.menu.show("zoo");
+  },
   _placeConsole(y) {
     this.picker.root.position.set(-0.42, y + 0.29 / 2 + 0.155 / 2 + 0.012, -0.36);
     this.picker.root.lookAt(0, y + 0.45, 0.35);
@@ -205,6 +236,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     this.idx = i;
     this.R = R;
     this.robotBtns.forEach((b, k) => b.setValue(k === i));
+    this.menuRobots?.forEach((b, k) => b.setValue(k === i));
+    if (this.duckMovesB) this.duckMovesB.root.visible = duck;
     this._drawInfo();
     this._sizeFor(R);
     if (this.tabletop) this.stage.scale.setScalar(this._tableScale());
@@ -418,7 +451,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     // thrown off the stage: back to the middle, as Microduck
     if (!S.grab && Math.hypot(q[0], q[1]) > this._lim() + 0.35) return this._hReset();
     // a fall: the walkers have no get-up policy, so it stands back up at the spot it started from
-    const up = rzGravity(q, 3)[2] < -0.5 && q[2] > 0.45 * S.z0;
+    // (Berkeley Humanoid Lite's root sits at ground level when standing: its height is no test, only its tilt)
+    const up = rzGravity(q, 3)[2] < -0.5 && (S.z0 < 0.1 || q[2] > 0.45 * S.z0);
     const was = S.fallen;
     S.fallen = up || S.grab ? 0 : S.fallen + S.ctrlDt;
     if (was < 0.3 && S.fallen >= 0.3) snd.uhoh(), this.status("Fell over · standing it back up");
@@ -493,6 +527,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     }
   },
   exit(ctx) {
+    if (this.inMenu) ctx.app.menu.removePage("zoo");
     if (this.hvis) this.hvis.root.removeFromParent();
     Microduck.exit.call(this, ctx);
     this.hvis = null;

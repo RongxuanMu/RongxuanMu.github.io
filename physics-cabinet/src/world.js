@@ -53,6 +53,10 @@ var PhysicsCabinet = {
     const info = new T.Mesh(new T.PlaneGeometry(0.3, 0.3 * 56 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
     info.position.set(0, -0.078, 2e-3);
     panel.root.add(info);
+    // the panel rides on the plate, and its bar moves it
+    stage.updateWorldMatrix(true, false);
+    stage.attach(panel.root);
+    pcPanelHandle(ctx, panel.root, { w: 0.16, y: -0.19 / 2 - 0.014 });
     this.titleTex = textTexture("", { w: 1024, h: 96, size: 56, color: "#ffffff" });
     const title = this.title = new T.Mesh(new T.PlaneGeometry(0.36, 0.36 * 96 / 1024), new T.MeshBasicMaterial({ map: this.titleTex, transparent: true, depthWrite: false }));
     title.userData.noCollider = title.userData.noHighlight = true;
