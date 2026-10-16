@@ -6,6 +6,7 @@ tabletop physics experiments simulated live in the page.
 
   python3 physics-cabinet/build.py"""
 from pathlib import Path
+import sys
 import re
 
 P = Path(__file__).resolve().parent
@@ -35,6 +36,10 @@ swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '  pendulum. Built on the VibeXR Interaction Framework v' + version + '.\n\n'
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Physics Cabinet</h1>')
+# the shared landing page: card on the left, the scene framed beside it, the latest update on the card
+sys.path.insert(0, str(P.parent / 'vibexr'))
+import landing  # noqa: E402
+s = landing.apply(s, updated='16 Oct 2026', notes="the water ball is Water Ball XR's water; a real Newton's cradle; two-hand jelly; a fair Galton board; draggable panels")
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Ten physics experiments on your table &middot; water ball, Newton&rsquo;s cradle, chaos, cloth, '
      'jelly, orbits and more &middot; grab, shake and throw</p>\n'

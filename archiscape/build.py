@@ -6,6 +6,7 @@ rebuilds one town in any era of architecture.
 
   python3 archiscape/build.py"""
 from pathlib import Path
+import sys
 import re
 
 P = Path(__file__).resolve().parent
@@ -36,6 +37,10 @@ swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v' + version + '.\n\n'
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Archiscape</h1>')
+# the shared landing page: card on the left, the scene framed beside it, the latest update on the card
+sys.path.insert(0, str(P.parent / 'vibexr'))
+import landing  # noqa: E402
+s = landing.apply(s, updated='16 Oct 2026', notes='nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate')
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; '
      'Stonehenge to Zaha Hadid</p>\n'

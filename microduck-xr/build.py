@@ -4,6 +4,7 @@ world swapped for the Microduck world (src/microduck.js). Outputs:
                 (fill it with vendor.py) and sw.js keeps them on the device for offline use
   codepen.html  the same page loading from jsDelivr / Hugging Face, to paste as-is into a CodePen HTML panel"""
 from pathlib import Path
+import sys
 import hashlib
 import json
 import re
@@ -55,6 +56,10 @@ swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '  and trained policies load at runtime from the pollen-robotics/microduck-simulator Space.\n\n'
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
+# the shared landing page: card on the left, the scene framed beside it, the latest update on the card
+sys.path.insert(0, str(P.parent / 'vibexr'))
+import landing  # noqa: E402
+s = landing.apply(s, updated='16 Oct 2026', notes='console panels can be dragged by their bars and ride with the stage', css=False)
 # author credit on the landing card
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>\n'

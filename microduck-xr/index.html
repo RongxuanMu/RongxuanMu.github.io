@@ -66,6 +66,8 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
   button:disabled { opacity: 0.35; cursor: not-allowed; }
   #status { margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.65); min-height: 1.2em; }
   #error { margin-top: 10px; font-size: 14px; color: #ffb4a8; }
+  .upd { margin: -6px 0 16px; font-size: 12px; line-height: 1.45; color: rgba(255,255,255,0.55); }
+  .upd b { color: rgba(255,255,255,0.8); font-weight: 600; }
   .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }
   .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }
   .by a:hover { color: #fff; border-color: #fff; }
@@ -88,6 +90,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Microduck XR</h1>
     <p class="sub">The real Microduck walking policies in MuJoCo &middot; point, pinch &amp; grab to play &middot; built on the VibeXR interaction framework</p>
     <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a></p>
+    <p class="upd"><b>Updated 16 Oct 2026</b> &middot; console panels can be dragged by their bars and ride with the stage</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4539,6 +4542,7 @@ var App = class {
       this.mouse.update(now);
       this.input.head.copy(this.camera.position);
       this.controls.update();
+      this._frameLanding();
     }
     this._updateBackdrop(dt);
     this.menu.update(dt, now);
@@ -4551,6 +4555,22 @@ var App = class {
     this.worlds.update(dt, now / 1e3);
     this.logPanel.update(now);
     this.renderer.render(this.scene, this.camera);
+  }
+  // landing (desktop, before / outside XR): the entry card sits on the left (at the bottom in portrait); the
+  // camera's view is offset so the scene's centre is framed in the free space beside it
+  _frameLanding() {
+    const cam = this.camera, W = innerWidth, H = innerHeight, el = document.querySelector("#overlay:not(.hidden) .card");
+    let rx = 0, rw = W, rh = H;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (W - r.right > r.top) rx = r.right, rw = W - r.right;
+      else rh = r.top;
+    }
+    const ox = Math.round(W / 2 - (rx + rw / 2)), oy = Math.round(H / 2 - rh / 2), key = `${ox},${oy},${W},${H}`;
+    if (key === this._landingKey) return;
+    this._landingKey = key;
+    if (ox || oy) cam.setViewOffset(W, H, ox, oy, W, H);
+    else cam.clearViewOffset();
   }
   // - logging -
   _onEvent(e) {

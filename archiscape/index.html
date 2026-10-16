@@ -72,6 +72,11 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
   .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }
   #ver { position: absolute; right: 14px; bottom: 10px; font-size: 11px; color: rgba(255,255,255,0.4); }
   @media (max-width: 600px) { #overlay { align-items: flex-end; padding-bottom: 16px; } }
+  @media (min-aspect-ratio: 5/4) and (min-width: 601px) { #overlay { justify-content: flex-start; padding-left: max(20px, 6vw); box-sizing: border-box; } .card { max-width: min(440px, 44vw); } }
+  @media (max-aspect-ratio: 5/4) and (min-width: 601px) { #overlay { align-items: flex-end; padding-bottom: 24px; } }
+  @media (max-height: 560px) { .card { padding: 16px 20px; } h1 { font-size: 21px; } .sub { font-size: 12.5px; margin-bottom: 12px; } button { padding: 10px 12px; font-size: 16px; flex-basis: 100px; } #status { margin-top: 10px; } }
+  .upd { margin: -6px 0 16px; font-size: 12px; line-height: 1.45; color: rgba(255,255,255,0.55); }
+  .upd b { color: rgba(255,255,255,0.8); font-weight: 600; }
 </style>
 
 <script type="importmap">
@@ -86,6 +91,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Archiscape</h1>
     <p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; Stonehenge to Zaha Hadid</p>
     <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
+    <p class="upd"><b>Updated 16 Oct 2026</b> &middot; nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -5393,6 +5399,7 @@ var App = class {
       this.mouse.update(now);
       this.input.head.copy(this.camera.position);
       this.controls.update();
+      this._frameLanding();
     }
     this._updateBackdrop(dt);
     this.menu.update(dt, now);
@@ -5405,6 +5412,22 @@ var App = class {
     this.worlds.update(dt, now / 1e3);
     this.logPanel.update(now);
     this.renderer.render(this.scene, this.camera);
+  }
+  // landing (desktop, before / outside XR): the entry card sits on the left (at the bottom in portrait); the
+  // camera's view is offset so the scene's centre is framed in the free space beside it
+  _frameLanding() {
+    const cam = this.camera, W = innerWidth, H = innerHeight, el = document.querySelector("#overlay:not(.hidden) .card");
+    let rx = 0, rw = W, rh = H;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (W - r.right > r.top) rx = r.right, rw = W - r.right;
+      else rh = r.top;
+    }
+    const ox = Math.round(W / 2 - (rx + rw / 2)), oy = Math.round(H / 2 - rh / 2), key = `${ox},${oy},${W},${H}`;
+    if (key === this._landingKey) return;
+    this._landingKey = key;
+    if (ox || oy) cam.setViewOffset(W, H, ox, oy, W, H);
+    else cam.clearViewOffset();
   }
   // - logging -
   _onEvent(e) {

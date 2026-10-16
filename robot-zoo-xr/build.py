@@ -8,6 +8,7 @@ robot picker: src/core.js, src/tracking.js and src/world.js add the humanoids. O
 
   python3 robot-zoo-xr/build.py"""
 from pathlib import Path
+import sys
 import re
 
 P = Path(__file__).resolve().parent
@@ -52,6 +53,10 @@ swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '  Robots, models and policies keep their own licences (see assets/*/SOURCE.txt and the licence files beside them).\n\n'
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Robot Zoo XR</h1>')
+# the shared landing page: card on the left, the scene framed beside it, the latest update on the card
+sys.path.insert(0, str(P.parent / 'vibexr'))
+import landing  # noqa: E402
+s = landing.apply(s, updated='16 Oct 2026', notes="built on Microduck XR's stage, robots walk through your room; Berkeley Lite stands again; a Robot Zoo hand menu; draggable panels")
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Open-source robots running their real policies &middot; Microduck, Unitree, Booster, AgiBot, Berkeley &middot; '
      'life-size on your floor or on a tabletop</p>\n'
