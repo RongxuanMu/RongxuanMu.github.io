@@ -1,6 +1,7 @@
 <!-- Archiscape - a Townscaper-style town builder for your table: tap to build, hold to remove, and rebuild the
-  same town in any era, from Stonehenge, Athens and Rome through Jiangnan, Moscow and Prussia to Richard Meier,
-  Tadao Ando, Frank Gehry and Zaha Hadid. Built on the VibeXR Interaction Framework v0.8.25.
+  same town in any of eighteen eras, from Stonehenge, Athens, Rome and Hagia Sophia through the Forbidden City,
+  Jiangnan after Wu Guanzhong, the Hakka tulou and the Kremlin to Gaudi, Wright, Le Corbusier, Meier, Ando, I. M. Pei,
+  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v0.8.25.
 
   VibeXR Interaction Framework v0.8.25 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
@@ -2583,6 +2584,7 @@ var AS_PROFILES = {
   onion: [[1, 0], [1.18, 0.22], [1.14, 0.48], [0.88, 0.78], [0.5, 1.05], [0.22, 1.32], [0.07, 1.56], [0, 1.72]],
   pointed: [[1, 0], [1, 0.18], [0.96, 0.46], [0.82, 0.76], [0.58, 1.02], [0.28, 1.24], [0, 1.42]],
   bell: [[1, 0], [0.98, 0.12], [0.62, 0.28], [0.42, 0.5], [0.3, 0.8], [0, 0.95]],
+  spire: [[1, 0], [0.97, 0.12], [0.88, 0.3], [0.72, 0.5], [0.52, 0.68], [0.32, 0.83], [0.15, 0.94], [0, 1]],
   stepped: [[1, 0], [1, 0.08], [0.92, 0.08], [0.92, 0.16], [0.84, 0.16], [0.84, 0.22], [0.8, 0.3], [0.7, 0.5], [0.5, 0.7], [0.26, 0.82], [0.2, 0.84], [0.2, 0.86], [0, 0.86]]
 };
 function asKit(tess = null) {
@@ -2719,11 +2721,13 @@ function asPointed(K, E, kind, hex, u, y, w, hh, out = 4e-4) {
 // edge k is at least as tall (no eave there, the roof runs on) -
 // a pitched roof whose ridge runs across the cell towards its joined neighbours, so rows of houses share one
 // ridge line; free ends are hipped, or closed by a gable (a callback draws the gable wall)
-function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 0, gable = null, ridge = null, end = null }) {
+function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 0, gable = null, ridge = null, end = null, dir = null }) {
   const v = R.v3, j = R.join, n = R.n3;
   const mids = [0, 1, 2, 3].map((k) => v[k].clone().lerp(v[(k + 1) % 4], 0.5));
   const sA = j[0] + j[2], sB = j[1] + j[3];
-  const a = sA !== sB ? sA > sB ? 0 : 1 : mids[0].distanceTo(mids[2]) >= mids[1].distanceTo(mids[3]) ? 0 : 1;
+  // dir: the ridge follows one fixed direction (rows of parallel roofs); otherwise it runs towards the joined
+  // neighbours, else along the cell's longer axis
+  const a = dir ? Math.abs(_asA.subVectors(mids[2], mids[0]).normalize().dot(dir)) >= Math.abs(_asB.subVectors(mids[3], mids[1]).normalize().dot(dir)) ? 0 : 1 : sA !== sB ? sA > sB ? 0 : 1 : mids[0].distanceTo(mids[2]) >= mids[1].distanceTo(mids[3]) ? 0 : 1;
   const i0 = a, i1 = (a + 1) % 4, i2 = (a + 2) % 4, i3 = (a + 3) % 4;
   const rise = pitch * mids[i1].distanceTo(mids[i3]) / 2;
   const E = v.map((p, i) => {
@@ -2955,6 +2959,69 @@ var AS_STYLES = [
     }
   },
   {
+    id: "hagia",
+    label: "Hagia Sophia",
+    title: "Hagia Sophia & the Ottoman domes",
+    era: "Constantinople / Istanbul · 537, and Sinan's 16th century",
+    blurb: "A dome floating on a ring of windows, cascades of half-domes, pencil minarets",
+    palette: [14260088, 14723718, 13799276],
+    ground: { hex: 12167565, side: 9206882 },
+    wall(K, E) {
+      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.05);
+      for (const u of asSlots(E.len, 0.0105)) {
+        asArch(K, E, "matte", 15393743, u, 0.0135, 5.4e-3, 0.0105, 3e-4);
+        asArch(K, E, "matte", 3812906, u, 0.013, 3.8e-3, 9e-3, 7e-4);
+      }
+      if (E.L > 0) asBand(K, E, "matte", 15392719, 0, 1.4e-3, 6e-4, 1.2e-3);
+      if (E.L === 0) asBand(K, E, "matte", 13352100, 0, 3e-3, 8e-4, 1.8e-3);
+    },
+    roof(K, R) {
+      const lead = 9410204;
+      if (R.tower && R.h >= 4 && R.ins < 0.013) {
+        // a pencil minaret: a slender fluted shaft, two balconies, a sharp lead cone
+        asFlat(K, R, { hex: R.wall, parapet: 2e-3 });
+        const b = R.cen.clone(), r = Math.min(R.ins * 0.5, 4.5e-3);
+        K.cyl("satin", 15657696, b, b.clone().setY(b.y + 0.075), r, r * 0.85, 12);
+        for (const y of [0.04, 0.062]) {
+          K.cyl("satin", 15657696, b.clone().setY(b.y + y), b.clone().setY(b.y + y + 2e-3), r * 1.7, r * 1.7, 12);
+          K.cyl("satin", 15657696, b.clone().setY(b.y + y - 2e-3), b.clone().setY(b.y + y), r * 0.9, r * 1.7, 12);
+        }
+        K.cyl("satin", lead, b.clone().setY(b.y + 0.075), b.clone().setY(b.y + 0.1), r * 1.05, 2e-4, 12);
+        K.sphere("gold", 14265674, b.clone().setY(b.y + 0.101), 7e-4, 1.4e-3, 7e-4, 0);
+      } else if (R.tower) {
+        // the great dome: a drum pierced by a ring of windows, a shallow lead dome, a gilded crescent
+        asFlat(K, R, { hex: R.wall, parapet: 2.5e-3 });
+        const r = R.ins * 0.9, b = R.cen.clone();
+        K.cyl("matte", R.wall, b, b.clone().setY(b.y + 6e-3), r * 1.02, r * 1.02, 24);
+        for (let i = 0; i < 16; i++) {
+          const a = i / 16 * Math.PI * 2, n = new THREE6.Vector3(Math.cos(a), 0, Math.sin(a));
+          K.box("matte", 3812906, b.clone().addScaledVector(n, r * 1.025).setY(b.y + 3.2e-3), new THREE6.Vector3(-n.z, 0, n.x), AS_UP, n, 1.4e-3, 3e-3, 6e-4);
+        }
+        K.lathe("satin", lead, b.clone().setY(b.y + 6e-3), "hemi", r, r * 0.6, 24, 0, 0.03, R.r);
+        const top = b.clone().setY(b.y + 6e-3 + r * 0.6);
+        K.cyl("gold", 14265674, top, top.clone().setY(top.y + 5e-3), 4e-4, 4e-4, 5);
+        K.sphere("gold", 14265674, top.clone().setY(top.y + 5.5e-3), 1.2e-3, 1.2e-3, 4e-4, 0);
+        // half-domes leaning on it from the lower neighbours' side
+        R.n3.forEach((n, k) => {
+          if (asHash(R.ci, k, 2) > 0.5) return;
+          const m = R.v3[k].clone().lerp(R.v3[(k + 1) % 4], 0.5);
+          K.lathe("satin", lead, m.clone().addScaledVector(n, -r * 0.05), "hemi", r * 0.45, r * 0.32, 12, 0, 0.03, R.r);
+        });
+      } else if (R.r < 0.45) {
+        // small lead domes over the side halls
+        asFlat(K, R, { hex: 13421994, parapet: 1.5e-3, phex: R.wall });
+        const r = R.ins * 0.62;
+        K.cyl("matte", R.wall, R.cen, R.cen.clone().setY(R.y + 2.5e-3), r, r, 14);
+        K.lathe("satin", lead, R.cen.clone().setY(R.y + 2.5e-3), "hemi", r, r * 0.75, 14, 0, 0.03, R.r);
+        K.sphere("gold", 14265674, R.cen.clone().setY(R.y + 2.5e-3 + r * 0.75 + 1e-3), 6e-4, 1.2e-3, 6e-4, 0);
+      } else asFlat(K, R, { hex: 13421994, parapet: 1.5e-3, phex: R.wall });
+    },
+    prop(K, x, z, r) {
+      if (r < 0.1) asTree(K, "cypress", x, z, 1.1, r);
+      else if (r < 0.18) asTree(K, "round", x, z, 1, r, 6528847);
+    }
+  },
+  {
     id: "islamic",
     label: "Islamic",
     title: "Islamic architecture",
@@ -3000,101 +3067,212 @@ var AS_STYLES = [
     }
   },
   {
-    id: "jiangnan",
-    label: "Jiangnan",
-    title: "Jiangnan water town",
-    era: "South of the Yangtze · Ming and Qing China",
-    blurb: "Whitewashed walls, grey tiles with upswept eaves, horse-head gables over the canals",
-    palette: [15921126, 15263716],
-    ground: { water: true, hex: 7311238, side: 5329234 },
-    found: 9079176,
+    id: "forbidden",
+    label: "Forbidden City",
+    title: "The Forbidden City",
+    era: "Beijing · Ming and Qing · from 1420",
+    blurb: "Vermilion walls on white marble terraces, golden glazed roofs with upswept eaves",
+    palette: [10627618, 10168352, 11219238],
+    ground: { hex: 12432806, side: 8618612 },
     wall(K, E) {
-      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.04);
-      if (E.L === 0) asBand(K, E, "matte", 7106660, 0, 4e-3, 4e-4, 1.6e-3);
-      for (const u of asSlots(E.len, 0.013)) {
-        if (E.L === 0 && asHash(E.ci, E.k, u * 100) < 0.5) {
-          asOn(K, E, "satin", 3811871, u, 0.0105, 9e-3, 0.017, 4e-4);
-          asOn(K, E, "satin", 6967352, u, 0.0105, 4e-4, 0.017, 9e-4);
-        } else {
-          asOn(K, E, "satin", 3877664, u, 0.015, 8e-3, 0.01, 5e-4);
-          asOn(K, E, "satin", 7032888, u, 0.0094, 9.5e-3, 1.2e-3, 1.1e-3);
-        }
+      if (E.L === 0) {
+        // a white marble terrace with its balustrade, the red wall set back above it
+        asWall(K, E, "satin", 15263450, 0, 5e-3, 0, 0.02);
+        asBand(K, E, "satin", 15921127, 5e-3, 1.2e-3, 2.6e-3, 2.4e-3, 3e-3);
+        asWall(K, E, "matte", E.bh, 5e-3, AS_H, 0, 0.03);
+      } else asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.03);
+      // lattice doors and windows in gold-brown, framed by red columns
+      for (const u of asSlots(E.len, 0.0105)) {
+        const y = E.L === 0 ? 0.0165 : 0.0145, hh = E.L === 0 ? 0.017 : 0.011;
+        asOn(K, E, "satin", 12093742, u, y, 7e-3, hh, 4e-4);
+        for (const dy of [-0.3, 0, 0.3]) asOn(K, E, "satin", 7023127, u, y + dy * hh, 7e-3, 4e-4, 8e-4);
+        asOn(K, E, "satin", 7023127, u, y, 4e-4, hh, 8e-4);
       }
-      // pent eaves between storeys
-      if (E.L > 0) {
-        const [a, b] = asInset(E, -6e-3);
-        K.poly("satin", 4540493, [E.a3.clone().setY(E.y0 + 1e-3), E.b3.clone().setY(E.y0 + 1e-3), b.setY(E.y0 - 3.5e-3), a.setY(E.y0 - 3.5e-3)], 0.05, E.r);
+      // painted brackets under the eaves: turquoise and blue
+      if (E.top) {
+        asBand(K, E, "satin", 2911850, AS_H - 3.6e-3, 2e-3, 8e-4, 1.6e-3);
+        asBand(K, E, "satin", 2771852, AS_H - 1.6e-3, 1.6e-3, 1.6e-3, 2.4e-3);
       }
     },
     roof(K, R) {
-      const { R0, R2 } = asPitched(K, R, {
-        kind: "satin", hex: 4540493, pitch: 0.55, over: 4.5e-3, up: 3e-3, ridge: 3092787,
-        gable: (K2, p, q, apex) => asHorseHead(K2, p, q, apex, R)
+      const gold = 14853418, ridge = 13209884;
+      if (R.tower) asSkirt(K, R, R.y - AS_H * 0.42, 6e-3, gold);
+      asPitched(K, R, {
+        kind: "gloss", hex: gold, pitch: 0.72, over: 6e-3, up: 4.5e-3, hip: 0.32, ridge,
+        // chiwen at the ridge ends
+        end: (K2, p) => K2.box("gloss", ridge, p.clone().setY(p.y + 2.2e-3), new THREE6.Vector3(1, 0, 0), AS_UP, new THREE6.Vector3(0, 0, 1), 1.8e-3, 4.4e-3, 1.8e-3)
       });
-      if (R.tower) {
-        const mid = R0.clone().lerp(R2, 0.5);
-        K.cyl("satin", 3092787, mid, mid.clone().setY(mid.y + 0.012), 1.2e-3, 3e-4, 6);
-        for (let i = 0; i < 3; i++) K.sphere("satin", 3092787, mid.clone().setY(mid.y + 3e-3 + i * 3e-3), 1.6e-3 - i * 3e-4, 1e-3, 1.6e-3 - i * 3e-4, 0);
-      }
-      if (R.r < 0.3) {
-        // a red lantern under the eaves
-        const k = R.join.indexOf(false);
-        if (k >= 0) {
-          const p = R.v3[k].clone().lerp(R.v3[(k + 1) % 4], 0.3).addScaledVector(R.n3[k], 3.5e-3);
-          p.y -= 5e-3;
-          K.sphere("glow", 14174767, p, 1.8e-3, 2.2e-3, 1.8e-3, 1);
-        }
-      }
     },
     prop(K, x, z, r) {
-      if (r < 0.035) {
-        // a black-awning boat
-        const yaw = r * 180;
-        K.ybox("satin", 3811871, x, -2e-3, z, 0.016, 2e-3, 4.5e-3, yaw);
-        K.ybox("satin", 2236962, x, 5e-4, z, 7e-3, 3e-3, 4e-3, yaw);
-      } else if (r > 0.9) {
-        // lotus pads
-        for (let i = 0; i < 3; i++) K.cyl("matte", 5605442, new THREE6.Vector3(x + Math.cos(i * 2.1 + r) * 3e-3, -3.5e-3, z + Math.sin(i * 2.1 + r) * 3e-3), new THREE6.Vector3(x + Math.cos(i * 2.1 + r) * 3e-3, -3.3e-3, z + Math.sin(i * 2.1 + r) * 3e-3), 2e-3, 2e-3, 8);
+      if (r < 0.08) asTree(K, "pine", x, z, 1.1, r, 3364145);
+      else if (r > 0.96) {
+        // a great bronze vat
+        K.cyl("satin", 5131302, new THREE6.Vector3(x, 0, z), new THREE6.Vector3(x, 6e-3, z), 4.5e-3, 5.5e-3, 12);
       }
     }
   },
   {
-    id: "russian",
-    label: "Russian",
-    title: "Old Russian",
-    era: "Moscow · 16th–17th century · St Basil's",
-    blurb: "Painted walls, kokoshnik window crowns, tented roofs and onion domes",
-    palette: [8369109, 15255146, 14249821, 10274714, 15921126],
-    ground: { hex: 15131119, side: 11710133 },
+    id: "jiangnan",
+    label: "Jiangnan",
+    title: "Jiangnan · after Wu Guanzhong",
+    era: "Water towns south of the Yangtze, as Wu Guanzhong painted them",
+    blurb: "Planes of white wall, lines of black tile, a few dots of colour over still water",
+    palette: [16053999, 15988457, 15790320],
+    ground: { water: true, hex: 9348524, side: 4605510 },
+    found: 6052956,
     wall(K, E) {
-      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.04);
-      for (const u of [0.015, 0.985]) asOn(K, E, "matte", 16316664, u, AS_H / 2, 2.4e-3, AS_H, 6e-4, 1.2e-3);
-      if (E.L > 0) asBand(K, E, "matte", 16316664, 0, 1.8e-3, 7e-4, 1.4e-3);
-      for (const u of asSlots(E.len, 0.012)) {
-        asOn(K, E, "matte", 16316664, u, 0.013, 7e-3, 0.0105, 5e-4, 1e-3);
-        asOn(K, E, "matte", 2766654, u, 0.0125, 4.6e-3, 7.6e-3, 9e-4, 1e-3);
-        const c = asAt(E, u, 0.0185, 5e-4);
-        K.cyl("matte", 16316664, c.clone().addScaledVector(E.n3, -5e-4), c.clone().addScaledVector(E.n3, 5e-4), 3.5e-3, 3.5e-3, 10);
+      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.015);
+      // the dark line where the wall meets the water
+      if (E.L === 0) asBand(K, E, "matte", 3816253, 0, 1.8e-3, 3e-4, 1e-3);
+      // few openings, like ink dots: a black door on some ground floors, one small window on some faces
+      const r = E.r;
+      if (E.L === 0 && r < 0.2 && E.len > 0.012) asOn(K, E, "matte", 2236962, 0.28 + r * 2, 7.5e-3, 6e-3, 0.013, 4e-4);
+      else if (r > 0.58 && E.len > 9e-3) asOn(K, E, "matte", 2763306, 0.22 + (r - 0.58) * 1.3, 0.018, 4.4e-3, 5e-3, 4e-4);
+      // one black eave line under the roof
+      if (E.top) asBand(K, E, "matte", 2828586, AS_H - 1e-3, 1e-3, 5e-4, 1.2e-3);
+    },
+    roof(K, R) {
+      // every ridge in the town runs the same way: rows of black roofs, the order of the paintings
+      asPitched(K, R, {
+        kind: "matte", hex: 3092532, pitch: 0.62, over: 4e-3, up: 1.4e-3, ridge: 1907744, dir: AS_JIANGNAN_DIR,
+        gable: (K2, p, q, apex) => R.h >= 2 ? asHorseHead(K2, p, q, apex, R) : K2.tri("matte", R.wall, p, q, apex)
+      });
+      // a red lantern here and there: the one warm note
+      if (R.r < 0.05) {
+        const k = R.join.indexOf(false);
+        if (k >= 0) {
+          const p = R.v3[k].clone().lerp(R.v3[(k + 1) % 4], 0.35).addScaledVector(R.n3[k], 3e-3);
+          p.y -= 5e-3;
+          K.sphere("glow", 13646377, p, 1.6e-3, 2e-3, 1.6e-3, 1);
+        }
+      }
+    },
+    prop(K, x, z, r) {
+      if (r < 0.025) {
+        // a narrow black boat
+        const yaw = r * 250;
+        K.ybox("matte", 2236962, x, -2.5e-3, z, 0.017, 1.6e-3, 3.4e-3, yaw);
+        K.ybox("matte", 1710618, x, 0, z, 6e-3, 2.4e-3, 3.2e-3, yaw);
+      } else if (r > 0.93) {
+        // a willow leaning over the water: a few hanging strokes
+        const top = new THREE6.Vector3(x, 0.015, z);
+        K.cyl("matte", 3815994, new THREE6.Vector3(x, -3e-3, z), top, 9e-4, 6e-4, 5);
+        for (let i = 0; i < 7; i++) {
+          const a = i / 7 * Math.PI * 2 + r * 9, p = top.clone().add(new THREE6.Vector3(Math.cos(a) * 4.5e-3, 1e-3, Math.sin(a) * 4.5e-3));
+          K.cyl("matte", 8826993, p, p.clone().add(new THREE6.Vector3(Math.cos(a) * 1.5e-3, -0.012, Math.sin(a) * 1.5e-3)), 9e-4, 3e-4, 4);
+        }
+      }
+    }
+  },
+  {
+    id: "tulou",
+    label: "Tulou",
+    title: "Hakka Tulou",
+    era: "Fujian, China · 12th–20th century",
+    blurb: "Rammed-earth rings that house a whole clan: blind lower walls, small high windows, deep dark eaves",
+    palette: [12884579, 12160343, 13608563],
+    ground: { hex: 8228686, side: 7035454 },
+    wall(K, E) {
+      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.09);
+      // a stone footing; no windows on the ground floor (defence), small ones above
+      if (E.L === 0) asBand(K, E, "matte", 9276034, 0, 5e-3, 5e-4, 1.4e-3);
+      else for (const u of asSlots(E.len, 0.0105, 0.4)) asOn(K, E, "matte", 2892829, u, 0.016, 2.8e-3, 4.6e-3, 4e-4);
+      if (E.L === 0 && E.r < 0.06) asArch(K, E, "matte", 3811359, 0.5, 9e-3, 6e-3, 0.012, 5e-4);
+      // the top floor's timber gallery shows as a dark band under the eaves
+      if (E.top && E.h >= 2) asBand(K, E, "matte", 6040870, AS_H - 6e-3, 4.2e-3, 3e-4, 1e-3);
+    },
+    roof(K, R) {
+      asPitched(K, R, { kind: "matte", hex: 4012599, pitch: 0.42, over: 8.5e-3, hip: 0.5, ridge: 2762790 });
+    },
+    prop(K, x, z, r) {
+      if (r < 0.1) {
+        // bamboo
+        for (let i = 0; i < 5; i++) {
+          const a = i * 2.4 + r * 30, p = new THREE6.Vector3(x + Math.cos(a) * 2.5e-3, 0, z + Math.sin(a) * 2.5e-3);
+          K.cyl("matte", 7650876, p, p.clone().add(new THREE6.Vector3(Math.cos(a) * 2e-3, 0.024 + i * 2e-3, Math.sin(a) * 2e-3)), 5e-4, 3e-4, 4);
+          K.sphere("matte", 6328643, p.clone().add(new THREE6.Vector3(Math.cos(a) * 2.5e-3, 0.024 + i * 2e-3, Math.sin(a) * 2.5e-3)), 2.6e-3, 4e-3, 2.6e-3, 0, 0.1, r);
+        }
+      } else if (r < 0.5) {
+        // rows of tea bushes
+        for (let i = -1; i <= 1; i++) K.sphere("matte", 4880689, new THREE6.Vector3(x + i * 4.5e-3, 1.8e-3, z), 2.4e-3, 2e-3, 2.4e-3, 1, 0.1, asHash(i, r * 1e5));
+      } else if (r > 0.95) asTree(K, "palm", x, z, 0.8, r, 6596928);
+    },
+    // a clan's round earth houses: two rings and a small square lou, ancestral halls in the courtyards
+    preset(cells) {
+      const rings = [[-0.07, 0.05, 0.135, 0.042, 4], [0.15, -0.11, 0.075, 0.035, 3]];
+      return cells.map((c) => {
+        for (const [x, z, R, w, h] of rings) {
+          const d = Math.hypot(c.c.x - x, c.c.y - z);
+          if (Math.abs(d - R) < w / 2) return h;
+          if (d < 0.025) return 1;
+        }
+        if (Math.abs(c.c.x - 0.13) < 0.045 && Math.abs(c.c.y - 0.14) < 0.045 && (Math.abs(c.c.x - 0.13) > 0.02 || Math.abs(c.c.y - 0.14) > 0.02)) return 3;
+        return 0;
+      });
+    }
+  },
+  {
+    id: "kremlin",
+    label: "Kremlin",
+    title: "Kremlin & St Basil's",
+    era: "Moscow · 15th–17th century",
+    blurb: "Red brick towers under green tents and ruby stars; St Basil's spiral onion domes",
+    palette: [10893869, 11550767, 10893869, 15325380, 14267996],
+    ground: { hex: 13617341, side: 9208953 },
+    wall(K, E) {
+      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.05);
+      const brick = E.bh === 10893869 || E.bh === 11550767, trim = 16316664;
+      for (const u of [0.015, 0.985]) asOn(K, E, "matte", trim, u, AS_H / 2, 2.2e-3, AS_H, 6e-4, 1.2e-3);
+      if (E.L > 0) asBand(K, E, "matte", trim, 0, 1.6e-3, 7e-4, 1.4e-3);
+      for (const u of asSlots(E.len, brick ? 0.014 : 0.012)) {
+        if (brick) {
+          // narrow white-framed arched windows
+          asArch(K, E, "matte", trim, u, 0.013, 4.6e-3, 8e-3, 5e-4);
+          asArch(K, E, "matte", 2766654, u, 0.0128, 2.8e-3, 6.6e-3, 8e-4);
+        } else {
+          // a church: kokoshnik arches crown each window
+          asOn(K, E, "matte", trim, u, 0.013, 7e-3, 0.0105, 5e-4, 1e-3);
+          asOn(K, E, "matte", 2766654, u, 0.0125, 4.6e-3, 7.6e-3, 9e-4, 1e-3);
+          const c = asAt(E, u, 0.0185, 5e-4);
+          K.cyl("matte", trim, c.clone().addScaledVector(E.n3, -5e-4), c.clone().addScaledVector(E.n3, 5e-4), 3.5e-3, 3.5e-3, 10);
+        }
       }
     },
     roof(K, R) {
-      const metal = asPick([4160092, 10107443, 3049960], asHash(R.ci, 2));
-      if (!R.tower) return asPitched(K, R, { kind: "satin", hex: metal, pitch: 0.8, over: 3e-3, hip: 0.6 });
+      const brick = R.wall === 10893869 || R.wall === 11550767;
+      if (!R.tower) {
+        // the Kremlin wall: swallow-tail merlons; houses: green iron roofs
+        if (brick && R.h <= 2) return asFlat(K, R, { hex: 9132587, parapet: 2e-3, merlon: 2.4e-3, phex: R.wall });
+        return asPitched(K, R, { kind: "satin", hex: 3965520, pitch: 0.75, over: 3e-3, hip: 0.6 });
+      }
       asFlat(K, R, { hex: R.wall });
-      const dome = asPick([14199354, 3104680, 4165466, 11680314, 14199354], asHash(R.ci, 4));
-      const cross = (K2, p) => asCross(K2, p);
-      if (R.h >= 4) {
-        // a tented roof with a small onion on top
-        const b = R.cen.clone(), r = R.ins * 0.85;
-        K.cyl("matte", R.wall, b, b.clone().setY(b.y + 6e-3), r, r, 8);
-        K.cyl("satin", 4160092, b.clone().setY(b.y + 6e-3), b.clone().setY(b.y + 0.04), r * 1.05, r * 0.12, 8);
-        K.lathe("gold", dome, b.clone().setY(b.y + 0.039), "onion", r * 0.25, r * 0.3, 10);
-        cross(K, b.clone().setY(b.y + 0.039 + r * 0.52));
-      } else asDome(K, R, { kind: dome === 14199354 ? "gold" : "satin", hex: dome, profile: "onion", scale: 0.55, drum: 0.012, drumHex: R.wall, height: 1.05, finial: cross });
+      const b = R.cen.clone(), r = R.ins * 0.85;
+      if (brick) {
+        // a Kremlin tower: a white-trimmed tier, a green tent, a ruby star
+        K.cyl("matte", R.wall, b, b.clone().setY(b.y + 0.012), r * 1.08, r * 0.95, 4);
+        K.cyl("matte", 16316664, b.clone().setY(b.y + 0.012), b.clone().setY(b.y + 0.0135), r * 1.0, r * 1.0, 4);
+        K.cyl("matte", R.wall, b.clone().setY(b.y + 0.0135), b.clone().setY(b.y + 0.021), r * 0.7, r * 0.7, 8);
+        K.cyl("satin", 3036246, b.clone().setY(b.y + 0.021), b.clone().setY(b.y + 0.055), r * 0.85, r * 0.04, 8);
+        K.sphere("glow", 14164012, b.clone().setY(b.y + 0.059), 2.6e-3, 3.2e-3, 1e-3, 0);
+        K.sphere("gold", 14265674, b.clone().setY(b.y + 0.059), 3e-3, 3.6e-3, 6e-4, 0);
+        return;
+      }
+      // St Basil's: a tall drum and a spiral-striped onion, with small onions at the corners
+      const pairs = [[13182515, 3638857], [2717596, 15921906], [15312951, 3707706], [14248763, 1739130], [12464194, 15919814]];
+      const [c1, c2] = pairs[Math.floor(asHash(R.ci, 4) * pairs.length)];
+      K.cyl("matte", R.wall, b, b.clone().setY(b.y + 0.016), r * 0.62, r * 0.6, 12);
+      const top = asOnion(K, b.clone().setY(b.y + 0.016), r * 0.62, r * 0.75, c1, c2, 1.2 + asHash(R.ci, 8));
+      asCross(K, top);
+      R.v3.forEach((p, k) => {
+        if (asHash(R.ci, k, 31) > 0.55) return;
+        const q = p.clone().lerp(R.cen, 0.32), [d1, d2] = pairs[Math.floor(asHash(R.ci, k, 5) * pairs.length)];
+        K.cyl("matte", R.wall, q, q.clone().setY(q.y + 7e-3), r * 0.2, r * 0.2, 8);
+        asCross(K, asOnion(K, q.clone().setY(q.y + 7e-3), r * 0.22, r * 0.3, d1, d2, 1.5));
+      });
     },
     prop(K, x, z, r) {
       if (r < 0.12) asTree(K, "fir", x, z, 1, r);
-      else if (r < 0.22) asTree(K, "birch", x, z, 1, r, 10203226);
+      else if (r < 0.2) asTree(K, "birch", x, z, 1, r, 10203226);
     }
   },
   {
@@ -3149,6 +3327,156 @@ var AS_STYLES = [
         K.cyl("satin", 2236962, new THREE6.Vector3(x, 0, z), new THREE6.Vector3(x, 0.016, z), 4e-4, 4e-4, 5);
         K.sphere("glow", 16771508, new THREE6.Vector3(x, 0.017, z), 1.3e-3, 1.6e-3, 1.3e-3, 0);
       }
+    }
+  },
+  {
+    id: "gaudi",
+    label: "Gaudí",
+    title: "Antoni Gaudí",
+    era: "Modernisme · Barcelona · 1880s–1926",
+    blurb: "Walls that ripple like the sea, broken-tile mosaic, bone balconies, the spires of the Sagrada Família",
+    palette: [14469539, 14074266, 14864048],
+    ground: { hex: 13219990, side: 9271900 },
+    tess: [2, 2],
+    smooth: ["satin"],
+    warp(p) {
+      const s = Math.min(1, Math.max(0, p.y) / 0.03);
+      p.x += s * 2.6e-3 * Math.sin(p.y * 95 + p.z * 46);
+      p.z += s * 2.6e-3 * Math.cos(p.y * 85 + p.x * 48);
+    },
+    wall(K, E) {
+      asWall(K, E, "satin", E.bh, 0, AS_H, 0, 0.05);
+      for (const u of asSlots(E.len, 0.012)) {
+        // oval windows with bone-white balcony masks
+        asArch(K, E, "matte", 2895401, u, 0.014, 5e-3, 9e-3, 6e-4);
+        if (E.L > 0) asOn(K, E, "matte", 15921392, u, 0.0085, 7e-3, 2.2e-3, 2.4e-3, 2.6e-3);
+      }
+      // a crown of broken-tile mosaic
+      if (E.top) {
+        const n = Math.max(2, Math.round(E.len / 3.4e-3));
+        for (let i = 0; i < n; i++) asOn(K, E, "gloss", asPick(AS_TRENCADIS, asHash(E.ci, E.k, i)), (i + 0.5) / n, AS_H - 1.6e-3, E.len / n * 0.92, 3e-3, 1.2e-3, 1.6e-3);
+      }
+    },
+    roof(K, R) {
+      if (R.tower) {
+        // a Sagrada Família spire: a tall bullet of stone, pierced, crowned with a mosaic finial
+        const b = R.cen.clone(), r = R.ins * 0.75, H = 0.05 + R.h * 4e-3;
+        asFlat(K, R, { hex: R.wall });
+        K.lathe("matte", 13087878, b, "spire", r, H, 14, 0, 0.04, R.r);
+        for (let i = 0; i < 6; i++) K.sphere("matte", 4210752, b.clone().add(new THREE6.Vector3(Math.cos(i * 1.05) * r * 0.86, H * 0.22 + i * H * 0.08, Math.sin(i * 1.05) * r * 0.86)), 6e-4, 1.2e-3, 6e-4, 0);
+        const top = b.clone().setY(b.y + H);
+        for (let i = 0; i < 4; i++) K.sphere("gloss", asPick(AS_TRENCADIS, asHash(R.ci, i)), top.clone().add(new THREE6.Vector3(Math.cos(i * 1.57) * 1.6e-3, 1.4e-3 + (i % 2) * 1e-3, Math.sin(i * 1.57) * 1.6e-3)), 1.5e-3, 1.5e-3, 1.5e-3, 1);
+        return;
+      }
+      // Casa Batllo's dragon roof: scaled tiles shading from green to blue to orange, a spine of mosaic balls
+      const hex = asPick([4165498, 5940075, 3830964, 13794126], asHash(R.ci, 3));
+      const { R0, R2 } = asPitched(K, R, { kind: "gloss", hex, pitch: 0.95, over: 2.5e-3, hip: 0.75, up: 2e-3 });
+      for (let i = 0; i <= 3; i++) K.sphere("gloss", asPick(AS_TRENCADIS, asHash(R.ci, i, 9)), R0.clone().lerp(R2, i / 3), 1.4e-3, 1.4e-3, 1.4e-3, 1);
+      if (R.r < 0.25) {
+        // a Casa Mila chimney warrior
+        const p = R.v3[0].clone().lerp(R.cen, 0.45);
+        K.cyl("matte", 15987699, p, p.clone().setY(p.y + 0.012), 1.8e-3, 1.1e-3, 8);
+        K.sphere("gloss", asPick(AS_TRENCADIS, R.r * 7), p.clone().setY(p.y + 0.013), 2.2e-3, 1.4e-3, 2.2e-3, 1);
+      }
+    },
+    prop(K, x, z, r) {
+      if (r < 0.12) asTree(K, "palm", x, z, 1, r);
+      else if (r > 0.95) {
+        // a serpentine mosaic bench (Park Guell)
+        for (let i = 0; i < 6; i++) K.ybox("gloss", asPick(AS_TRENCADIS, asHash(i, r * 1e4)), x + Math.cos(i * 0.6) * 6e-3, 2e-3, z + Math.sin(i * 0.9) * 3e-3, 2.4e-3, 4e-3, 1.6e-3, i * 0.5);
+      }
+    }
+  },
+  {
+    id: "wright",
+    label: "Wright",
+    title: "Frank Lloyd Wright",
+    era: "Organic architecture · USA · 1900s–1950s · Fallingwater",
+    blurb: "Stacked stone and cream terraces cantilevered over the water, long horizontals in Cherokee red",
+    palette: [10257510, 9402203, 10849388],
+    ground: { water: true, hex: 5073758, side: 6115392 },
+    found: 8220760,
+    wall(K, E) {
+      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.22);
+      // ledgestone courses
+      for (const y of [0.007, 0.0145, 0.022]) asBand(K, E, "matte", 7364681, y, 7e-4, 2e-4, 6e-4);
+      if (E.r < 0.7) {
+        // a ribbon of windows with Cherokee-red mullions
+        asBand(K, E, "glass", 2767414, 0.011, 9e-3, 3e-4, 6e-4);
+        for (const u of asSlots(E.len, 5e-3, 0.2)) asOn(K, E, "satin", 10893867, u, 0.0155, 6e-4, 9e-3, 6e-4, 8e-4);
+      }
+      // the terrace: a cream slab cantilevered out past the wall and its corners
+      if (E.r < 0.55 || E.top) asBand(K, E, "satin", 15260863, AS_H - 2.2e-3, 2.2e-3, 5e-3, 0.012, 0.012 + E.r * 0.01);
+    },
+    roof(K, R) {
+      asFlat(K, R, { kind: "satin", hex: 15260863 });
+      // a thin roof plane with a deep overhang
+      const k = 7e-3, pts = R.v3.map((p, i) => p.clone().addScaledVector(R.n3[i], R.join[i] ? 0 : k).addScaledVector(R.n3[(i + 3) % 4], R.join[(i + 3) % 4] ? 0 : k).setY(R.y + 2.2e-3));
+      K.poly("satin", 15260863, pts, 0.02, R.r);
+      pts.forEach((p, i) => {
+        const q = pts[(i + 1) % 4];
+        K.quad("satin", 13945246, p, q, q.clone().setY(R.y), p.clone().setY(R.y));
+      });
+      if (R.tower) {
+        // the stone chimney core
+        const b = R.cen;
+        K.ybox("matte", R.wall, b.x, R.y + 0.012, b.z, R.ins * 0.9, 0.024, R.ins * 0.9, 0, 0.2, R.r);
+        K.ybox("matte", 7364681, b.x, R.y + 0.0245, b.z, R.ins * 1.0, 1.2e-3, R.ins * 1.0, 0, 0.1, R.r);
+      }
+    },
+    prop(K, x, z, r) {
+      if (r < 0.06) K.ybox("matte", 8220760, x, -1e-3, z, 9e-3, 5e-3, 7e-3, r * 70, 0.2, r);
+      else if (r > 0.94) asTree(K, "round", x, z, 1.2, r, 4741424);
+    }
+  },
+  {
+    id: "corbusier",
+    label: "Le Corbusier",
+    title: "Le Corbusier",
+    era: "Modernism · 1920s–1960s · Villa Savoye, Unité d'Habitation",
+    blurb: "Pilotis, ribbon windows, a free façade and a roof garden: the five points of a new architecture",
+    palette: [15921386, 15658979],
+    ground: { hex: 9414762, side: 7038040 },
+    wall(K, E) {
+      if (E.L === 0 && E.h >= 2) {
+        // pilotis: the ground floor drawn back in dark green glass, the box above standing on white columns
+        asWall(K, E, "satin", 4086346, 0, AS_H - 1.6e-3, -5e-3);
+        const [a, b] = asInset(E, 5e-3);
+        K.quad("satin", E.bh, a.setY(E.y0 + AS_H - 1.6e-3), b.setY(E.y0 + AS_H - 1.6e-3), E.b3.clone().setY(E.y0 + AS_H - 1.6e-3), E.a3.clone().setY(E.y0 + AS_H - 1.6e-3));
+        asWall(K, E, "satin", E.bh, AS_H - 1.6e-3, AS_H);
+        for (const u of asSlots(E.len, 0.011, 0.3)) {
+          const p = asAt(E, u, 0, -1.4e-3);
+          K.cyl("satin", 16316664, p, p.clone().setY(E.y0 + AS_H - 1.6e-3), 9e-4, 9e-4, 8);
+        }
+        return;
+      }
+      asWall(K, E, "satin", E.bh, 0, AS_H, 0, 0.02);
+      if (E.r < 0.25 && E.L > 0) {
+        // Unite d'Habitation: loggias painted red, yellow, blue, green
+        for (const u of asSlots(E.len, 5.5e-3, 0.3)) {
+          asOn(K, E, "matte", 3289650, u, 0.015, 4.8e-3, 0.024, 3e-4, 6e-4);
+          asOn(K, E, "matte", asPick([13121325, 15778841, 2841256, 5937755], asHash(E.ci, E.k, E.L, u * 99)), u, 0.012, 3e-3, 0.016, 6e-4, 6e-4);
+        }
+        return;
+      }
+      // the ribbon window, the whole length of the façade
+      asBand(K, E, "glass", 3160124, 0.012, 7.5e-3, 3e-4, 6e-4, -1e-3);
+      for (const u of asSlots(E.len, 6e-3, 0.2)) asOn(K, E, "satin", 16316664, u - 0.5 / Math.max(1, Math.round(E.len / 6e-3)), 0.0157, 5e-4, 7.5e-3, 5e-4, 6e-4);
+    },
+    roof(K, R) {
+      asFlat(K, R, { kind: "satin", hex: 15132378, parapet: 2.4e-3, phex: 15921386 });
+      if (R.tower || R.r < 0.14) {
+        // the roof garden's curved solarium screen
+        const c = R.cen, rr = R.ins * 0.62, a0 = R.r * 40;
+        for (let i = 0; i < 9; i++) {
+          const a = a0 + i / 9 * Math.PI * 1.15, p = new THREE6.Vector3(c.x + Math.cos(a) * rr, R.y + 5e-3, c.z + Math.sin(a) * rr);
+          K.ybox("satin", 15921386, p.x, p.y, p.z, rr * 0.38, 0.01, 8e-4, -a + Math.PI / 2);
+        }
+        K.ybox("matte", 6066258, c.x, R.y + 1e-3, c.z, R.ins * 0.5, 2e-3, R.ins * 0.5, 0.3);
+      } else if (R.r > 0.85) K.poly("matte", 6066258, R.v3.map((p) => p.clone().lerp(R.cen, 0.25).setY(R.y + 6e-4)));
+    },
+    prop(K, x, z, r) {
+      if (r < 0.14) asTree(K, "round", x, z, 1, r, 5212978);
     }
   },
   {
@@ -3218,6 +3546,58 @@ var AS_STYLES = [
     }
   },
   {
+    id: "pei",
+    label: "I. M. Pei",
+    title: "I. M. Pei",
+    era: "1960s–2006 · Louvre Pyramid, Bank of China Tower, Suzhou Museum",
+    blurb: "Pure geometry: white walls edged in grey granite, glass pyramids, a tower of triangles",
+    palette: [16119023, 15790824],
+    ground: { hex: 14276300, side: 9078656 },
+    wall(K, E) {
+      const granite = 5198679;
+      if (E.tower && E.h >= 4 && E.L >= 1) {
+        // Bank of China: glass faces crossed by white diagonals, an X every two storeys
+        asWall(K, E, "glass", 6257811, 0, AS_H);
+        const a = asAt(E, 0, E.y0 - E.a3.y + (E.L % 2 ? AS_H : 0), 6e-4), b = asAt(E, 1, E.y0 - E.a3.y + (E.L % 2 ? 0 : AS_H), 6e-4);
+        const d = b.clone().sub(a), len = d.length();
+        d.divideScalar(len);
+        K.box("satin", 16250871, a.clone().lerp(b, 0.5), d, new THREE6.Vector3().crossVectors(E.n3, d), E.n3, len, 1.2e-3, 1e-3);
+        if (E.L % 2 === 0) asBand(K, E, "satin", 16250871, 0, 1e-3, 6e-4, 1e-3);
+        return;
+      }
+      asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.01);
+      // grey granite lines: the cornice and the corners, as if drawn in ink
+      if (E.top) asBand(K, E, "satin", granite, AS_H - 1.6e-3, 1.6e-3, 5e-4, 1.2e-3);
+      for (const u of [0.01, 0.99]) if (E.r > 0.4) asOn(K, E, "satin", granite, u, AS_H / 2, 1.2e-3, AS_H, 5e-4, 1e-3);
+      if (E.r < 0.3) {
+        // a square window in a granite frame
+        asOn(K, E, "satin", granite, 0.5, 0.015, 0.012, 0.012, 5e-4, 1e-3);
+        asOn(K, E, "glass", 3292226, 0.5, 0.015, 0.0095, 0.0095, 9e-4, 1e-3);
+      } else if (E.r > 0.75) asBand(K, E, "glass", 3292226, 0.02, 2.4e-3, 3e-4, 6e-4, -4e-3);
+    },
+    roof(K, R) {
+      const granite = 5198679;
+      if (R.tower && R.h >= 4) {
+        // the tower's sloped glass crown
+        asFlat(K, R, { hex: granite });
+        asPyramid(K, R, "glass", 6257811, R.ins * 2.4, 16250871);
+      } else if (R.tower || R.r < 0.16) {
+        // a glass pyramid skylight on a granite roof
+        asFlat(K, R, { kind: "satin", hex: granite });
+        asPyramid(K, R, "glass", 9418441, R.ins * 1.3, 13421772);
+      } else {
+        // Suzhou Museum: geometric grey roof planes with plain white gables
+        asPitched(K, R, { kind: "satin", hex: granite, pitch: 0.58, over: 1.2e-3, hip: 0, ridge: 4211274, dir: AS_JIANGNAN_DIR, gable: (K2, p, q, apex) => K2.tri("matte", R.wall, p, q, apex) });
+      }
+    },
+    prop(K, x, z, r) {
+      if (r < 0.08) {
+        // Suzhou rock slices: thin grey slabs against the white walls
+        for (let i = 0; i < 3; i++) K.ybox("satin", 8421246, x + (i - 1) * 3.5e-3, 3e-3 + i * 2e-3, z, 2.4e-3, 6e-3 + i * 4e-3, 1e-3, 0.2 + r * 9, 0.2, asHash(i, r * 1e4));
+      } else if (r > 0.94) asTree(K, "round", x, z, 0.8, r, 5998133);
+    }
+  },
+  {
     id: "gehry",
     label: "Gehry",
     title: "Frank Gehry",
@@ -3281,19 +3661,685 @@ var AS_STYLES = [
     }
   }
 ];
-// the horse-head wall of a Jiangnan gable: stepped white wall pieces with dark tile caps
+// the town's one ridge direction (Jiangnan and Suzhou rows of roofs run parallel, as in Wu Guanzhong's paintings)
+var AS_JIANGNAN_DIR = new THREE6.Vector3(Math.cos(0.5), 0, Math.sin(0.5));
+// Gaudi's broken-tile mosaic
+var AS_TRENCADIS = [3112897, 4694875, 14721082, 13784638, 8176841, 15848299, 15921906, 6977208];
+// the horse-head wall of a Jiangnan gable: a stepped white wall in three steps, each capped with a thin line of
+// black tile
 function asHorseHead(K, p, q, apex, R) {
   const t = q.clone().sub(p), len = t.length(), n = new THREE6.Vector3(t.z, 0, -t.x).normalize();
   t.normalize();
-  const H0 = apex.y - p.y, hs = [0.42, 0.78, 1.18, 0.78, 0.42];
+  const H0 = apex.y - p.y, hs = [0.5, 1.12, 0.5];
   hs.forEach((f, i) => {
     const u = (i + 0.5) / hs.length, hgt = H0 * f + 2.5e-3;
     const c = p.clone().addScaledVector(t, u * len).addScaledVector(n, -1.2e-3);
     c.y = p.y + hgt / 2;
-    K.box("matte", R.wall, c, t, AS_UP, n, len / hs.length + 3e-4, hgt, 2.4e-3, 0.03, R.r);
-    K.box("satin", 3092787, c.clone().setY(p.y + hgt + 6e-4), t, AS_UP, n, len / hs.length + 9e-4, 1.4e-3, 4.6e-3);
+    K.box("matte", R.wall, c, t, AS_UP, n, len / hs.length + 3e-4, hgt, 2.4e-3, 0.01, R.r);
+    K.box("matte", 2302755, c.clone().setY(p.y + hgt + 5e-4), t, AS_UP, n, len / hs.length + 1.4e-3, 1e-3, 4e-3);
   });
 }
+// an onion dome striped in a spiral of two colours (St Basil's); returns its tip
+function asOnion(K, base, r, h, c1, c2, twist = 1.2) {
+  const prof = AS_PROFILES.onion, top = prof.at(-1)[1], seg = 16;
+  const at = (i, j) => {
+    const [pr, py] = prof[j], a = i / seg * Math.PI * 2 + twist * Math.PI * py / top;
+    return new THREE6.Vector3(base.x + Math.cos(a) * pr * r, base.y + py / top * h, base.z + Math.sin(a) * pr * r);
+  };
+  for (let i = 0; i < seg; i++) for (let j = 0; j + 1 < prof.length; j++) {
+    const hex = i % 2 ? c1 : c2;
+    K.tri("satin", hex, at(i, j), at(i, j + 1), at(i + 1, j + 1));
+    K.tri("satin", hex, at(i, j), at(i + 1, j + 1), at(i + 1, j));
+  }
+  return base.clone().setY(base.y + h);
+}
+// a lower eave all round a column at height y (the second eave of a Chinese hall), corners lifted
+function asSkirt(K, R, y, d, hex) {
+  const n = R.n3, out = R.v3.map((p, i) => {
+    const o = n[i].clone().add(n[(i + 3) % 4]);
+    return p.clone().addScaledVector(o, d).setY(y - d * 0.5 + 1.8e-3);
+  });
+  R.v3.forEach((p, i) => {
+    const q = R.v3[(i + 1) % 4];
+    K.poly("gloss", hex, [p.clone().setY(y), q.clone().setY(y), out[(i + 1) % 4], out[i]], 0.05, R.r);
+  });
+}
+// a pyramid on the roof (Louvre): glass faces and metal edges
+function asPyramid(K, R, kind, hex, height, edge) {
+  const c = R.v3.map((p) => p.clone().lerp(R.cen, 0.12).setY(R.y + 3e-4)), apex = R.cen.clone().setY(R.y + height);
+  c.forEach((p, i) => {
+    K.tri(kind, hex, p, c[(i + 1) % 4], apex);
+    K.cyl("metal", edge, p, apex, 4e-4, 4e-4, 4);
+  });
+}
+// - music: every era has its own generative piece, synthesized live (WebAudio, no samples). Changing era
+// crossfades: the new piece swells in over ~3 s while the old one fades away.
+//
+// Instruments: plucked strings are Karplus-Strong (rendered once per pitch and timbre, then cached), so a
+// guzheng, a pipa, an oud, a lyre and a Spanish guitar are the same physics with different damping, brightness
+// and bends; bells are inharmonic partials (Russian zvon, bianzhong, celesta); winds are a vibrato tone with
+// breath noise (dizi, xiao, ney, shakuhachi, aulos); pads are detuned saws through a filter (choir, organ,
+// synths); drums are tuned noise and sine thumps. Everything goes through one room reverb.
+var AS_MIDI = (m) => 440 * Math.pow(2, (m - 69) / 12);
+var AsMusic = class {
+  constructor(sfx) {
+    this.sfx = sfx;
+    this.on = true;
+    this.vol = 0.8;
+    this.layers = [];
+    this.want = null;
+    this.ks = /* @__PURE__ */ new Map();
+  }
+  setOn(v) {
+    this.on = v;
+    const c = this.c;
+    if (c && this.master) this.master.gain.setTargetAtTime(v ? this.vol : 0, c.currentTime, 0.4);
+  }
+  play(id) {
+    this.want = id;
+  }
+  // the audio graph, built once the page has had a gesture: layers -> dry + room reverb -> compressor -> out
+  _graph() {
+    // the framework makes the AudioContext on the first gesture; until then there is nothing to play into
+    const c = this.sfx.ctx;
+    if (!c || c.state !== "running") return null;
+    if (this.c === c) return c;
+    this.c = c;
+    this.master = c.createGain();
+    this.master.gain.value = this.on ? this.vol : 0;
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -16;
+    comp.ratio.value = 3;
+    comp.attack.value = 0.01;
+    comp.release.value = 0.3;
+    this.master.connect(comp).connect(c.destination);
+    // room: decaying stereo noise, a little darker at the tail
+    const len = Math.round(c.sampleRate * 4.2), ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      let lp = 0;
+      for (let i = 0; i < len; i++) {
+        const t = i / c.sampleRate, k = Math.min(0.9, 0.2 + t * 0.25);
+        lp = lp * k + (Math.random() * 2 - 1) * (1 - k);
+        d[i] = lp * Math.pow(1 - i / len, 2.2) * (t < 0.012 ? t / 0.012 : 1);
+      }
+    }
+    this.verb = c.createConvolver();
+    this.verb.buffer = ir;
+    this.verb.connect(this.master);
+    return c;
+  }
+  // called every frame by the world: starts / crossfades pieces and schedules ~0.3 s ahead
+  tick() {
+    const c = this._graph();
+    if (!c) return;
+    const now = c.currentTime;
+    const cur = this.layers.at(-1);
+    if (this.want && cur?.id !== this.want && AS_MUSIC[this.want]) {
+      for (const L of this.layers) if (!L.out) {
+        L.out = now + 2.6;
+        L.bus.gain.cancelScheduledValues(now);
+        L.bus.gain.setValueAtTime(L.bus.gain.value, now);
+        L.bus.gain.linearRampToValueAtTime(0, now + 2.6);
+      }
+      this.layers.push(this._layer(this.want, now));
+    }
+    for (const L of this.layers) {
+      // music off, or the tab was away: skip ahead instead of playing a backlog
+      if (!this.on || L.next < now - 0.2) {
+        while (L.next < now) L.step++, L.next += 60 / L.spec.bpm / 2;
+        if (!this.on) continue;
+      }
+      while (L.next < now + 0.3) {
+        if (!L.out || L.next < L.out) {
+          try {
+            L.spec.beat(L.M, L.next, L.step);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        L.step++;
+        L.next += 60 / L.spec.bpm / 2 * (L.step % 2 ? 1 + (L.spec.swing ?? 0) : 1 - (L.spec.swing ?? 0));
+      }
+    }
+    // retire faded pieces
+    this.layers = this.layers.filter((L) => {
+      if (!L.out || now < L.out + 4) return true;
+      for (const s of L.held) try {
+        s.stop();
+      } catch (_) {
+      }
+      L.bus.disconnect();
+      return false;
+    });
+  }
+  _layer(id, now) {
+    const c = this.c, spec = AS_MUSIC[id];
+    const bus = c.createGain(), send = c.createGain();
+    bus.gain.setValueAtTime(0, now);
+    bus.gain.linearRampToValueAtTime(spec.level ?? 1, now + 3);
+    send.gain.value = spec.wet ?? 0.35;
+    bus.connect(this.master);
+    bus.connect(send).connect(this.verb);
+    const L = { id, spec, bus, next: now + 0.1, step: 0, out: 0, held: [] };
+    L.M = this._voices(L);
+    spec.init?.(L.M, now + 0.1);
+    return L;
+  }
+  // the instrument set handed to a piece; every note goes to that piece's bus
+  _voices(L) {
+    const c = this.c, bus = L.bus, spec = L.spec, self = this;
+    let seed = 0;
+    for (const ch of L.id) seed = seed * 31 + ch.charCodeAt(0) | 0;
+    const rnd = asRng(seed ^ Math.floor(performance.now()));
+    const pan = (x, node) => {
+      if (!c.createStereoPanner) return node;
+      const p = c.createStereoPanner();
+      p.pan.value = x;
+      node.connect(p);
+      return p;
+    };
+    const env = (t, a, peak, d, hold = 0) => {
+      const g = c.createGain();
+      g.gain.setValueAtTime(1e-4, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + a);
+      if (hold) g.gain.setValueAtTime(peak, t + a + hold);
+      g.gain.exponentialRampToValueAtTime(1e-4, t + a + hold + d);
+      return g;
+    };
+    const M = {
+      rnd,
+      chance: (p) => rnd() < p,
+      pick: (a) => a[Math.floor(rnd() * a.length)],
+      // scale degree -> Hz (degrees beyond the scale wrap into octaves)
+      f(deg, oct = 0, scale = spec.scale, root = spec.root) {
+        const n = scale.length, o = Math.floor(deg / n), k = (deg % n + n) % n;
+        return AS_MIDI(root + scale[k] + 12 * (o + oct));
+      },
+      // a melodic random walk with memory: mostly steps, sometimes a leap, kept inside [lo, hi]
+      walk(key, lo, hi, leap = 0.18) {
+        const s = M[key] ??= { d: Math.round((lo + hi) / 2) };
+        const r = rnd();
+        let step = r < leap ? (rnd() < 0.5 ? -1 : 1) * (2 + Math.floor(rnd() * 2)) : r < 0.82 ? rnd() < 0.5 ? -1 : 1 : 0;
+        if (s.d + step < lo || s.d + step > hi) step = -step;
+        s.d = Math.max(lo, Math.min(hi, s.d + step));
+        return s.d;
+      },
+      // plucked string (Karplus-Strong). damp: 0.5 dull .. 0.05 bright; decay per period; bend: semitones of
+      // slide into the note; vol; x: stereo position
+      pluck(f, t, { vol = 0.3, damp = 0.3, decay = 0.996, dur = 2.4, bend = 0, bendT = 0.12, x = 0, body = 0 } = {}) {
+        const buf = self._ks(f, damp, decay, dur), s = c.createBufferSource();
+        s.buffer = buf;
+        if (bend) {
+          s.playbackRate.setValueAtTime(Math.pow(2, -bend / 12), t);
+          s.playbackRate.exponentialRampToValueAtTime(1, t + bendT);
+        }
+        const g = c.createGain();
+        g.gain.value = vol;
+        let n = s.connect(g);
+        if (body) {
+          // a resonant body (oud, guitar): a broad peak an octave or so above the fundamental
+          const pk = c.createBiquadFilter();
+          pk.type = "peaking";
+          pk.frequency.value = body;
+          pk.Q.value = 1.2;
+          pk.gain.value = 6;
+          n = n.connect(pk);
+        }
+        pan(x, n).connect(bus);
+        s.start(t);
+        s.stop(t + dur);
+      },
+      // a struck bell: inharmonic partials, each with its own decay
+      bell(f, t, { vol = 0.2, dur = 4, partials = [[1, 1, 1], [2.01, 0.55, 0.6], [2.76, 0.4, 0.5], [5.4, 0.22, 0.3], [8.93, 0.1, 0.18]], x = 0, attack = 2e-3 } = {}) {
+        const out = pan(x, c.createGain());
+        out.connect(bus);
+        for (const [ratio, amp, life] of partials) {
+          const fr = f * ratio;
+          if (fr > 14e3) continue;
+          const o = c.createOscillator(), g = env(t, attack, vol * amp, dur * life);
+          o.frequency.value = fr;
+          o.connect(g).connect(out.numberOfInputs ? out : bus);
+          o.start(t);
+          o.stop(t + attack + dur * life + 0.05);
+        }
+      },
+      // a wind instrument: tone + soft overtones, vibrato that blooms after the attack, breath noise
+      flute(f, t, dur, { vol = 0.12, breath = 0.25, vib = 5.2, depth = 0.012, attack = 0.08, x = 0, wave = "sine", bend = 0, nasal = 0 } = {}) {
+        const out = pan(x, c.createGain());
+        out.connect(bus);
+        const g = c.createGain();
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + attack);
+        g.gain.setValueAtTime(vol * 0.85, t + Math.max(attack, dur - 0.12));
+        g.gain.exponentialRampToValueAtTime(1e-4, t + dur + 0.15);
+        g.connect(out.numberOfInputs ? out : bus);
+        const o = c.createOscillator();
+        o.type = wave;
+        if (bend) {
+          o.frequency.setValueAtTime(f * Math.pow(2, -bend / 12), t);
+          o.frequency.exponentialRampToValueAtTime(f, t + 0.18);
+        } else o.frequency.value = f;
+        const lfo = c.createOscillator(), ld = c.createGain();
+        lfo.frequency.value = vib;
+        ld.gain.setValueAtTime(0, t);
+        ld.gain.linearRampToValueAtTime(f * depth, t + Math.min(0.5, dur * 0.6));
+        lfo.connect(ld).connect(o.frequency);
+        let src = o;
+        if (nasal) {
+          const bp = c.createBiquadFilter();
+          bp.type = "bandpass";
+          bp.frequency.value = f * 3;
+          bp.Q.value = 1.5;
+          src = o.connect(bp);
+        }
+        src.connect(g);
+        const o2 = c.createOscillator(), g2 = c.createGain();
+        o2.frequency.value = f * 2;
+        g2.gain.value = 0.18;
+        o2.connect(g2).connect(g);
+        const nz = c.createBufferSource(), bp = c.createBiquadFilter(), ng = c.createGain();
+        nz.buffer = self.sfx.noise;
+        nz.loop = true;
+        bp.type = "bandpass";
+        bp.frequency.value = Math.min(9e3, f * 2.5);
+        bp.Q.value = 2;
+        ng.gain.value = breath;
+        nz.connect(bp).connect(ng).connect(g);
+        for (const s of [o, lfo, o2, nz]) {
+          s.start(t);
+          s.stop(t + dur + 0.25);
+        }
+      },
+      // a held chord: detuned saws (or another wave) through a low-pass, slow swell; formant = choir vowel
+      pad(fs, t, dur, { vol = 0.06, cutoff = 1200, attack = 1.2, release = 1.5, wave = "sawtooth", detune = 9, formant = false, x = 0 } = {}) {
+        const out = pan(x, c.createGain());
+        out.connect(bus);
+        const g = c.createGain();
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + attack);
+        g.gain.setValueAtTime(vol, t + Math.max(attack, dur));
+        g.gain.exponentialRampToValueAtTime(1e-4, t + dur + release);
+        const lp = c.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = cutoff;
+        lp.Q.value = 0.7;
+        if (!formant) lp.connect(g);
+        else {
+          // "ah": two formant peaks
+          const mix = c.createGain();
+          for (const [fr, q, gain] of [[730, 6, 1], [1090, 8, 0.6], [2440, 10, 0.25]]) {
+            const bp = c.createBiquadFilter();
+            bp.type = "bandpass";
+            bp.frequency.value = fr;
+            bp.Q.value = q;
+            const bg = c.createGain();
+            bg.gain.value = gain * 3;
+            lp.connect(bp).connect(bg).connect(mix);
+          }
+          mix.connect(g);
+        }
+        g.connect(out.numberOfInputs ? out : bus);
+        for (const f of fs) for (const d of [-detune, 0, detune]) {
+          const o = c.createOscillator();
+          o.type = wave;
+          o.frequency.value = f;
+          o.detune.value = d + (rnd() - 0.5) * 3;
+          o.connect(lp);
+          o.start(t);
+          o.stop(t + dur + release + 0.1);
+        }
+        return g;
+      },
+      // percussion
+      drum(type, t, vol = 0.3, x = 0) {
+        const out = pan(x, c.createGain());
+        out.connect(bus);
+        const to = out.numberOfInputs ? out : bus;
+        const thump = (f0, f1, d, v) => {
+          const o = c.createOscillator(), g = env(t, 3e-3, v, d);
+          o.frequency.setValueAtTime(f0, t);
+          o.frequency.exponentialRampToValueAtTime(f1, t + d);
+          o.connect(g).connect(to);
+          o.start(t);
+          o.stop(t + d + 0.05);
+        };
+        const hiss = (type2, fr, q, d, v) => {
+          const s = c.createBufferSource(), f = c.createBiquadFilter(), g = env(t, 1e-3, v, d);
+          s.buffer = self.sfx.noise;
+          f.type = type2;
+          f.frequency.value = fr;
+          f.Q.value = q;
+          s.connect(f).connect(g).connect(to);
+          s.start(t);
+          s.stop(t + d + 0.05);
+        };
+        if (type === "frame") thump(110, 55, 0.35, vol), hiss("lowpass", 900, 0.7, 0.08, vol * 0.3);
+        else if (type === "dum") thump(140, 70, 0.28, vol), hiss("bandpass", 600, 1, 0.05, vol * 0.25);
+        else if (type === "tek") hiss("highpass", 3200, 0.8, 0.05, vol * 0.7), thump(700, 500, 0.03, vol * 0.2);
+        else if (type === "wood") thump(1250, 1150, 0.06, vol * 0.8), hiss("bandpass", 2500, 3, 0.02, vol * 0.3);
+        else if (type === "clave") thump(2400, 2300, 0.05, vol * 0.6);
+        else if (type === "castanet") {
+          hiss("bandpass", 3800, 2, 0.02, vol);
+          hiss("bandpass", 4200, 2, 0.02, vol * 0.6);
+        } else if (type === "taiko") thump(80, 42, 0.6, vol), hiss("lowpass", 500, 0.7, 0.12, vol * 0.4);
+        else if (type === "shaker") hiss("highpass", 6e3, 0.7, 0.07, vol * 0.5);
+        else if (type === "tick") hiss("highpass", 8e3, 0.7, 0.015, vol * 0.4);
+      },
+      // a sustained drone for the life of the piece (it fades with the piece)
+      drone(fs, t, { vol = 0.05, wave = "sawtooth", cutoff = 500, wobble = 0.1 } = {}) {
+        const g = c.createGain(), lp = c.createBiquadFilter();
+        lp.type = "lowpass";
+        lp.frequency.value = cutoff;
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + 4);
+        lp.connect(g).connect(bus);
+        const lfo = c.createOscillator(), ld = c.createGain();
+        lfo.frequency.value = wobble;
+        ld.gain.value = cutoff * 0.35;
+        lfo.connect(ld).connect(lp.frequency);
+        lfo.start(t);
+        L.held.push(lfo);
+        for (const f of fs) for (const d of [-6, 5]) {
+          const o = c.createOscillator();
+          o.type = wave;
+          o.frequency.value = f;
+          o.detune.value = d;
+          o.connect(lp);
+          o.start(t);
+          L.held.push(o);
+        }
+      },
+      // weather: wind (a moving band of noise) or water (drips: tiny upward sine chirps), for the piece's life
+      wind(t, { vol = 0.03, center = 500 } = {}) {
+        const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), ld = c.createGain();
+        s.buffer = self._longNoise();
+        s.loop = true;
+        f.type = "bandpass";
+        f.frequency.value = center;
+        f.Q.value = 1.4;
+        lfo.frequency.value = 0.07;
+        ld.gain.value = center * 0.6;
+        lfo.connect(ld).connect(f.frequency);
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(vol, t + 5);
+        s.connect(f).connect(g).connect(bus);
+        s.start(t);
+        lfo.start(t);
+        L.held.push(s, lfo);
+      },
+      drip(t, { vol = 0.05, x = 0 } = {}) {
+        const o = c.createOscillator(), g = env(t, 2e-3, vol, 0.09), f0 = 900 + rnd() * 1400;
+        o.frequency.setValueAtTime(f0, t);
+        o.frequency.exponentialRampToValueAtTime(f0 * 1.9, t + 0.06);
+        pan(x, o.connect(g)).connect(bus);
+        o.start(t);
+        o.stop(t + 0.12);
+      }
+    };
+    return M;
+  }
+  _ks(f, damp, decay, dur) {
+    const c = this.c, key = `${Math.round(f * 10)}:${damp}:${decay}:${dur}`;
+    let b = this.ks.get(key);
+    if (b) return b;
+    const sr = c.sampleRate, N = Math.max(2, Math.round(sr / f)), len = Math.round(sr * dur);
+    b = c.createBuffer(1, len, sr);
+    const d = b.getChannelData(0), ring = new Float32Array(N);
+    // the pluck: noise, softened for a darker string
+    let lp = 0;
+    for (let i = 0; i < N; i++) {
+      lp = lp * damp + (Math.random() * 2 - 1) * (1 - damp);
+      ring[i] = lp;
+    }
+    let idx = 0, prev = 0;
+    const S = 0.5 - damp * 0.45;
+    for (let i = 0; i < len; i++) {
+      const cur = ring[idx], v = decay * ((1 - S) * cur + S * prev);
+      d[i] = cur;
+      prev = cur;
+      ring[idx] = v;
+      idx = (idx + 1) % N;
+    }
+    // remove the DC the filter leaves and fade the tail
+    let m = 0;
+    for (let i = 0; i < len; i++) m += d[i] / len;
+    const fade = Math.round(sr * 0.05);
+    for (let i = 0; i < len; i++) d[i] = (d[i] - m) * (i > len - fade ? (len - i) / fade : 1);
+    if (this.ks.size > 260) this.ks.delete(this.ks.keys().next().value);
+    this.ks.set(key, b);
+    return b;
+  }
+  _longNoise() {
+    if (this._ln) return this._ln;
+    const c = this.c, len = c.sampleRate * 4, b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    return this._ln = b;
+  }
+  stop() {
+    for (const L of this.layers) {
+      for (const s of L.held) try {
+        s.stop();
+      } catch (_) {
+      }
+      L.bus.disconnect();
+    }
+    this.layers = [];
+  }
+};
+// - the pieces. scale: semitones from root (MIDI); bpm counts quarter notes, beat(M, t, i) runs every eighth -
+var AS_SCALES = {
+  // Chinese pentatonic modes
+  gong: [0, 2, 4, 7, 9],
+  yu: [0, 3, 5, 7, 10],
+  zhi: [0, 2, 5, 7, 9],
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  phrygian: [0, 1, 3, 5, 7, 8, 10],
+  mixolydian: [0, 2, 4, 5, 7, 9, 10],
+  aeolian: [0, 2, 3, 5, 7, 8, 10],
+  lydian: [0, 2, 4, 6, 7, 9, 11],
+  major: [0, 2, 4, 5, 7, 9, 11],
+  // maqam Hijaz (on D: D Eb F# G A Bb C)
+  hijaz: [0, 1, 4, 5, 7, 8, 10],
+  // Japanese in scale
+  in: [0, 1, 5, 7, 8],
+  whole: [0, 2, 4, 6, 8, 10],
+  minpent: [0, 3, 5, 7, 10]
+};
+var AS_MUSIC = {
+  // the Neolithic: wind over the plain, a low drone, a slow heartbeat drum and a bone flute far away
+  stonehenge: {
+    bpm: 50, root: 38, scale: AS_SCALES.minpent, wet: 0.55, level: 1.2,
+    init(M, t) {
+      M.wind(t, { vol: 0.045, center: 420 });
+      M.drone([AS_MIDI(38), AS_MIDI(45)], t, { vol: 0.05, cutoff: 260, wobble: 0.05 });
+    },
+    beat(M, t, i) {
+      if (i % 8 === 0) M.drum("frame", t, 0.32);
+      if (i % 8 === 3 && M.chance(0.6)) M.drum("frame", t, 0.16);
+      if (i % 16 === 8 && M.chance(0.5)) M.flute(M.f(M.walk("m", 5, 11), 0), t, 2.4, { vol: 0.07, breath: 0.6, depth: 0.02, attack: 0.25, x: 0.4 });
+    }
+  },
+  // Classical Greece: a lyre in the Dorian mode, an aulos answering
+  greek: {
+    bpm: 76, root: 50, scale: AS_SCALES.dorian, wet: 0.4,
+    beat(M, t, i) {
+      if (i % 2 === 0 && M.chance(0.75)) M.pluck(M.f(M.walk("l", 4, 13), 0), t, { vol: 0.32, damp: 0.25, decay: 0.995, x: -0.25 });
+      if (i % 8 === 0) M.pluck(M.f(0, -1), t, { vol: 0.28, damp: 0.35, decay: 0.997, dur: 3 });
+      if (i % 32 >= 16 && i % 4 === 0 && M.chance(0.7)) M.flute(M.f(M.walk("a", 7, 14), 0), t, 0.7, { vol: 0.06, wave: "triangle", nasal: 1, breath: 0.2, x: 0.3 });
+    }
+  },
+  // Imperial Rome: a march - frame drums, harp arpeggios, horn calls
+  roman: {
+    bpm: 84, root: 45, scale: AS_SCALES.mixolydian, wet: 0.35, level: 1.7,
+    beat(M, t, i) {
+      if (i % 4 === 0) M.drum("frame", t, 0.3);
+      if (i % 8 === 6) M.drum("dum", t, 0.18);
+      const chord = [0, 4, 7, 9][Math.floor(i / 16) % 4];
+      if (i % 2 === 0) M.pluck(M.f(chord + [0, 2, 4, 7][i / 2 % 4], 1), t, { vol: 0.2, damp: 0.2, decay: 0.994, x: -0.3 });
+      if (i % 32 === 0) [0, 4, 7].forEach((d, k) => M.flute(M.f(chord + d, 0), t + k * 0.36, 0.6, { vol: 0.07, wave: "sawtooth", breath: 0.05, depth: 4e-3, attack: 0.03, x: 0.25 }));
+    }
+  },
+  // Hagia Sophia: Byzantine chant - a held ison drone, a slow line in the choir's vowel, a vast dome of reverb
+  hagia: {
+    bpm: 48, root: 50, scale: AS_SCALES.hijaz, wet: 0.75, level: 1.1,
+    init(M, t) {
+      M.drone([AS_MIDI(38), AS_MIDI(50)], t, { vol: 0.045, cutoff: 600, wobble: 0.06, wave: "sawtooth" });
+    },
+    beat(M, t, i) {
+      if (i % 4 === 0 && M.chance(0.85)) M.pad([M.f(M.walk("c", 0, 8), 0)], t, 1.6, { vol: 0.05, cutoff: 2600, attack: 0.35, release: 0.8, formant: true, detune: 6 });
+      if (i % 32 === 24 && M.chance(0.6)) M.flute(M.f(M.walk("n", 7, 12), 0), t, 3, { vol: 0.06, breath: 0.9, depth: 0.018, attack: 0.3, x: 0.35, bend: 1 });
+    }
+  },
+  // Islamic: an oud in maqam Hijaz over a darbuka (dum - tek - tek), a ney floating above
+  islamic: {
+    bpm: 96, root: 50, scale: AS_SCALES.hijaz, wet: 0.35,
+    beat(M, t, i) {
+      const r = i % 8;
+      if (r === 0 || r === 3) M.drum("dum", t, 0.3, -0.1);
+      if (r === 2 || r === 5 || r === 6) M.drum("tek", t, 0.18, 0.15);
+      if (M.chance(r % 2 ? 0.35 : 0.8)) M.pluck(M.f(M.walk("o", 0, 9), 0), t, { vol: 0.28, damp: 0.4, decay: 0.993, dur: 1.4, bend: M.chance(0.15) ? 1 : 0, body: 260, x: -0.2 });
+      if (i % 32 === 16) M.flute(M.f(M.walk("ney", 7, 12), 0), t, 2.6, { vol: 0.07, breath: 0.8, depth: 0.02, attack: 0.25, x: 0.35, bend: 0.8 });
+    }
+  },
+  // the Forbidden City: bianzhong bronze bells and a guqin, in the gong mode - slow, ceremonial
+  forbidden: {
+    bpm: 58, root: 48, scale: AS_SCALES.gong, wet: 0.5,
+    beat(M, t, i) {
+      if (i % 8 === 0) M.bell(M.f([0, 2, 4, 3][Math.floor(i / 8) % 4], -1), t, { vol: 0.16, dur: 5, partials: [[1, 1, 1], [2.4, 0.5, 0.5], [3.9, 0.3, 0.3], [5.1, 0.15, 0.2]] });
+      if (i % 4 === 2 && M.chance(0.5)) M.bell(M.f(M.walk("b", 5, 10), 0), t, { vol: 0.08, dur: 3, x: 0.3, partials: [[1, 1, 1], [2.4, 0.4, 0.4], [3.9, 0.2, 0.25]] });
+      if (i % 2 === 0 && M.chance(0.55)) M.pluck(M.f(M.walk("q", 0, 7), -1), t, { vol: 0.3, damp: 0.55, decay: 0.998, dur: 3, bend: M.chance(0.3) ? 2 : 0, bendT: 0.25, x: -0.3 });
+      if (i % 16 === 12 && M.chance(0.6)) M.drum("wood", t, 0.15, 0.4);
+    }
+  },
+  // Jiangnan, after Wu Guanzhong: a guzheng with glissandi, a soft xiao, rain dripping into the canals
+  jiangnan: {
+    bpm: 66, root: 55, scale: AS_SCALES.yu, wet: 0.5, level: 1.4,
+    init(M, t) {
+      M.wind(t, { vol: 0.012, center: 1600 });
+    },
+    beat(M, t, i) {
+      if (i % 16 === 0) for (let k = 0; k < 6; k++) M.pluck(M.f(k + 2, -1), t + k * 0.045, { vol: 0.12 + k * 0.02, damp: 0.15, decay: 0.996, x: -0.4 + k * 0.08 });
+      else if (M.chance(0.55)) M.pluck(M.f(M.walk("z", 2, 11), 0), t, { vol: 0.24, damp: 0.18, decay: 0.997, dur: 2.6, bend: M.chance(0.2) ? 1.5 : 0, bendT: 0.2, x: -0.2 });
+      if (i % 16 === 8 && M.chance(0.75)) M.flute(M.f(M.walk("x", 4, 10), 0), t, 2.2, { vol: 0.06, breath: 0.7, depth: 0.012, attack: 0.3, x: 0.3 });
+      if (M.chance(0.18)) M.drip(t + M.rnd() * 0.2, { vol: 0.035, x: M.rnd() * 2 - 1 });
+    }
+  },
+  // Tulou: a Hakka folk tune on the dizi over a small drum and woodblock
+  tulou: {
+    bpm: 100, root: 62, scale: AS_SCALES.zhi, wet: 0.3, swing: 0.08, level: 1.3,
+    beat(M, t, i) {
+      if (i % 4 === 0) M.drum("dum", t, 0.18);
+      if (i % 2 === 1 && M.chance(0.6)) M.drum("wood", t, 0.1, 0.3);
+      if (M.chance(i % 2 ? 0.45 : 0.85)) M.flute(M.f(M.walk("d", 3, 11), 0), t, 0.32, { vol: 0.07, breath: 0.35, depth: 8e-3, attack: 0.02, x: 0.15, bend: M.chance(0.1) ? 1 : 0 });
+      if (i % 8 === 0) M.pluck(M.f(0, -1), t, { vol: 0.16, damp: 0.3, x: -0.3 });
+    }
+  },
+  // Kremlin and St Basil's: the zvon - bells pealing in patterns - over a low choir
+  kremlin: {
+    bpm: 72, root: 50, scale: AS_SCALES.aeolian, wet: 0.55,
+    init(M, t) {
+      M.pad([AS_MIDI(38), AS_MIDI(45), AS_MIDI(50)], t, 600, { vol: 0.035, cutoff: 900, attack: 4, formant: true, detune: 7 });
+    },
+    beat(M, t, i) {
+      const z = [[0, 4], [2], [0, 4], [3], [0], [2, 4], [1], [2]][i % 8];
+      for (const d of z) M.bell(M.f(d, 1), t, { vol: 0.07, dur: 2.2, x: (d - 2) * 0.2 });
+      if (i % 8 === 0) M.bell(M.f(0, -1), t, { vol: 0.2, dur: 6, partials: [[1, 1, 1], [1.2, 0.6, 0.7], [2.0, 0.5, 0.6], [2.6, 0.3, 0.4], [4.1, 0.2, 0.3]] });
+      if (i % 32 === 16) M.pad([M.f(M.walk("ch", 0, 7), 0), M.f(2, 0)], t, 3.5, { vol: 0.04, cutoff: 1400, formant: true, attack: 1 });
+    }
+  },
+  // Prussian brick Gothic: a pipe organ chorale
+  prussian: {
+    bpm: 66, root: 43, scale: AS_SCALES.major, wet: 0.6, level: 0.8,
+    beat(M, t, i) {
+      if (i % 4 !== 0) return;
+      const prog = [[0, 2, 4], [3, 5, 7], [4, 6, 8], [0, 2, 4], [5, 7, 9], [3, 5, 7], [1, 3, 5], [4, 6, 8]];
+      const ch = prog[Math.floor(i / 4) % prog.length];
+      M.pad(ch.map((d) => M.f(d, 0)).concat([M.f(ch[0], -1)]), t, 60 / 66 * 2 - 0.1, { vol: 0.035, wave: "square", cutoff: 1800, attack: 0.08, release: 0.25, detune: 2 });
+      if (M.chance(0.6)) M.pad([M.f(ch[M.walk("s", 0, 2)] + 7, 0)], t, 60 / 66 * 2 - 0.15, { vol: 0.02, wave: "triangle", cutoff: 3e3, attack: 0.05, release: 0.2, detune: 1 });
+    }
+  },
+  // Gaudi's Barcelona: a Spanish guitar in the Phrygian mode, castanets
+  gaudi: {
+    bpm: 104, root: 52, scale: AS_SCALES.phrygian, wet: 0.3, level: 1.4,
+    beat(M, t, i) {
+      const prog = [0, 6, 5, 4], ch = prog[Math.floor(i / 8) % 4];
+      if (i % 8 === 0) for (let k = 0; k < 5; k++) M.pluck(M.f(ch + [0, 2, 4, 7, 9][k], -1), t + k * 0.025, { vol: 0.13, damp: 0.25, decay: 0.994, body: 220, x: -0.3 });
+      else if (M.chance(0.6)) M.pluck(M.f(ch + M.walk("g", 3, 10), 0), t, { vol: 0.2, damp: 0.2, decay: 0.993, dur: 1.4, body: 300, x: 0.1 });
+      if ([3, 6].includes(i % 8)) M.drum("castanet", t, 0.15, 0.35);
+    }
+  },
+  // Frank Lloyd Wright: warm wooden marimba lines, prairie-open, a little jazz
+  wright: {
+    bpm: 88, root: 53, scale: AS_SCALES.major, wet: 0.35, swing: 0.12, level: 0.85,
+    beat(M, t, i) {
+      const prog = [[0, 2, 4, 6], [3, 5, 7, 9], [1, 3, 5, 7], [4, 6, 8, 10]], ch = prog[Math.floor(i / 8) % 4];
+      if (i % 8 === 0) M.pad(ch.map((d) => M.f(d, 0)), t, 3.6, { vol: 0.025, wave: "triangle", cutoff: 1500, attack: 0.4 });
+      if (M.chance(0.7)) M.bell(M.f(M.walk("mar", 4, 14), 0), t, { vol: 0.12, dur: 0.8, partials: [[1, 1, 1], [3.9, 0.3, 0.25], [10, 0.08, 0.1]], x: 0.2 });
+      if (i % 4 === 2) M.drum("tick", t, 0.12);
+    }
+  },
+  // Le Corbusier: machine-age piano - clear lines, parallel chords, a steady pulse
+  corbusier: {
+    bpm: 92, root: 57, scale: AS_SCALES.lydian, wet: 0.3, level: 1.4,
+    beat(M, t, i) {
+      const piano = (f, v) => M.bell(f, t, { vol: v, dur: 2, partials: [[1, 1, 1], [2, 0.4, 0.6], [3, 0.2, 0.4], [4, 0.1, 0.3]], attack: 4e-3 });
+      if (i % 2 === 0) piano(M.f([0, 4, 2, 4][i / 2 % 4], -1), 0.07);
+      if (M.chance(0.55)) {
+        const d = M.walk("p", 7, 16);
+        piano(M.f(d, 0), 0.08);
+        piano(M.f(d + 2, 0), 0.05);
+      }
+      if (i % 4 === 0) M.drum("clave", t, 0.06, 0.3);
+    }
+  },
+  // Richard Meier: luminous minimal piano and a white pad
+  meier: {
+    bpm: 70, root: 60, scale: AS_SCALES.lydian, wet: 0.55,
+    beat(M, t, i) {
+      if (i % 16 === 0) M.pad([M.f(0, -1), M.f(4, -1), M.f(6, 0)], t, 7, { vol: 0.03, wave: "triangle", cutoff: 2500, attack: 2 });
+      if (M.chance(0.35)) M.bell(M.f(M.walk("w", 5, 14), 0), t, { vol: 0.08, dur: 3, partials: [[1, 1, 1], [2, 0.25, 0.5], [4, 0.08, 0.3]], x: M.rnd() * 0.8 - 0.4 });
+    }
+  },
+  // Tadao Ando: a shakuhachi and a koto in the in scale, long silences, still water
+  ando: {
+    bpm: 46, root: 62, scale: AS_SCALES.in, wet: 0.7, level: 1.5,
+    beat(M, t, i) {
+      if (i % 16 === 0 && M.chance(0.8)) M.flute(M.f(M.walk("sh", 0, 6), -1), t, 3.4, { vol: 0.08, breath: 1.2, depth: 0.025, vib: 4, attack: 0.5, bend: M.chance(0.4) ? 1 : 0 });
+      if (i % 4 === 2 && M.chance(0.35)) M.pluck(M.f(M.walk("k", 3, 10), 0), t, { vol: 0.2, damp: 0.12, decay: 0.997, dur: 3, x: 0.35, bend: M.chance(0.3) ? 1 : 0 });
+      if (M.chance(0.05)) M.drip(t, { vol: 0.03, x: -0.4 });
+    }
+  },
+  // I. M. Pei: glass and stone - celesta figures over a pentatonic pad, East meeting West
+  pei: {
+    bpm: 72, root: 60, scale: AS_SCALES.gong, wet: 0.5,
+    beat(M, t, i) {
+      if (i % 16 === 0) M.pad([M.f(0, -1), M.f(2, -1), M.f(4, -1)], t, 7.5, { vol: 0.03, wave: "sawtooth", cutoff: 900, attack: 2 });
+      if (i % 2 === 0 || M.chance(0.3)) M.bell(M.f([0, 2, 4, 2, 3, 1, 4, 3][i % 8] + Math.floor(i / 16) % 3, 1), t, { vol: 0.06, dur: 1.6, partials: [[1, 1, 1], [3, 0.3, 0.3], [5.04, 0.1, 0.2]], x: Math.sin(i * 0.7) * 0.5 });
+      if (i % 32 === 20) M.pluck(M.f(M.walk("pp", 2, 8), -1), t, { vol: 0.2, damp: 0.2, decay: 0.997, dur: 2.5, bend: 1.5, bendT: 0.2 });
+    }
+  },
+  // Frank Gehry: metal - detuned bells tumbling in whole tones, a restless pulse
+  gehry: {
+    bpm: 104, root: 55, scale: AS_SCALES.whole, wet: 0.4, level: 1.7,
+    beat(M, t, i) {
+      if (M.chance(0.6)) M.bell(M.f(M.walk("t", 0, 12, 0.4), 0), t, { vol: 0.06, dur: 1.2, partials: [[1, 1, 1], [2.31, 0.6, 0.5], [3.8, 0.4, 0.4], [6.2, 0.2, 0.2]], x: M.rnd() * 1.2 - 0.6 });
+      if (i % 4 === 0) M.bell(M.f(M.pick([0, 1, 3]), -1), t, { vol: 0.1, dur: 0.6, partials: [[1, 1, 1], [3.9, 0.3, 0.2]] });
+      if (i % 2 === 1) M.drum("shaker", t, 0.06);
+      if (i % 16 === 0) M.drum("taiko", t, 0.12);
+    }
+  },
+  // Zaha Hadid: flowing synth arpeggios over a slowly turning pad
+  hadid: {
+    bpm: 112, root: 57, scale: AS_SCALES.aeolian, wet: 0.5,
+    beat(M, t, i) {
+      const prog = [[0, 2, 4], [5, 7, 9], [3, 5, 7], [6, 8, 10]], ch = prog[Math.floor(i / 16) % 4];
+      if (i % 16 === 0) M.pad(ch.map((d) => M.f(d, -1)), t, 8, { vol: 0.03, cutoff: 1100, attack: 2.5, release: 2.5 });
+      const arp = [0, 1, 2, 1, 2, 0, 2, 1];
+      M.pad([M.f(ch[arp[i % 8]] + (i % 16 >= 8 ? 7 : 0), 1)], t, 0.18, { vol: 0.03, wave: "triangle", cutoff: 4e3, attack: 0.01, release: 0.4, detune: 4, x: Math.sin(i * 0.4) * 0.6 });
+    }
+  }
+};
 // - the town: heights per cell, rebuilt into one mesh per surface kind for the current style. Each cell's
 // geometry depends only on its own height and its neighbours', so it is cached under that key and an edit
 // regenerates just the handful of cells around it -
@@ -3356,7 +4402,8 @@ function asCellChunk(grid, h, style, cell) {
       }
       // bent surfaces: smooth normals within the cell (or recomputed flat ones)
       let g = new THREE6.BufferGeometry().setAttribute("position", new THREE6.BufferAttribute(P, 3)).setAttribute("color", new THREE6.BufferAttribute(C, 3));
-      if (style.smooth) {
+      // smooth: true, or the list of surface kinds to smooth (the rest keep flat normals; merging is costly)
+      if (style.smooth === true || style.smooth?.includes?.(kind)) {
         g = mergeVertices(g, 1e-5);
         g.computeVertexNormals();
         g = g.toNonIndexed();
@@ -3568,25 +4615,36 @@ var Archiscape = {
     title.traverse((o) => o.userData.noCollider = o.userData.noHighlight = true);
     root.add(title);
     // - the panel: one button per style, then the tools -
-    const panel = ctx.panel("Archiscape · one town, every era", { w: 0.3, h: 0.218 });
-    panel.root.position.set(-0.47, TABLE + 0.09, -0.36);
+    const PW = 0.39, PH = 0.252;
+    const panel = ctx.panel("Archiscape · one town, every era", { w: PW, h: PH });
+    panel.root.position.set(-0.5, TABLE + 0.1, -0.34);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
-    this.styleBtns = AS_STYLES.map((s, i) => ctx.button(s.label, { onClick: () => this.setStyle(i) }));
-    const gen = ctx.button("New town", { onClick: () => this.generate() });
-    this.eraseB = ctx.button("Erase", { toggle: true, onClick: (v) => {
+    // eighteen eras in five columns, the tools in a row of six under them
+    this.styleBtns = AS_STYLES.map((s, i) => ctx.button(s.label, { w: 0.07, fontSize: s.label.length > 10 ? 22 : 26, onClick: () => this.setStyle(i) }));
+    const tool = (label, o) => ctx.button(label, { w: 0.057, fontSize: 24, ...o });
+    const gen = tool("New town", { onClick: () => this.generate() });
+    this.eraseB = tool("Erase", { toggle: true, onClick: (v) => {
       this.erase = v;
       this.ghostKey = "";
     } });
-    const undo = ctx.button("Undo", { onClick: () => this.undo() });
-    const clear = ctx.button("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
-    this.tourB = ctx.button("Tour", { toggle: true, onClick: (v) => {
+    const undo = tool("Undo", { onClick: () => this.undo() });
+    const clear = tool("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
+    this.tourB = tool("Tour", { toggle: true, onClick: (v) => {
       this.tour = v ? 0 : null;
     } });
-    panel.layout([...this.styleBtns, gen, this.eraseB, undo, clear, this.tourB], { cols: 4, top: 0.03 });
+    asMusic ||= new AsMusic(app2.sfx);
+    this.music = asMusic;
+    const music = tool("Music", { toggle: true, value: asMusic.on, onClick: (v) => {
+      app2.sfx.ensure();
+      asMusic.setOn(v);
+    } });
+    panel.layout(this.styleBtns, { cols: 5, top: 0.03 });
+    const rows = Math.ceil(AS_STYLES.length / 5);
+    panel.layout([gen, this.eraseB, undo, clear, this.tourB, music], { cols: 6, top: 0.03 + rows * 0.032 + 8e-3 });
     this.infoTex = textTexture("", { w: 1024, h: 56, size: 24, color: "#ffffff" });
-    const info = new T.Mesh(new T.PlaneGeometry(0.284, 0.284 * 56 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
-    info.position.set(0, -0.094, 2e-3);
+    const info = new T.Mesh(new T.PlaneGeometry(PW - 0.016, (PW - 0.016) * 56 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
+    info.position.set(0, -PH / 2 + 0.02, 2e-3);
     panel.root.add(info);
     const tl = ctx.label("Tap a tile to build · tap a wall to build beside it · hold to remove · grab the plate to move, two hands to turn", { height: 0.011 });
     tl.position.set(0, TABLE + 0.012, -0.22);
@@ -3619,6 +4677,8 @@ var Archiscape = {
     this.titleTex.userData.draw(s.title);
     this.subTex.userData.draw(s.era);
     this.infoTex.userData.draw(s.blurb);
+    // the era's own music, crossfading from the last one
+    asMusic?.play(s.id);
     this._rebuild(instant ? null : "era");
     this.app.log(`era → ${s.title}`);
   },
@@ -3769,6 +4829,7 @@ var Archiscape = {
   },
   update(dt, t) {
     this.time += dt;
+    asMusic?.tick();
     // era change: the old town sinks, the new one springs up
     for (const l of this.leaving) {
       l.t += dt / 0.35;
@@ -3809,9 +4870,10 @@ var Archiscape = {
   },
   exit() {
     removeEventListener("keydown", this._kd);
+    asMusic?.stop();
   }
 };
-var asEnv = null;
+var asEnv = null, asMusic = null;
 function asMaterials() {
   const cache = {};
   const kind = (k) => {

@@ -60,7 +60,8 @@ function asCellChunk(grid, h, style, cell) {
       }
       // bent surfaces: smooth normals within the cell (or recomputed flat ones)
       let g = new THREE6.BufferGeometry().setAttribute("position", new THREE6.BufferAttribute(P, 3)).setAttribute("color", new THREE6.BufferAttribute(C, 3));
-      if (style.smooth) {
+      // smooth: true, or the list of surface kinds to smooth (the rest keep flat normals; merging is costly)
+      if (style.smooth === true || style.smooth?.includes?.(kind)) {
         g = mergeVertices(g, 1e-5);
         g.computeVertexNormals();
         g = g.toNonIndexed();
@@ -272,25 +273,36 @@ var Archiscape = {
     title.traverse((o) => o.userData.noCollider = o.userData.noHighlight = true);
     root.add(title);
     // - the panel: one button per style, then the tools -
-    const panel = ctx.panel("Archiscape · one town, every era", { w: 0.3, h: 0.218 });
-    panel.root.position.set(-0.47, TABLE + 0.09, -0.36);
+    const PW = 0.39, PH = 0.252;
+    const panel = ctx.panel("Archiscape · one town, every era", { w: PW, h: PH });
+    panel.root.position.set(-0.5, TABLE + 0.1, -0.34);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
-    this.styleBtns = AS_STYLES.map((s, i) => ctx.button(s.label, { onClick: () => this.setStyle(i) }));
-    const gen = ctx.button("New town", { onClick: () => this.generate() });
-    this.eraseB = ctx.button("Erase", { toggle: true, onClick: (v) => {
+    // eighteen eras in five columns, the tools in a row of six under them
+    this.styleBtns = AS_STYLES.map((s, i) => ctx.button(s.label, { w: 0.07, fontSize: s.label.length > 10 ? 22 : 26, onClick: () => this.setStyle(i) }));
+    const tool = (label, o) => ctx.button(label, { w: 0.057, fontSize: 24, ...o });
+    const gen = tool("New town", { onClick: () => this.generate() });
+    this.eraseB = tool("Erase", { toggle: true, onClick: (v) => {
       this.erase = v;
       this.ghostKey = "";
     } });
-    const undo = ctx.button("Undo", { onClick: () => this.undo() });
-    const clear = ctx.button("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
-    this.tourB = ctx.button("Tour", { toggle: true, onClick: (v) => {
+    const undo = tool("Undo", { onClick: () => this.undo() });
+    const clear = tool("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
+    this.tourB = tool("Tour", { toggle: true, onClick: (v) => {
       this.tour = v ? 0 : null;
     } });
-    panel.layout([...this.styleBtns, gen, this.eraseB, undo, clear, this.tourB], { cols: 4, top: 0.03 });
+    asMusic ||= new AsMusic(app2.sfx);
+    this.music = asMusic;
+    const music = tool("Music", { toggle: true, value: asMusic.on, onClick: (v) => {
+      app2.sfx.ensure();
+      asMusic.setOn(v);
+    } });
+    panel.layout(this.styleBtns, { cols: 5, top: 0.03 });
+    const rows = Math.ceil(AS_STYLES.length / 5);
+    panel.layout([gen, this.eraseB, undo, clear, this.tourB, music], { cols: 6, top: 0.03 + rows * 0.032 + 8e-3 });
     this.infoTex = textTexture("", { w: 1024, h: 56, size: 24, color: "#ffffff" });
-    const info = new T.Mesh(new T.PlaneGeometry(0.284, 0.284 * 56 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
-    info.position.set(0, -0.094, 2e-3);
+    const info = new T.Mesh(new T.PlaneGeometry(PW - 0.016, (PW - 0.016) * 56 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
+    info.position.set(0, -PH / 2 + 0.02, 2e-3);
     panel.root.add(info);
     const tl = ctx.label("Tap a tile to build · tap a wall to build beside it · hold to remove · grab the plate to move, two hands to turn", { height: 0.011 });
     tl.position.set(0, TABLE + 0.012, -0.22);
@@ -323,6 +335,8 @@ var Archiscape = {
     this.titleTex.userData.draw(s.title);
     this.subTex.userData.draw(s.era);
     this.infoTex.userData.draw(s.blurb);
+    // the era's own music, crossfading from the last one
+    asMusic?.play(s.id);
     this._rebuild(instant ? null : "era");
     this.app.log(`era → ${s.title}`);
   },
@@ -473,6 +487,7 @@ var Archiscape = {
   },
   update(dt, t) {
     this.time += dt;
+    asMusic?.tick();
     // era change: the old town sinks, the new one springs up
     for (const l of this.leaving) {
       l.t += dt / 0.35;
@@ -513,9 +528,10 @@ var Archiscape = {
   },
   exit() {
     removeEventListener("keydown", this._kd);
+    asMusic?.stop();
   }
 };
-var asEnv = null;
+var asEnv = null, asMusic = null;
 function asMaterials() {
   const cache = {};
   const kind = (k) => {

@@ -200,6 +200,7 @@ var AS_PROFILES = {
   onion: [[1, 0], [1.18, 0.22], [1.14, 0.48], [0.88, 0.78], [0.5, 1.05], [0.22, 1.32], [0.07, 1.56], [0, 1.72]],
   pointed: [[1, 0], [1, 0.18], [0.96, 0.46], [0.82, 0.76], [0.58, 1.02], [0.28, 1.24], [0, 1.42]],
   bell: [[1, 0], [0.98, 0.12], [0.62, 0.28], [0.42, 0.5], [0.3, 0.8], [0, 0.95]],
+  spire: [[1, 0], [0.97, 0.12], [0.88, 0.3], [0.72, 0.5], [0.52, 0.68], [0.32, 0.83], [0.15, 0.94], [0, 1]],
   stepped: [[1, 0], [1, 0.08], [0.92, 0.08], [0.92, 0.16], [0.84, 0.16], [0.84, 0.22], [0.8, 0.3], [0.7, 0.5], [0.5, 0.7], [0.26, 0.82], [0.2, 0.84], [0.2, 0.86], [0, 0.86]]
 };
 function asKit(tess = null) {
@@ -336,11 +337,13 @@ function asPointed(K, E, kind, hex, u, y, w, hh, out = 4e-4) {
 // edge k is at least as tall (no eave there, the roof runs on) -
 // a pitched roof whose ridge runs across the cell towards its joined neighbours, so rows of houses share one
 // ridge line; free ends are hipped, or closed by a gable (a callback draws the gable wall)
-function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 0, gable = null, ridge = null, end = null }) {
+function asPitched(K, R, { kind, hex, pitch = 0.5, over = 5e-3, hip = 0.5, up = 0, gable = null, ridge = null, end = null, dir = null }) {
   const v = R.v3, j = R.join, n = R.n3;
   const mids = [0, 1, 2, 3].map((k) => v[k].clone().lerp(v[(k + 1) % 4], 0.5));
   const sA = j[0] + j[2], sB = j[1] + j[3];
-  const a = sA !== sB ? sA > sB ? 0 : 1 : mids[0].distanceTo(mids[2]) >= mids[1].distanceTo(mids[3]) ? 0 : 1;
+  // dir: the ridge follows one fixed direction (rows of parallel roofs); otherwise it runs towards the joined
+  // neighbours, else along the cell's longer axis
+  const a = dir ? Math.abs(_asA.subVectors(mids[2], mids[0]).normalize().dot(dir)) >= Math.abs(_asB.subVectors(mids[3], mids[1]).normalize().dot(dir)) ? 0 : 1 : sA !== sB ? sA > sB ? 0 : 1 : mids[0].distanceTo(mids[2]) >= mids[1].distanceTo(mids[3]) ? 0 : 1;
   const i0 = a, i1 = (a + 1) % 4, i2 = (a + 2) % 4, i3 = (a + 3) % 4;
   const rise = pitch * mids[i1].distanceTo(mids[i3]) / 2;
   const E = v.map((p, i) => {

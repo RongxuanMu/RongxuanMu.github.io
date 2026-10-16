@@ -21,7 +21,7 @@ def swap(a, b):
 version = re.search(r'var VERSION = "([^"]+)";', s).group(1)
 
 # world: the playground section is replaced wholesale; the framework modules stay untouched
-world = '\n'.join((P / 'src' / f).read_text().rstrip() for f in ('core.js', 'styles.js', 'world.js'))
+world = '\n'.join((P / 'src' / f).read_text().rstrip() for f in ('core.js', 'styles.js', 'music.js', 'world.js'))
 a = s.index('// src/worlds/playground.js')
 b = s.index('// src/main.js\nvar VERSION')
 s = s[:a] + world + '\n\n' + s[b:]
@@ -31,8 +31,9 @@ swap('await app.worlds.load("playground");', 'await app.worlds.load("archiscape"
 # page chrome (the one Enter button is the framework's, unchanged)
 swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
      '<!-- Archiscape - a Townscaper-style town builder for your table: tap to build, hold to remove, and rebuild the\n'
-     '  same town in any era, from Stonehenge, Athens and Rome through Jiangnan, Moscow and Prussia to Richard Meier,\n'
-     '  Tadao Ando, Frank Gehry and Zaha Hadid. Built on the VibeXR Interaction Framework v' + version + '.\n\n'
+     '  same town in any of eighteen eras, from Stonehenge, Athens, Rome and Hagia Sophia through the Forbidden City,\n'
+     '  Jiangnan after Wu Guanzhong, the Hakka tulou and the Kremlin to Gaudi, Wright, Le Corbusier, Meier, Ando, I. M. Pei,\n'
+     '  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v' + version + '.\n\n'
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Archiscape</h1>')
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
@@ -66,7 +67,7 @@ assert 'enter-vr' not in s and 'VR only' not in s, 'VibeXR pages have exactly on
 
 (P / 'codepen.html').write_text(s)
 desc = ('Archiscape by Rongxuan Mu: a Townscaper-style town builder in WebXR. Build a town on your table, then '
-        'rebuild it in any era of architecture, from Stonehenge to Zaha Hadid.')
+        'rebuild it in any of eighteen eras of architecture, from Stonehenge and the Forbidden City to Gaudi, I. M. Pei and Zaha Hadid, each with its own music.')
 page = f'''<!DOCTYPE html>
 <html lang="en">
 <head>
