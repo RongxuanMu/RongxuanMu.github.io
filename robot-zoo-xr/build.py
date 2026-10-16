@@ -1,6 +1,6 @@
 """Build Robot Zoo XR: the VibeXR Interaction Framework single-file build with its demo playground world swapped
 for the Robot Zoo world. Robot Zoo is Microduck XR's world (../microduck-xr/src/microduck.js, included as is) with a
-robot picker: src/core.js, src/tracking.js and src/world.js add the humanoids. Outputs:
+robot picker: src/core.js, src/tracking.js and src/world.js add the humanoids and quadrupeds. Outputs:
   index.html    the site page: robots from assets/ (packed from their repos), three.js / MuJoCo WASM / ONNX
                 Runtime Web from the copies Microduck XR already serves (../microduck-xr/assets/lib)
   codepen.html  the same page with jsDelivr libraries and the robots fetched from the GitHub Pages site, to paste
@@ -47,18 +47,18 @@ swap('  _hands() {\n    return this.app.input.list()',
 swap('    if (this.owner === src) return;', '    if (this.owner === src) return;\n    this.show(this.home);')
 
 swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
-     '<!-- Robot Zoo XR - open-source humanoid robots running their published policies in MuJoCo WASM + ONNX Runtime\n'
+     '<!-- Robot Zoo XR - open-source humanoid and quadruped robots running their published policies in MuJoCo WASM + ONNX Runtime\n'
      '  Web: Pollen Microduck (Microduck XR itself), Unitree G1 (whole-body motion tracking and walking), H1, H1-2, Booster T1,\n'
-     '  AgiBot X1 and Berkeley Humanoid Lite, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v' + version + '.\n'
+     '  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v' + version + '.\n'
      '  Robots, models and policies keep their own licences (see assets/*/SOURCE.txt and the licence files beside them).\n\n'
      f'  VibeXR Interaction Framework v{version} - single-file build')
 swap('<h1>VibeXR</h1>', '<h1>Robot Zoo XR</h1>')
 # the shared landing page: card on the left, the scene framed beside it, the latest update on the card
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='16 Oct 2026', notes="built on Microduck XR's stage, robots walk through your room; Berkeley Lite stands again; a Robot Zoo hand menu; draggable panels")
+s = landing.apply(s, updated='16 Oct 2026', notes="three robot dogs: Unitree Go2, Unitree B2 and AgiBot D1; robots walk through your room on Microduck XR's stage; a Robot Zoo hand menu; draggable panels")
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
-     '<p class="sub">Open-source robots running their real policies &middot; Microduck, Unitree, Booster, AgiBot, Berkeley &middot; '
+     '<p class="sub">Open-source robots running their real policies &middot; Microduck, humanoids and robot dogs from Unitree, Booster, AgiBot, Berkeley &middot; '
      'life-size on your floor or on a tabletop</p>\n'
      '    <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> '
      '&middot; built on the VibeXR interaction framework</p>')

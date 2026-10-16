@@ -1,6 +1,6 @@
-<!-- Robot Zoo XR - open-source humanoid robots running their published policies in MuJoCo WASM + ONNX Runtime
+<!-- Robot Zoo XR - open-source humanoid and quadruped robots running their published policies in MuJoCo WASM + ONNX Runtime
   Web: Pollen Microduck (Microduck XR itself), Unitree G1 (whole-body motion tracking and walking), H1, H1-2, Booster T1,
-  AgiBot X1 and Berkeley Humanoid Lite, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.8.25.
+  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.8.25.
   Robots, models and policies keep their own licences (see assets/*/SOURCE.txt and the licence files beside them).
 
   VibeXR Interaction Framework v0.8.25 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
@@ -72,9 +72,9 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
 <div id="overlay">
   <div class="card">
     <h1>Robot Zoo XR</h1>
-    <p class="sub">Open-source robots running their real policies &middot; Microduck, Unitree, Booster, AgiBot, Berkeley &middot; life-size on your floor or on a tabletop</p>
+    <p class="sub">Open-source robots running their real policies &middot; Microduck, humanoids and robot dogs from Unitree, Booster, AgiBot, Berkeley &middot; life-size on your floor or on a tabletop</p>
     <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 16 Oct 2026</b> &middot; built on Microduck XR&#x27;s stage, robots walk through your room; Berkeley Lite stands again; a Robot Zoo hand menu; draggable panels</p>
+    <p class="upd"><b>Updated 16 Oct 2026</b> &middot; three robot dogs: Unitree Go2, Unitree B2 and AgiBot D1; robots walk through your room on Microduck XR&#x27;s stage; a Robot Zoo hand menu; draggable panels</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4312,7 +4312,7 @@ function T6clamp(v, lo = 0.6, hi = 1.6) {
   return Math.min(hi, Math.max(lo, v));
 }
 // src/worlds/robotzoo.js
-// Robot Zoo XR: open-source humanoid robots running the very policies their makers (and the community) trained,
+// Robot Zoo XR: open-source humanoid and quadruped robots running the very policies their makers (and the community) trained,
 // simulated live in MuJoCo WASM with ONNX Runtime Web, on your table or life-size in your room.
 //
 // Every robot runs its published policy with the observation, gains and timing of its own deploy code:
@@ -4322,7 +4322,8 @@ function T6clamp(v, lo = 0.6, hi = 1.6) {
 //   Booster T1         booster_gym walking, 50 Hz (play_mujoco.py)
 //   AgiBot X1          agibot_x1_infer walking, 100 Hz over a 66-frame history, 1 kHz PD with filtered targets
 //   Berkeley Humanoid Lite   biped walking, 50 Hz, 2 kHz PD (sim2sim/play_mujoco.py)
-// The Unitree and Booster TorchScript policies were converted to ONNX (weights unchanged, checked against a
+//   Unitree Go2 / B2, AgiBot D1   robot_lab velocity walking as rl_sar deploys it, 50 Hz, 200 Hz PD
+// The Unitree, Booster and rl_sar TorchScript policies were converted to ONNX (weights unchanged, checked against a
 // NumPy forward pass); each policy was checked in desktop MuJoCo walking, turning and standing before shipping.
 import { toCreasedNormals as rzCreased } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { RoomEnvironment as RzRoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -4361,7 +4362,16 @@ var RZ_ROBOTS = [
   { id: "x1", label: "AgiBot X1", name: "AgiBot X1 灵犀", maker: "AgiBot 智元", kind: "x1", height: 1.3, dt: 1e-3, dec: 10, vmax: 0.6, root: "x1-body", tone: [15000554, 3421244],
     policy: "agibot_x1_infer walking · Mulan PSL v2" },
   { id: "bhl", label: "Berkeley Lite", name: "Berkeley Humanoid Lite", maker: "UC Berkeley Hybrid Robotics", kind: "bhl", height: 0.8, dt: 5e-4, dec: 40, vmax: 0.5, root: "base",
-    policy: "Berkeley Humanoid Lite biped · MIT · model CC BY-SA 4.0" }
+    policy: "Berkeley Humanoid Lite biped · MIT · model CC BY-SA 4.0" },
+  { id: "go2", label: "Go2", name: "Unitree Go2", maker: "Unitree 宇树", kind: "quad", height: 0.4, dt: 5e-3, dec: 4, vmax: 0.8, root: "base_link",
+    quad: { z0: 0.337, kp: 20, kd: 0.5, tmax: [23.5, 23.5, 23.5], wmax: [30, 30, 30], clip: 100 },
+    policy: "robot_lab walking via rl_sar · Apache-2.0 · model BSD-3-Clause" },
+  { id: "b2", label: "B2", name: "Unitree B2", maker: "Unitree 宇树", kind: "quad", height: 0.65, dt: 5e-3, dec: 4, vmax: 0.8, root: "base_link",
+    quad: { z0: 0.546, kp: 160, kd: 5, tmax: [200, 200, 320], wmax: [23, 23, 14], clip: 100 },
+    policy: "robot_lab walking via rl_sar · Apache-2.0 · model BSD-3-Clause" },
+  { id: "d1", label: "AgiBot D1", name: "AgiBot D1", maker: "AgiBot 智元", kind: "quad", height: 0.4, dt: 5e-3, dec: 4, vmax: 0.8, root: "base_link",
+    quad: { z0: 0.327, kp: 20, kd: 0.8, tmax: [33.5, 33.5, 33.5], wmax: [21, 21, 21], clip: 3 },
+    policy: "robot_lab walking via rl_sar · Apache-2.0" }
 ];
 // - small math on MuJoCo arrays (quaternions are w, x, y, z) -
 function rzGravity(q, o = 0) {
@@ -4515,6 +4525,43 @@ var RZ_CONTROLLERS = {
       }
     }
   },
+  // robot_lab velocity walking (Isaac Lab) as rl_sar deploys it: 45 inputs from fresh qpos / qvel (sensordata
+  // lags a physics step), PD every 5 ms clamped to the trained DC-motor torque-speed box
+  quad: {
+    setup(S) {
+      const q = S.data.qpos, Q = RZ_QUAD;
+      q.fill(0);
+      q.set([0, 0, S.R.quad.z0, 1, 0, 0, 0]);
+      Q.def.forEach((d, i) => q[Q.qadr[i]] = d);
+      S.data.qvel.fill(0);
+      S.action = new Float32Array(12);
+      S.target = Float64Array.from(Q.def);
+      S.hold = 0;
+    },
+    async policy(S) {
+      const q = S.data.qpos, v = S.data.qvel, Q = RZ_QUAD, P = S.R.quad, o = new Float32Array(45), g = rzGravity(q, 3);
+      // trained on heading commands: with no turn asked it holds its heading (Go2 otherwise drifts round, trotting)
+      const yaw = rzYaw(q), c = S.cmd;
+      let wz = c[2];
+      if (Math.abs(wz) < 0.02) wz = T6clamp(MD_WRAP(S.hold - yaw), -1, 1);
+      else S.hold = yaw;
+      for (let i = 0; i < 3; i++) o[i] = v[3 + i] * 0.25, o[3 + i] = g[i];
+      o[6] = c[0];
+      o[7] = c[1];
+      o[8] = wz;
+      for (let i = 0; i < 12; i++) o[9 + i] = q[Q.qadr[i]] - Q.def[i], o[21 + i] = v[Q.vadr[i]] * 0.05, o[33 + i] = S.action[i];
+      const a = await S.pol.run(o.map((u) => Math.max(-100, Math.min(100, u))));
+      for (let i = 0; i < 12; i++) S.action[i] = Math.max(-P.clip, Math.min(P.clip, a[i])), S.target[i] = Q.def[i] + S.action[i] * Q.scale[i];
+    },
+    torque(S) {
+      const q = S.data.qpos, v = S.data.qvel, c = S.data.ctrl, Q = RZ_QUAD, P = S.R.quad;
+      for (let i = 0; i < 12; i++) {
+        const dq = v[Q.vadr[i]], tm = P.tmax[i % 3], wm = P.wmax[i % 3];
+        const hi = T6clamp(tm * (1 - dq / wm), 0, tm), lo = T6clamp(tm * (-1 - dq / wm), -tm, 0);
+        c[i] = T6clamp(P.kp * (S.target[i] - q[Q.qadr[i]]) - P.kd * dq, lo, hi);
+      }
+    }
+  },
   // Berkeley Humanoid Lite: MujocoSimulator + RlController (sensordata: joint pos, vel, torque, then imu)
   bhl: {
     setup(S) {
@@ -4537,6 +4584,14 @@ var RZ_CONTROLLERS = {
       for (let j = 0; j < 12; j++) c[j] = Math.max(-5, Math.min(5, 20 * (S.target[j] - sd[j]) - 2 * sd[12 + j]));
     }
   }
+};
+// the quadrupeds: policy joint i is actuator i (FR, FL, RR, RL legs: hip, thigh, calf); the kinematic tree, and
+// so qpos / qvel, runs FL, FR, RL, RR
+var RZ_QUAD = {
+  def: [0, 0.8, -1.5, 0, 0.8, -1.5, 0, 0.8, -1.5, 0, 0.8, -1.5],
+  qadr: [10, 11, 12, 7, 8, 9, 16, 17, 18, 13, 14, 15],
+  vadr: [9, 10, 11, 6, 7, 8, 15, 16, 17, 12, 13, 14],
+  scale: [0.125, 0.25, 0.25, 0.125, 0.25, 0.25, 0.125, 0.25, 0.25, 0.125, 0.25, 0.25]
 };
 var RZ_BHL_DEF = [0, 0, -0.2, 0.4, -0.3, 0, 0, 0, -0.2, 0.4, -0.3, 0];
 var RZ_X1 = {
@@ -4825,6 +4880,8 @@ function rzBuildVisual(A, R) {
 }
 // m: how tall a humanoid stands on the tabletop stage (Microduck keeps Microduck XR's 0.4 scale)
 var RZ_TABLE_HEIGHT = 0.42;
+// m: the robot picker's height (eleven robots in three rows of four, the picked one's credits below)
+var RZ_PICKER_H = 0.2;
 // Robot Zoo IS Microduck XR: the same world object (stage in the room, its bar, the console riding with it, goal
 // flag, floor pinch, grab spring, follow me, boundary, tabletop, sounds, desktop camera), with a robot picker.
 // Microduck runs Microduck XR's own code path unchanged; a humanoid plugs its MuJoCo model and published policy
@@ -4863,17 +4920,17 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
   _buildConsole(ctx) {
     Microduck._buildConsole.call(this, ctx);
     const T = THREE6;
-    const pk = this.picker = ctx.panel("Robot Zoo · pick a robot", { w: 0.3, h: 0.155 });
+    const pk = this.picker = ctx.panel("Robot Zoo · pick a robot", { w: 0.3, h: RZ_PICKER_H });
     this.robotBtns = RZ_ROBOTS.map((R, i) => ctx.button(R.label, { w: 0.068, h: 0.026, fontSize: 24, toggle: true, onClick: () => this.pick(i) }));
     pk.layout(this.robotBtns, { cols: 4, top: 0.03 });
     this.infoTex = textTexture("", { w: 1024, h: 120, size: 30, color: "#ffffff" });
     const info = new T.Mesh(new T.PlaneGeometry(0.28, 0.28 * 120 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
-    info.position.set(0, -0.052, 2e-3);
+    info.position.set(0, -RZ_PICKER_H / 2 + 0.024, 2e-3);
     info.userData.noCollider = true;
     pk.root.add(info);
     ctx.add(pk.root.children[0], { near: false, highlight: false });
     ctx.root.add(pk.root);
-    this._handle(ctx, pk.root, { w: 0.14, y: 0.155 / 2 + 0.014 });
+    this._handle(ctx, pk.root, { w: 0.14, y: RZ_PICKER_H / 2 + 0.014 });
     // humanoid commands, where Microduck's console sits; the shared toggles stay in sync with Microduck's copies
     this.humSlot = new T.Group();
     ctx.root.add(this.humSlot);
@@ -4916,7 +4973,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
       if (v) this.goal.active = false;
     });
     this._handle(ctx, this.humSlot, { w: 0.14, y: -0.25 / 2 - 0.014 });
-    this.walkPanel = make("Humanoid · pinch the floor, grab, drive", [follow, ...common()], 0.15, true);
+    this.walkPanel = make("Walk · pinch the floor, grab, drive", [follow, ...common()], 0.15, true);
     if (this.inMenu) this._zooMenu(ctx);
     this.trackPanel = make("Unitree G1 · pick a motion", [...RZ_TRACK_CLIPS.map((l) => ctx.button(l, { w: 0.078, h: 0.026, fontSize: 24, onClick: () => this._play(l) })), ...common()], 0.25, false);
   },
@@ -4951,7 +5008,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     this.menuBack.onClick = () => app.menu.show("zoo");
   },
   _placeConsole(y) {
-    this.picker.root.position.set(-0.42, y + 0.29 / 2 + 0.155 / 2 + 0.012, -0.36);
+    this.picker.root.position.set(-0.42, y + 0.29 / 2 + RZ_PICKER_H / 2 + 0.012, -0.36);
     this.picker.root.lookAt(0, y + 0.45, 0.35);
     // where Microduck XR puts its command panel (_placeStage sets that one only after asking us)
     this.humSlot.position.set(-0.42, y, -0.36);
@@ -5078,10 +5135,10 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     S.ctrl.setup(S);
     A.mujoco.mj_forward(A.model, data);
     S.z0 = data.qpos[2];
-    // footsteps: the two lowest bodies when standing
+    // footsteps: the two lowest bodies when standing (four on a quadruped)
     const z = [];
     for (let b = 1; b < A.model.nbody; b++) z.push([data.xpos[b * 3 + 2], b]);
-    S.feetIds = z.sort((a, b) => a[0] - b[0]).slice(0, 2).map((e) => e[1]);
+    S.feetIds = z.sort((a, b) => a[0] - b[0]).slice(0, R.kind === "quad" ? 4 : 2).map((e) => e[1]);
     this.goal.active = false;
     this.flag.position.set(0.5, 0, 0);
     this._hSync();
@@ -5207,7 +5264,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     S.jv = jv * 14 / Math.max(1, S.model.nv - 6);
     if (!S.grab) {
       const xp = S.data.xpos, z = S.feetIds.map((b) => xp[b * 3 + 2]), g = Math.min(...z), now = performance.now();
-      S.feet ??= [{ air: false, z: 0, at: 0 }, { air: false, z: 0, at: 0 }];
+      S.feet ??= S.feetIds.map(() => ({ air: false, z: 0, at: 0 }));
       S.feet.forEach((f, i) => {
         const vz = (z[i] - f.z) / S.ctrlDt;
         f.z = z[i];

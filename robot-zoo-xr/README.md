@@ -23,6 +23,8 @@ roller skates, colourways); picking another robot swaps what stands on the stage
 | Booster T1 | MLP walking, 50 Hz | BoosterRobotics/booster_gym (Apache-2.0) |
 | AgiBot X1 | MLP walking, 100 Hz over 66 frames of history | AgibotTech/agibot_x1_infer (Mulan PSL v2) |
 | Berkeley Humanoid Lite | biped walking, 50 Hz | HybridRobotics/Berkeley-Humanoid-Lite (MIT); model CC BY-SA 4.0 |
+| Unitree Go2, Unitree B2 | quadruped walking, 50 Hz (robot_lab, as rl_sar deploys it) | fan-ziqi/rl_sar + robot_lab (Apache-2.0); models unitreerobotics/unitree_mujoco (BSD-3-Clause) |
+| AgiBot D1 | quadruped walking, 50 Hz (robot_lab, as rl_sar deploys it) | fan-ziqi/rl_sar + robot_lab (Apache-2.0); model from fan-ziqi/rl_sar_zoo, converted from the D1 URDF in robot_lab (no separate AgiBot model licence) |
 
 Each `assets/<robot>/` folder holds its `SOURCE.txt` and the licence files of the repositories it came from.
 
@@ -32,7 +34,7 @@ Each `assets/<robot>/` folder holds its `SOURCE.txt` and the licence files of th
 | --- | --- |
 | `src/core.js` | robot list, ONNX sessions, one controller per policy family (observation, gains and timing of its deploy code) |
 | `src/tracking.js` | the G1 motion-tracking controller, ported from humanoid-policy-viewer |
-| `src/world.js` | the humanoids on Microduck XR's world: loading, rendering, driving, grabbing, robot picker |
+| `src/world.js` | the humanoids and quadrupeds on Microduck XR's world: loading, rendering, driving, grabbing, robot picker |
 | `build.py` | writes `index.html` (site) and `codepen.html` (CodePen) from the framework and `src/` |
 | `assets/` | packed robots, policies, motion clips, `lib/RoomEnvironment.js` (three.js, MIT) |
 | `tools/` | how `assets/` was made (below) |
@@ -56,3 +58,9 @@ All of it is reproducible with `tools/` (Python with `mujoco onnxruntime onnx nu
 
 The browser controllers were checked against the Python runs. The same command sequence gives the same distances,
 heights and headings, and every G1 clip (flips and the fall-and-get-up included) ends standing.
+
+The quadrupeds have their own scripts in `tools/quad/` (Python with PyTorch for the export and the comparison):
+`export.py` turns rl_sar's TorchScript into ONNX (max error about 1e-6 against the original), `qval.py` runs a policy
+headless in MuJoCo, `proof.py` checks each packed robot (stand, walk 0.5 m/s, turn 1 rad/s, stand: all stay up and
+track) and `assemble_quad.py` copies the packs and licences into `assets/`. In the browser they hold their heading when
+no turn is asked (the policies were trained on heading commands; Go2 otherwise trots round on the spot).

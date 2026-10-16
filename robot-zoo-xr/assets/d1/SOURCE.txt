@@ -1,0 +1,2 @@
+AgiBot D1 walking policy: fan-ziqi/rl_sar policy/d1/robot_lab/policy.pt (rl_sar 376d42c, Apache-2.0), trained with fan-ziqi/robot_lab (Apache-2.0); converted TorchScript -> ONNX, weights unchanged.
+Robot model: fan-ziqi/rl_sar_zoo d1_description/mjcf (7dd30bd), converted from the D1 URDF distributed in fan-ziqi/robot_lab (source/robot_lab/data/Robots/agibot/d1, Apache-2.0 repository licence; no separate AgiBot licence file).

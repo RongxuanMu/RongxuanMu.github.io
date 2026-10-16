@@ -1,0 +1,2 @@
+Unitree Go2 walking policy: fan-ziqi/rl_sar policy/go2/robot_lab/policy.pt (rl_sar 376d42c, Apache-2.0), trained with fan-ziqi/robot_lab (Apache-2.0); converted TorchScript -> ONNX, weights unchanged.
+Robot model: unitreerobotics/unitree_mujoco unitree_robots/go2 (1eb6642, BSD-3-Clause, Unitree Robotics), as shipped in fan-ziqi/rl_sar_zoo.

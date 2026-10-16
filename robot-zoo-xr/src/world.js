@@ -85,6 +85,8 @@ function rzBuildVisual(A, R) {
 }
 // m: how tall a humanoid stands on the tabletop stage (Microduck keeps Microduck XR's 0.4 scale)
 var RZ_TABLE_HEIGHT = 0.42;
+// m: the robot picker's height (eleven robots in three rows of four, the picked one's credits below)
+var RZ_PICKER_H = 0.2;
 // Robot Zoo IS Microduck XR: the same world object (stage in the room, its bar, the console riding with it, goal
 // flag, floor pinch, grab spring, follow me, boundary, tabletop, sounds, desktop camera), with a robot picker.
 // Microduck runs Microduck XR's own code path unchanged; a humanoid plugs its MuJoCo model and published policy
@@ -123,17 +125,17 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
   _buildConsole(ctx) {
     Microduck._buildConsole.call(this, ctx);
     const T = THREE6;
-    const pk = this.picker = ctx.panel("Robot Zoo · pick a robot", { w: 0.3, h: 0.155 });
+    const pk = this.picker = ctx.panel("Robot Zoo · pick a robot", { w: 0.3, h: RZ_PICKER_H });
     this.robotBtns = RZ_ROBOTS.map((R, i) => ctx.button(R.label, { w: 0.068, h: 0.026, fontSize: 24, toggle: true, onClick: () => this.pick(i) }));
     pk.layout(this.robotBtns, { cols: 4, top: 0.03 });
     this.infoTex = textTexture("", { w: 1024, h: 120, size: 30, color: "#ffffff" });
     const info = new T.Mesh(new T.PlaneGeometry(0.28, 0.28 * 120 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
-    info.position.set(0, -0.052, 2e-3);
+    info.position.set(0, -RZ_PICKER_H / 2 + 0.024, 2e-3);
     info.userData.noCollider = true;
     pk.root.add(info);
     ctx.add(pk.root.children[0], { near: false, highlight: false });
     ctx.root.add(pk.root);
-    this._handle(ctx, pk.root, { w: 0.14, y: 0.155 / 2 + 0.014 });
+    this._handle(ctx, pk.root, { w: 0.14, y: RZ_PICKER_H / 2 + 0.014 });
     // humanoid commands, where Microduck's console sits; the shared toggles stay in sync with Microduck's copies
     this.humSlot = new T.Group();
     ctx.root.add(this.humSlot);
@@ -176,7 +178,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
       if (v) this.goal.active = false;
     });
     this._handle(ctx, this.humSlot, { w: 0.14, y: -0.25 / 2 - 0.014 });
-    this.walkPanel = make("Humanoid · pinch the floor, grab, drive", [follow, ...common()], 0.15, true);
+    this.walkPanel = make("Walk · pinch the floor, grab, drive", [follow, ...common()], 0.15, true);
     if (this.inMenu) this._zooMenu(ctx);
     this.trackPanel = make("Unitree G1 · pick a motion", [...RZ_TRACK_CLIPS.map((l) => ctx.button(l, { w: 0.078, h: 0.026, fontSize: 24, onClick: () => this._play(l) })), ...common()], 0.25, false);
   },
@@ -211,7 +213,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     this.menuBack.onClick = () => app.menu.show("zoo");
   },
   _placeConsole(y) {
-    this.picker.root.position.set(-0.42, y + 0.29 / 2 + 0.155 / 2 + 0.012, -0.36);
+    this.picker.root.position.set(-0.42, y + 0.29 / 2 + RZ_PICKER_H / 2 + 0.012, -0.36);
     this.picker.root.lookAt(0, y + 0.45, 0.35);
     // where Microduck XR puts its command panel (_placeStage sets that one only after asking us)
     this.humSlot.position.set(-0.42, y, -0.36);
@@ -338,10 +340,10 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     S.ctrl.setup(S);
     A.mujoco.mj_forward(A.model, data);
     S.z0 = data.qpos[2];
-    // footsteps: the two lowest bodies when standing
+    // footsteps: the two lowest bodies when standing (four on a quadruped)
     const z = [];
     for (let b = 1; b < A.model.nbody; b++) z.push([data.xpos[b * 3 + 2], b]);
-    S.feetIds = z.sort((a, b) => a[0] - b[0]).slice(0, 2).map((e) => e[1]);
+    S.feetIds = z.sort((a, b) => a[0] - b[0]).slice(0, R.kind === "quad" ? 4 : 2).map((e) => e[1]);
     this.goal.active = false;
     this.flag.position.set(0.5, 0, 0);
     this._hSync();
@@ -467,7 +469,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     S.jv = jv * 14 / Math.max(1, S.model.nv - 6);
     if (!S.grab) {
       const xp = S.data.xpos, z = S.feetIds.map((b) => xp[b * 3 + 2]), g = Math.min(...z), now = performance.now();
-      S.feet ??= [{ air: false, z: 0, at: 0 }, { air: false, z: 0, at: 0 }];
+      S.feet ??= S.feetIds.map(() => ({ air: false, z: 0, at: 0 }));
       S.feet.forEach((f, i) => {
         const vz = (z[i] - f.z) / S.ctrlDt;
         f.z = z[i];

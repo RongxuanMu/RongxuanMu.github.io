@@ -1,0 +1,188 @@
+<mujoco model="d1 scene">
+  <compiler angle="radian" meshdir="m"/>
+
+  <option impratio="100" cone="elliptic"/>
+
+  <size nkey="1"/>
+
+  <statistic extent="0.8" center="0 0 0.1"/>
+
+  <visual>
+    <global azimuth="-130" elevation="-20"/>
+    <headlight ambient="0.3 0.3 0.3" diffuse="0.6 0.6 0.6" specular="0 0 0"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+  </visual>
+
+  <default>
+    <default class="d1">
+      <joint armature="0.01" damping="0.1" frictionloss="0.2" axis="0 1 0"/>
+      <geom conaffinity="0" friction="0.4" margin="0.001"/>
+      <general ctrlrange="-33.5 33.5"/>
+      <default class="abad">
+        <joint range="-0.4887 0.4887" axis="1 0 0"/>
+      </default>
+      <default class="hip">
+        <joint range="-1.1519 2.967"/>
+      </default>
+      <default class="knee">
+        <joint range="-2.723 -0.602"/>
+        <general ctrlrange="-45.43 45.43"/>
+      </default>
+      <default class="visual">
+        <geom type="mesh" contype="0" group="2"/>
+      </default>
+      <default class="collision">
+        <geom group="3"/>
+        <default class="foot">
+          <geom size="0.022 0 0" conaffinity="1" condim="6" priority="1" friction="0.4 0.02 0.01"/>
+        </default>
+      </default>
+    </default>
+  </default>
+
+  <worldbody>
+    <geom name="floor" size="0 0 0.05" type="plane"/>
+    <light pos="0 0 1.5" type="directional"/>
+    <body name="base_link" childclass="d1" pos="0 0 0.5">
+      <inertial pos="0.0054 0 0.0061" mass="6.268" diaginertia="0.0274 0.085 0.0992"/>
+      <joint type="free" armature="0" damping="0" frictionloss="0"/>
+      <geom class="collision" size="0.2 0.08 0.05" type="box"/>
+      <site name="imu"/>
+      <body name="FL_ABAD" pos="0.17449 0.062 0">
+        <inertial pos="-0.027 -0.0155 0" mass="0.454" diaginertia="0.000251 0.000487 0.000541"/>
+        <joint name="FL_ABAD_JOINT" class="abad"/>
+        <geom class="collision" size="0.04 0.03" pos="-0.02 -0.04 0" quat="0.707107 0.707107 0 0" type="cylinder"/>
+        <body name="FL_HIP" pos="0 0.097412 0">
+          <inertial pos="-0.003 -0.043 -0.022" mass="1.502" diaginertia="0.00695 0.00476 0.00326"/>
+          <joint name="FL_HIP_JOINT" class="hip"/>
+          <geom class="collision" size="0.1 0.015 0.02" pos="0 0 -0.1" quat="0.707107 0 0.707107 0" type="box"/>
+          <body name="FL_KNEE" pos="0 0 -0.2">
+            <inertial pos="0.0077 0 -0.092" mass="0.207" diaginertia="0.00159 0.00162 5e-05"/>
+            <joint name="FL_KNEE_JOINT" class="knee"/>
+            <geom class="collision" size="0.012 0.06" pos="0.008 0 -0.06" type="cylinder"/>
+            <geom class="collision" size="0.011 0.04" pos="0.01 0 -0.14" type="cylinder"/>
+            <geom name="FL" class="foot" pos="0 0 -0.21366"/>
+            <body name="FL_FOOT" pos="0 0 -0.21366"/>
+          </body>
+        </body>
+      </body>
+      <body name="FR_ABAD" pos="0.17449 -0.062 0">
+        <inertial pos="-0.027 0.0155 0" mass="0.454" diaginertia="0.000251 0.000487 0.000541"/>
+        <joint name="FR_ABAD_JOINT" class="abad"/>
+        <geom class="collision" size="0.04 0.03" pos="-0.02 0.04 0" quat="0.707107 0.707107 0 0" type="cylinder"/>
+        <body name="FR_HIP" pos="0 -0.097399 0">
+          <inertial pos="-0.003 0.043 -0.022" mass="1.508" diaginertia="0.00715 0.00496 0.00327"/>
+          <joint name="FR_HIP_JOINT" class="hip"/>
+          <geom class="collision" size="0.1 0.015 0.02" pos="0 0 -0.1" quat="0.707107 0 0.707107 0" type="box"/>
+          <body name="FR_KNEE" pos="0 0 -0.2">
+            <inertial pos="0.0077 0 -0.092" mass="0.207" diaginertia="0.00159 0.00162 5e-05"/>
+            <joint name="FR_KNEE_JOINT" class="knee"/>
+            <geom class="collision" size="0.012 0.06" pos="0.008 0 -0.06" type="cylinder"/>
+            <geom class="collision" size="0.011 0.04" pos="0.01 0 -0.14" type="cylinder"/>
+            <geom name="FR" class="foot" pos="0 0 -0.21366"/>
+            <body name="FR_FOOT" pos="0 0 -0.21366"/>
+          </body>
+        </body>
+      </body>
+      <body name="RL_ABAD" pos="-0.17449 0.062 0">
+        <inertial pos="0.027 -0.0155 0" mass="0.454" diaginertia="0.000251 0.000487 0.000541"/>
+        <joint name="RL_ABAD_JOINT" class="abad"/>
+        <geom class="collision" size="0.04 0.03" pos="0.02 -0.04 0" quat="0.707107 0.707107 0 0" type="cylinder"/>
+        <body name="RL_HIP" pos="0 0.097412 0">
+          <inertial pos="-0.003 -0.043 -0.022" mass="1.502" diaginertia="0.00695 0.00476 0.00326"/>
+          <joint name="RL_HIP_JOINT" class="hip"/>
+          <geom class="collision" size="0.1 0.015 0.02" pos="0 0 -0.1" quat="0.707107 0 0.707107 0" type="box"/>
+          <body name="RL_KNEE" pos="0 0 -0.2">
+            <inertial pos="0.0077 0 -0.092" mass="0.207" diaginertia="0.00159 0.00162 5e-05"/>
+            <joint name="RL_KNEE_JOINT" class="knee"/>
+            <geom class="collision" size="0.012 0.06" pos="0.008 0 -0.06" type="cylinder"/>
+            <geom class="collision" size="0.011 0.04" pos="0.01 0 -0.14" type="cylinder"/>
+            <geom name="RL" class="foot" pos="0 0 -0.21366"/>
+            <body name="RL_FOOT" pos="0 0 -0.21366"/>
+          </body>
+        </body>
+      </body>
+      <body name="RR_ABAD" pos="-0.17449 -0.062 0">
+        <inertial pos="0.027 0.0155 0" mass="0.454" diaginertia="0.000251 0.000487 0.000541"/>
+        <joint name="RR_ABAD_JOINT" class="abad"/>
+        <geom class="collision" size="0.04 0.03" pos="0.02 0.04 0" quat="0.707107 0.707107 0 0" type="cylinder"/>
+        <body name="RR_HIP" pos="0 -0.0974 0">
+          <inertial pos="-0.003 0.043 -0.022" mass="1.508" diaginertia="0.00715 0.00496 0.00327"/>
+          <joint name="RR_HIP_JOINT" class="hip"/>
+          <geom class="collision" size="0.1 0.015 0.02" pos="0 0 -0.1" quat="0.707107 0 0.707107 0" type="box"/>
+          <body name="RR_KNEE" pos="0 0 -0.2">
+            <inertial pos="0.0077 0 -0.092" mass="0.207" diaginertia="0.00159 0.00162 5e-05"/>
+            <joint name="RR_KNEE_JOINT" class="knee"/>
+            <geom class="collision" size="0.012 0.06" pos="0.008 0 -0.06" type="cylinder"/>
+            <geom class="collision" size="0.011 0.04" pos="0.01 0 -0.14" type="cylinder"/>
+            <geom name="RR" class="foot" pos="0 0 -0.21366"/>
+            <body name="RR_FOOT" pos="0 0 -0.21366"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <general name="FR_abad" class="abad" joint="FR_ABAD_JOINT"/>
+    <general name="FR_hip" class="hip" joint="FR_HIP_JOINT"/>
+    <general name="FR_knee" class="knee" joint="FR_KNEE_JOINT"/>
+    <general name="FL_abad" class="abad" joint="FL_ABAD_JOINT"/>
+    <general name="FL_hip" class="hip" joint="FL_HIP_JOINT"/>
+    <general name="FL_knee" class="knee" joint="FL_KNEE_JOINT"/>
+    <general name="RR_abad" class="abad" joint="RR_ABAD_JOINT"/>
+    <general name="RR_hip" class="hip" joint="RR_HIP_JOINT"/>
+    <general name="RR_knee" class="knee" joint="RR_KNEE_JOINT"/>
+    <general name="RL_abad" class="abad" joint="RL_ABAD_JOINT"/>
+    <general name="RL_hip" class="hip" joint="RL_HIP_JOINT"/>
+    <general name="RL_knee" class="knee" joint="RL_KNEE_JOINT"/>
+  </actuator>
+
+  <sensor>
+    <jointpos joint="FR_ABAD_JOINT" name="FR_abad_pos"/>
+    <jointpos joint="FR_HIP_JOINT" name="FR_hip_pos"/>
+    <jointpos joint="FR_KNEE_JOINT" name="FR_knee_pos"/>
+    <jointpos joint="FL_ABAD_JOINT" name="FL_abad_pos"/>
+    <jointpos joint="FL_HIP_JOINT" name="FL_hip_pos"/>
+    <jointpos joint="FL_KNEE_JOINT" name="FL_knee_pos"/>
+    <jointpos joint="RR_ABAD_JOINT" name="RR_abad_pos"/>
+    <jointpos joint="RR_HIP_JOINT" name="RR_hip_pos"/>
+    <jointpos joint="RR_KNEE_JOINT" name="RR_knee_pos"/>
+    <jointpos joint="RL_ABAD_JOINT" name="RL_abad_pos"/>
+    <jointpos joint="RL_HIP_JOINT" name="RL_hip_pos"/>
+    <jointpos joint="RL_KNEE_JOINT" name="RL_knee_pos"/>
+    <jointvel joint="FR_ABAD_JOINT" name="FR_abad_vel"/>
+    <jointvel joint="FR_HIP_JOINT" name="FR_hip_vel"/>
+    <jointvel joint="FR_KNEE_JOINT" name="FR_knee_vel"/>
+    <jointvel joint="FL_ABAD_JOINT" name="FL_abad_vel"/>
+    <jointvel joint="FL_HIP_JOINT" name="FL_hip_vel"/>
+    <jointvel joint="FL_KNEE_JOINT" name="FL_knee_vel"/>
+    <jointvel joint="RR_ABAD_JOINT" name="RR_abad_vel"/>
+    <jointvel joint="RR_HIP_JOINT" name="RR_hip_vel"/>
+    <jointvel joint="RR_KNEE_JOINT" name="RR_knee_vel"/>
+    <jointvel joint="RL_ABAD_JOINT" name="RL_abad_vel"/>
+    <jointvel joint="RL_HIP_JOINT" name="RL_hip_vel"/>
+    <jointvel joint="RL_KNEE_JOINT" name="RL_knee_vel"/>
+    <jointactuatorfrc joint="FR_ABAD_JOINT" name="FR_abad_torque" noise="0.01"/>
+    <jointactuatorfrc joint="FR_HIP_JOINT" name="FR_hip_torque" noise="0.01"/>
+    <jointactuatorfrc joint="FR_KNEE_JOINT" name="FR_knee_torque" noise="0.01"/>
+    <jointactuatorfrc joint="FL_ABAD_JOINT" name="FL_abad_torque" noise="0.01"/>
+    <jointactuatorfrc joint="FL_HIP_JOINT" name="FL_hip_torque" noise="0.01"/>
+    <jointactuatorfrc joint="FL_KNEE_JOINT" name="FL_knee_torque" noise="0.01"/>
+    <jointactuatorfrc joint="RR_ABAD_JOINT" name="RR_abad_torque" noise="0.01"/>
+    <jointactuatorfrc joint="RR_HIP_JOINT" name="RR_hip_torque" noise="0.01"/>
+    <jointactuatorfrc joint="RR_KNEE_JOINT" name="RR_knee_torque" noise="0.01"/>
+    <jointactuatorfrc joint="RL_ABAD_JOINT" name="RL_abad_torque" noise="0.01"/>
+    <jointactuatorfrc joint="RL_HIP_JOINT" name="RL_hip_torque" noise="0.01"/>
+    <jointactuatorfrc joint="RL_KNEE_JOINT" name="RL_knee_torque" noise="0.01"/>
+    <framequat objtype="site" objname="imu" name="imu_quat"/>
+    <gyro site="imu" name="imu_gyro"/>
+    <accelerometer site="imu" name="imu_acc"/>
+    <framepos objtype="site" objname="imu" name="frame_pos"/>
+    <framelinvel objtype="site" objname="imu" name="frame_vel"/>
+  </sensor>
+
+  <keyframe>
+    <key name="home" qpos="0 0 0.5 1 0 0 0 0 0.8 -1.5 0 0.8 -1.5 0 0.8 -1.5 0 0.8 -1.5" ctrl="0 0.8 -1.5 0 0.8 -1.5 0 0.8 -1.5 0 0.8 -1.5"/>
+  </keyframe>
+</mujoco>

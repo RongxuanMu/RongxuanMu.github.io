@@ -1,5 +1,5 @@
 // src/worlds/robotzoo.js
-// Robot Zoo XR: open-source humanoid robots running the very policies their makers (and the community) trained,
+// Robot Zoo XR: open-source humanoid and quadruped robots running the very policies their makers (and the community) trained,
 // simulated live in MuJoCo WASM with ONNX Runtime Web, on your table or life-size in your room.
 //
 // Every robot runs its published policy with the observation, gains and timing of its own deploy code:
@@ -9,7 +9,8 @@
 //   Booster T1         booster_gym walking, 50 Hz (play_mujoco.py)
 //   AgiBot X1          agibot_x1_infer walking, 100 Hz over a 66-frame history, 1 kHz PD with filtered targets
 //   Berkeley Humanoid Lite   biped walking, 50 Hz, 2 kHz PD (sim2sim/play_mujoco.py)
-// The Unitree and Booster TorchScript policies were converted to ONNX (weights unchanged, checked against a
+//   Unitree Go2 / B2, AgiBot D1   robot_lab velocity walking as rl_sar deploys it, 50 Hz, 200 Hz PD
+// The Unitree, Booster and rl_sar TorchScript policies were converted to ONNX (weights unchanged, checked against a
 // NumPy forward pass); each policy was checked in desktop MuJoCo walking, turning and standing before shipping.
 import { toCreasedNormals as rzCreased } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { RoomEnvironment as RzRoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -48,7 +49,16 @@ var RZ_ROBOTS = [
   { id: "x1", label: "AgiBot X1", name: "AgiBot X1 灵犀", maker: "AgiBot 智元", kind: "x1", height: 1.3, dt: 1e-3, dec: 10, vmax: 0.6, root: "x1-body", tone: [15000554, 3421244],
     policy: "agibot_x1_infer walking · Mulan PSL v2" },
   { id: "bhl", label: "Berkeley Lite", name: "Berkeley Humanoid Lite", maker: "UC Berkeley Hybrid Robotics", kind: "bhl", height: 0.8, dt: 5e-4, dec: 40, vmax: 0.5, root: "base",
-    policy: "Berkeley Humanoid Lite biped · MIT · model CC BY-SA 4.0" }
+    policy: "Berkeley Humanoid Lite biped · MIT · model CC BY-SA 4.0" },
+  { id: "go2", label: "Go2", name: "Unitree Go2", maker: "Unitree 宇树", kind: "quad", height: 0.4, dt: 5e-3, dec: 4, vmax: 0.8, root: "base_link",
+    quad: { z0: 0.337, kp: 20, kd: 0.5, tmax: [23.5, 23.5, 23.5], wmax: [30, 30, 30], clip: 100 },
+    policy: "robot_lab walking via rl_sar · Apache-2.0 · model BSD-3-Clause" },
+  { id: "b2", label: "B2", name: "Unitree B2", maker: "Unitree 宇树", kind: "quad", height: 0.65, dt: 5e-3, dec: 4, vmax: 0.8, root: "base_link",
+    quad: { z0: 0.546, kp: 160, kd: 5, tmax: [200, 200, 320], wmax: [23, 23, 14], clip: 100 },
+    policy: "robot_lab walking via rl_sar · Apache-2.0 · model BSD-3-Clause" },
+  { id: "d1", label: "AgiBot D1", name: "AgiBot D1", maker: "AgiBot 智元", kind: "quad", height: 0.4, dt: 5e-3, dec: 4, vmax: 0.8, root: "base_link",
+    quad: { z0: 0.327, kp: 20, kd: 0.8, tmax: [33.5, 33.5, 33.5], wmax: [21, 21, 21], clip: 3 },
+    policy: "robot_lab walking via rl_sar · Apache-2.0" }
 ];
 // - small math on MuJoCo arrays (quaternions are w, x, y, z) -
 function rzGravity(q, o = 0) {
@@ -202,6 +212,43 @@ var RZ_CONTROLLERS = {
       }
     }
   },
+  // robot_lab velocity walking (Isaac Lab) as rl_sar deploys it: 45 inputs from fresh qpos / qvel (sensordata
+  // lags a physics step), PD every 5 ms clamped to the trained DC-motor torque-speed box
+  quad: {
+    setup(S) {
+      const q = S.data.qpos, Q = RZ_QUAD;
+      q.fill(0);
+      q.set([0, 0, S.R.quad.z0, 1, 0, 0, 0]);
+      Q.def.forEach((d, i) => q[Q.qadr[i]] = d);
+      S.data.qvel.fill(0);
+      S.action = new Float32Array(12);
+      S.target = Float64Array.from(Q.def);
+      S.hold = 0;
+    },
+    async policy(S) {
+      const q = S.data.qpos, v = S.data.qvel, Q = RZ_QUAD, P = S.R.quad, o = new Float32Array(45), g = rzGravity(q, 3);
+      // trained on heading commands: with no turn asked it holds its heading (Go2 otherwise drifts round, trotting)
+      const yaw = rzYaw(q), c = S.cmd;
+      let wz = c[2];
+      if (Math.abs(wz) < 0.02) wz = T6clamp(MD_WRAP(S.hold - yaw), -1, 1);
+      else S.hold = yaw;
+      for (let i = 0; i < 3; i++) o[i] = v[3 + i] * 0.25, o[3 + i] = g[i];
+      o[6] = c[0];
+      o[7] = c[1];
+      o[8] = wz;
+      for (let i = 0; i < 12; i++) o[9 + i] = q[Q.qadr[i]] - Q.def[i], o[21 + i] = v[Q.vadr[i]] * 0.05, o[33 + i] = S.action[i];
+      const a = await S.pol.run(o.map((u) => Math.max(-100, Math.min(100, u))));
+      for (let i = 0; i < 12; i++) S.action[i] = Math.max(-P.clip, Math.min(P.clip, a[i])), S.target[i] = Q.def[i] + S.action[i] * Q.scale[i];
+    },
+    torque(S) {
+      const q = S.data.qpos, v = S.data.qvel, c = S.data.ctrl, Q = RZ_QUAD, P = S.R.quad;
+      for (let i = 0; i < 12; i++) {
+        const dq = v[Q.vadr[i]], tm = P.tmax[i % 3], wm = P.wmax[i % 3];
+        const hi = T6clamp(tm * (1 - dq / wm), 0, tm), lo = T6clamp(tm * (-1 - dq / wm), -tm, 0);
+        c[i] = T6clamp(P.kp * (S.target[i] - q[Q.qadr[i]]) - P.kd * dq, lo, hi);
+      }
+    }
+  },
   // Berkeley Humanoid Lite: MujocoSimulator + RlController (sensordata: joint pos, vel, torque, then imu)
   bhl: {
     setup(S) {
@@ -224,6 +271,14 @@ var RZ_CONTROLLERS = {
       for (let j = 0; j < 12; j++) c[j] = Math.max(-5, Math.min(5, 20 * (S.target[j] - sd[j]) - 2 * sd[12 + j]));
     }
   }
+};
+// the quadrupeds: policy joint i is actuator i (FR, FL, RR, RL legs: hip, thigh, calf); the kinematic tree, and
+// so qpos / qvel, runs FL, FR, RL, RR
+var RZ_QUAD = {
+  def: [0, 0.8, -1.5, 0, 0.8, -1.5, 0, 0.8, -1.5, 0, 0.8, -1.5],
+  qadr: [10, 11, 12, 7, 8, 9, 16, 17, 18, 13, 14, 15],
+  vadr: [9, 10, 11, 6, 7, 8, 15, 16, 17, 12, 13, 14],
+  scale: [0.125, 0.25, 0.25, 0.125, 0.25, 0.25, 0.125, 0.25, 0.25, 0.125, 0.25, 0.25]
 };
 var RZ_BHL_DEF = [0, 0, -0.2, 0.4, -0.3, 0, 0, 0, -0.2, 0.4, -0.3, 0];
 var RZ_X1 = {
