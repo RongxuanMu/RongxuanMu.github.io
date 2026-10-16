@@ -374,10 +374,19 @@ PC_EXHIBITS.push({
     });
     X.action("Turn over", () => flip = { q0: board.quaternion.clone(), q1: board.quaternion.clone().multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), Math.PI)), t: 0 });
     X.action("Curve", (on) => curve.line.visible = on, { toggle: true, value: true });
-    const grid = /* @__PURE__ */ new Map(), gl = new T.Vector3();
+    // a flat uniform grid over the board (counting sort, no allocation per step) and each wall's bounding box, so a
+    // bead only tests the walls it is near
+    const CS = 2 * r, GX = Math.ceil(2 * W2 / CS) + 2, GY = Math.ceil(HT / CS) + 2;
+    const cellStart = new Int32Array(GX * GY + 1), cellOf = new Int32Array(NB), sorted = new Int32Array(NB), fillp = new Int32Array(GX * GY);
+    const gcx = (px) => Math.min(GX - 1, Math.max(0, Math.floor((px + W2) / CS) + 1)), gcy = (py) => Math.min(GY - 1, Math.max(0, Math.floor(py / CS) + 1));
+    const reach = r + 8e-4, segBox = segs.map(([x1, y1, x2, y2]) => [Math.min(x1, x2) - reach, Math.min(y1, y2) - reach, Math.max(x1, x2) + reach, Math.max(y1, y2) + reach]);
+    const gl = new T.Vector3(), hit = new Uint8Array(NB);
+    // a bead that touched a peg, a wall or another bead this step loses most of its speed: steel beads in a
+    // Galton board barely bounce, so each peg is a fair coin flip instead of a ricochet to the sides
     const push = (i, cx, cy, rr) => {
       const dx = x[i * 2] - cx, dy = x[i * 2 + 1] - cy, d2 = dx * dx + dy * dy;
       if (d2 < rr * rr && d2 > 1e-14) {
+        hit[i] = 1;
         const d = Math.sqrt(d2);
         x[i * 2] = cx + dx / d * rr;
         x[i * 2 + 1] = cy + dy / d * rr;
@@ -404,44 +413,56 @@ PC_EXHIBITS.push({
             x[i * 2 + 1] += v[i * 2 + 1] * h;
           }
           for (let iter = 0; iter < 2; iter++) {
-            grid.clear();
+            cellStart.fill(0);
             for (let i = 0; i < NB; i++) {
-              const key = Math.floor(x[i * 2] / (2 * r)) * 1e4 + Math.floor(x[i * 2 + 1] / (2 * r));
-              let l = grid.get(key);
-              if (!l) grid.set(key, l = []);
-              l.push(i);
+              cellOf[i] = gcx(x[i * 2]) * GY + gcy(x[i * 2 + 1]);
+              cellStart[cellOf[i] + 1]++;
             }
+            for (let c = 0; c < GX * GY; c++) cellStart[c + 1] += cellStart[c];
+            fillp.set(cellStart.subarray(0, GX * GY));
+            for (let i = 0; i < NB; i++) sorted[fillp[cellOf[i]]++] = i;
             for (let i = 0; i < NB; i++) {
-              const cx = Math.floor(x[i * 2] / (2 * r)), cy = Math.floor(x[i * 2 + 1] / (2 * r));
-              for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
-                const l = grid.get((cx + a) * 1e4 + cy + b);
-                if (!l) continue;
-                for (const j of l) {
+              const ci = gcx(x[i * 2]), cj = gcy(x[i * 2 + 1]);
+              for (let a = Math.max(0, ci - 1); a <= Math.min(GX - 1, ci + 1); a++) for (let b = Math.max(0, cj - 1); b <= Math.min(GY - 1, cj + 1); b++) {
+                const cell = a * GY + b;
+                for (let q = cellStart[cell]; q < cellStart[cell + 1]; q++) {
+                  const j = sorted[q];
                   if (j <= i) continue;
                   const dx = x[j * 2] - x[i * 2], dy = x[j * 2 + 1] - x[i * 2 + 1], d2 = dx * dx + dy * dy;
                   if (d2 >= 4 * r * r || d2 < 1e-14) continue;
                   const d = Math.sqrt(d2), c = (2 * r - d) / 2 / d;
+                  hit[i] = hit[j] = 1;
                   x[i * 2] -= dx * c;
                   x[i * 2 + 1] -= dy * c;
                   x[j * 2] += dx * c;
                   x[j * 2 + 1] += dy * c;
                 }
               }
-              const row = Math.round((Y0 - x[i * 2 + 1]) / DY);
-              for (let rr = row - 1; rr <= row + 1; rr++) {
-                if (rr < 0 || rr >= ROWS) continue;
-                const cc = Math.round(x[i * 2] / DX + (rr + 1) / 2);
-                for (let c = cc - 1; c <= cc + 1; c++) if (c >= 0 && c <= rr + 1) push(i, (c - (rr + 1) / 2) * DX, Y0 - rr * DY, r + PEG);
+              const px = x[i * 2], py = x[i * 2 + 1];
+              if (py > Y0 - (ROWS - 1) * DY - DY && py < Y0 + DY) {
+                const row = Math.round((Y0 - py) / DY);
+                for (let rr = row - 1; rr <= row + 1; rr++) {
+                  if (rr < 0 || rr >= ROWS) continue;
+                  const cc = Math.round(px / DX + (rr + 1) / 2);
+                  for (let c = cc - 1; c <= cc + 1; c++) if (c >= 0 && c <= rr + 1) push(i, (c - (rr + 1) / 2) * DX, Y0 - rr * DY, r + PEG);
+                }
               }
-              for (const [x1, y1, x2, y2] of segs) {
-                const sx = x2 - x1, sy = y2 - y1, t = Math.max(0, Math.min(1, ((x[i * 2] - x1) * sx + (x[i * 2 + 1] - y1) * sy) / (sx * sx + sy * sy)));
-                push(i, x1 + sx * t, y1 + sy * t, r + 8e-4);
+              for (let k = 0; k < segs.length; k++) {
+                const bb = segBox[k], qx = x[i * 2], qy = x[i * 2 + 1];
+                if (qx < bb[0] || qx > bb[2] || qy < bb[1] || qy > bb[3]) continue;
+                const [x1, y1, x2, y2] = segs[k], sx = x2 - x1, sy = y2 - y1, t = Math.max(0, Math.min(1, ((qx - x1) * sx + (qy - y1) * sy) / (sx * sx + sy * sy)));
+                push(i, x1 + sx * t, y1 + sy * t, reach);
               }
               x[i * 2] = Math.max(-W2 + r, Math.min(W2 - r, x[i * 2]));
               x[i * 2 + 1] = Math.max(3e-3 + r, Math.min(HT - r, x[i * 2 + 1]));
             }
           }
-          for (let i = 0; i < NB * 2; i++) v[i] = (x[i] - x0[i]) / h * 0.995;
+          for (let i = 0; i < NB; i++) {
+            const k = hit[i] ? 0.72 : 0.995;
+            v[i * 2] = (x[i * 2] - x0[i * 2]) / h * k;
+            v[i * 2 + 1] = (x[i * 2 + 1] - x0[i * 2 + 1]) / h * k;
+          }
+          hit.fill(0);
         }
         const M = new T.Matrix4();
         for (let i = 0; i < NB; i++) balls.setMatrixAt(i, M.makeTranslation(x[i * 2], x[i * 2 + 1], 0));

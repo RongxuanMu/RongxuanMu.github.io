@@ -21,7 +21,7 @@ def swap(a, b):
 version = re.search(r'var VERSION = "([^"]+)";', s).group(1)
 
 # world: the playground section is replaced wholesale; the framework modules stay untouched
-world = '\n'.join((P / 'src' / f).read_text().rstrip() for f in ('common.js', 'exhibits1.js', 'exhibits2.js', 'world.js'))
+world = '\n'.join((P / 'src' / f).read_text().rstrip() for f in ('common.js', 'water.js', 'exhibits1.js', 'exhibits2.js', 'world.js'))
 a = s.index('// src/worlds/playground.js')
 b = s.index('// src/main.js\nvar VERSION')
 s = s[:a] + world + '\n\n' + s[b:]

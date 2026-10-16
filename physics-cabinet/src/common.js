@@ -13,7 +13,7 @@ import { RoomEnvironment as PcRoomEnvironment } from "three/examples/jsm/environ
 var PC_G = 9.81;
 var PC_TABLE_BELOW_HEAD = 0.5;
 var PC_PLATE_R = 0.3;
-var pcEnv = null;
+var pcEnv = null, pcWaterEnv = null;
 var _pcV = new THREE6.Vector3(), _pcV2 = new THREE6.Vector3(), _pcQ = new THREE6.Quaternion();
 var PC_YUP = new THREE6.Vector3(0, 1, 0);
 // fat lines get their pixel resolution from the camera that draws them (each eye in XR)

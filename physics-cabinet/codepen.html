@@ -2396,7 +2396,7 @@ import { RoomEnvironment as PcRoomEnvironment } from "three/examples/jsm/environ
 var PC_G = 9.81;
 var PC_TABLE_BELOW_HEAD = 0.5;
 var PC_PLATE_R = 0.3;
-var pcEnv = null;
+var pcEnv = null, pcWaterEnv = null;
 var _pcV = new THREE6.Vector3(), _pcV2 = new THREE6.Vector3(), _pcQ = new THREE6.Quaternion();
 var PC_YUP = new THREE6.Vector3(0, 1, 0);
 // fat lines get their pixel resolution from the camera that draws them (each eye in XR)
@@ -2499,300 +2499,714 @@ var PC_MAT = {
 function pcStd(color, o = {}) {
   return new THREE6.MeshStandardMaterial({ color, roughness: 0.45, ...o });
 }
+// src/water.js
+// The water ball, from Water Ball XR (codepen.io/MuRongxuan/pen/PwpQYap), unchanged in its physics, surface and
+// sound: position-based SPH with double density relaxation (Clavet et al. 2005), surface tension from the kept
+// negative pressure, a marching-cubes surface over a density grid that follows the water, droplet impostors for
+// lone particles, and bubble sounds. Here it floats over the plate, scaled to the table.
+import { MarchingCubes as WBMarchingCubes } from "three/examples/jsm/objects/MarchingCubes.js";
+var WB_MOBILE = /OculusBrowser|Quest|Pico|Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+var WB_MAXN = 48;            // neighbours kept per particle
+var WB_CELLS = 1 << 14;      // spatial-hash buckets
+var WB_MAX_COLLIDERS = 72;
+
+function wbHash(x, y, z) {
+  return (Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791)) & (WB_CELLS - 1);
+}
+// density a particle sees inside a cubic lattice of the given spacing: the rest density of the liquid
+function wbLatticeDensity(h, s) {
+  let rho = 0;
+  const R = Math.ceil(h / s);
+  for (let i = -R; i <= R; i++) for (let j = -R; j <= R; j++) for (let k = -R; k <= R; k++) {
+    if (!i && !j && !k) continue;
+    const q = 1 - Math.hypot(i, j, k) * s / h;
+    if (q > 0) rho += q * q;
+  }
+  return rho;
+}
+
+var WaterSim = class {
+  constructor(n) {
+    this.n = n;
+    this.h = 0.04;                      // interaction radius (m)
+    this.radius = 0.0105;               // particle radius
+    this.k = 34;                        // stiffness
+    this.kNear = 120;                   // near-stiffness: keeps particles apart, gives the surface its sharpness
+    this.tension = 0.6;                 // share of negative pressure kept: surface tension (0 = splashy, 1 = goo)
+    this.visc = 0.05;                   // XSPH smoothing
+    this.pull = 26;                     // zero-g pull toward the anchor (1/s^2)
+    this.pullMax = 6;                   // ... capped (m/s^2) so far droplets come back gently
+    this.damping = 0.5;                 // zero-g velocity damping (1/s): a thrown ball glides to a stop
+    this.gravity = false;
+    this.rho0 = wbLatticeDensity(this.h, 0.5 * this.h);
+    this.p = new Float32Array(n * 3);
+    this.o = new Float32Array(n * 3);
+    this.v = new Float32Array(n * 3);
+    this.dv = new Float32Array(n * 3);
+    this.speed = new Float32Array(n);
+    this.vis = new Float32Array(n).fill(1);    // 0 = drawn by the surface, 1 = drawn as a droplet
+    this.cellOf = new Int32Array(n);
+    this.cellStart = new Int32Array(WB_CELLS + 1);
+    this.cellFill = new Int32Array(WB_CELLS);
+    this.sorted = new Int32Array(n);
+    this.nb = new Int32Array(n * WB_MAXN);
+    this.nq = new Float32Array(n * WB_MAXN);
+    this.nc = new Int32Array(n);
+    this.cols = new Float32Array(WB_MAX_COLLIDERS * 4);
+    this.nCols = 0;
+    this.anchor = new THREE6.Vector3();
+    this.centroid = new THREE6.Vector3();
+    this.grabs = new Map();             // key -> { idx: Int32Array, off: Float32Array, target: Vector3 }
+    this.floorHits = 0;                 // for the sound: how hard water hit the floor / was pushed since last read
+    this.floorAt = new THREE6.Vector3();
+    this.pokes = 0;
+    this.floorR2 = Infinity;            // the floor (y = 0) only reaches this far from the axis: past it, water falls
+  }
+
+  // a ball of water: particles on a jittered lattice inside a sphere, nearest-first
+  reset(center) {
+    const s = 0.5 * this.h, pts = [];
+    const R = Math.cbrt(this.n * s * s * s * 3 / (4 * Math.PI)) + s;
+    for (let x = -R; x <= R; x += s) for (let y = -R; y <= R; y += s) for (let z = -R; z <= R; z += s) {
+      const d = Math.hypot(x, y, z);
+      if (d <= R) pts.push([d, x, y, z]);
+    }
+    pts.sort((a, b) => a[0] - b[0]);
+    for (let i = 0; i < this.n; i++) {
+      const [, x, y, z] = pts[i % pts.length], b = i * 3, j = () => (Math.random() - 0.5) * 1e-3;
+      this.p[b] = this.o[b] = center.x + x + j();
+      this.p[b + 1] = this.o[b + 1] = center.y + y + j();
+      this.p[b + 2] = this.o[b + 2] = center.z + z + j();
+      this.v[b] = this.v[b + 1] = this.v[b + 2] = 0;
+    }
+    this.anchor.copy(center);
+    this.centroid.copy(center);
+    this.grabs.clear();
+  }
+
+  setColliders(list) {
+    const n = Math.min(list.length, WB_MAX_COLLIDERS);
+    for (let i = 0; i < n; i++) this.cols.set(list[i], i * 4);
+    this.nCols = n;
+  }
+
+  // grab the water around `point`: the nearest particles follow the grabber, bunched slightly together
+  grab(key, point) {
+    const p = this.p, near = [];
+    for (let r = 0.07; r <= 0.2 && near.length < 12; r += 0.045) {
+      near.length = 0;
+      for (let i = 0; i < this.n; i++) {
+        const b = i * 3, d = Math.hypot(p[b] - point.x, p[b + 1] - point.y, p[b + 2] - point.z);
+        if (d < r) near.push([d, i]);
+      }
+    }
+    if (!near.length) return false;
+    near.sort((a, b) => a[0] - b[0]);
+    const m = Math.min(near.length, 140), idx = new Int32Array(m), off = new Float32Array(m * 3);
+    for (let k = 0; k < m; k++) {
+      const i = near[k][1], b = i * 3;
+      idx[k] = i;
+      off[k * 3] = (p[b] - point.x) * 0.55;
+      off[k * 3 + 1] = (p[b + 1] - point.y) * 0.55;
+      off[k * 3 + 2] = (p[b + 2] - point.z) * 0.55;
+    }
+    this.grabs.set(key, { idx, off, target: point.clone() });
+    return true;
+  }
+
+  // a splash: particles near `point` kicked outward
+  splash(point, strength = 1.4, radius = 0.12) {
+    const p = this.p, v = this.v;
+    for (let i = 0, b = 0; i < this.n; i++, b += 3) {
+      const dx = p[b] - point.x, dy = p[b + 1] - point.y, dz = p[b + 2] - point.z, d = Math.hypot(dx, dy, dz);
+      if (d > radius || d < 1e-5) continue;
+      const f = strength * (1 - d / radius) / d;
+      v[b] += dx * f; v[b + 1] += dy * f + 0.3 * strength * (1 - d / radius); v[b + 2] += dz * f;
+    }
+  }
+
+  updateCentroid() {
+    // centre of the main body: the plain mean, then a second mean that ignores far stragglers
+    const p = this.p, n = this.n, c = this.centroid;
+    let x = 0, y = 0, z = 0;
+    for (let i = 0, b = 0; i < n; i++, b += 3) { x += p[b]; y += p[b + 1]; z += p[b + 2]; }
+    c.set(x / n, y / n, z / n);
+    let m = 0; x = y = z = 0;
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      if ((p[b] - c.x) ** 2 + (p[b + 1] - c.y) ** 2 + (p[b + 2] - c.z) ** 2 > 0.09) continue;
+      x += p[b]; y += p[b + 1]; z += p[b + 2]; m++;
+    }
+    if (m > n * 0.2) c.set(x / m, y / m, z / m);
+  }
+
+  step(dt) {
+    dt = Math.min(dt, 1 / 30);
+    if (!(dt > 1e-4)) return;
+    const S = dt > 1 / 55 ? 3 : 2, sdt = dt / S;
+    for (let s = 0; s < S; s++) this.substep(sdt);
+  }
+
+  substep(dt) {
+    const n = this.n, p = this.p, o = this.o, v = this.v;
+    const ax = this.anchor.x, ay = this.anchor.y, az = this.anchor.z, K = this.pull, AM = this.pullMax;
+    const damp = this.gravity ? 1 : Math.exp(-this.damping * dt), g = this.gravity ? -9.81 * dt : 0;
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      if (this.gravity) v[b + 1] += g;
+      else {
+        let fx = (ax - p[b]) * K, fy = (ay - p[b + 1]) * K, fz = (az - p[b + 2]) * K;
+        const f = Math.hypot(fx, fy, fz);
+        if (f > AM) { const s = AM / f; fx *= s; fy *= s; fz *= s; }
+        v[b] = (v[b] + fx * dt) * damp; v[b + 1] = (v[b + 1] + fy * dt) * damp; v[b + 2] = (v[b + 2] + fz * dt) * damp;
+      }
+      o[b] = p[b]; o[b + 1] = p[b + 1]; o[b + 2] = p[b + 2];
+      p[b] += v[b] * dt; p[b + 1] += v[b + 1] * dt; p[b + 2] += v[b + 2] * dt;
+    }
+    // grabbed particles are drawn to the grabber (position based, so the motion becomes their velocity)
+    for (const gr of this.grabs.values()) {
+      const t = gr.target;
+      for (let k = 0; k < gr.idx.length; k++) {
+        const b = gr.idx[k] * 3;
+        p[b] += (t.x + gr.off[k * 3] - p[b]) * 0.3;
+        p[b + 1] += (t.y + gr.off[k * 3 + 1] - p[b + 1]) * 0.3;
+        p[b + 2] += (t.z + gr.off[k * 3 + 2] - p[b + 2]) * 0.3;
+      }
+    }
+    this.neighbours();
+    this.relax(dt);
+    this.collide();
+    const idt = 1 / dt;
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      v[b] = (p[b] - o[b]) * idt; v[b + 1] = (p[b + 1] - o[b + 1]) * idt; v[b + 2] = (p[b + 2] - o[b + 2]) * idt;
+    }
+    this.viscosity();
+  }
+
+  neighbours() {
+    const n = this.n, p = this.p, ih = 1 / this.h, h2 = this.h * this.h;
+    const { cellOf, cellStart, cellFill, sorted, nb, nc } = this;
+    cellStart.fill(0);
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      const c = wbHash(Math.floor(p[b] * ih), Math.floor(p[b + 1] * ih), Math.floor(p[b + 2] * ih));
+      cellOf[i] = c; cellStart[c + 1]++;
+    }
+    for (let c = 0; c < WB_CELLS; c++) cellStart[c + 1] += cellStart[c];
+    cellFill.set(cellStart.subarray(0, WB_CELLS));
+    for (let i = 0; i < n; i++) sorted[cellFill[cellOf[i]]++] = i;
+    const seen = new Int32Array(27);
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      const x = p[b], y = p[b + 1], z = p[b + 2];
+      const cx = Math.floor(x * ih), cy = Math.floor(y * ih), cz = Math.floor(z * ih), base = i * WB_MAXN;
+      let cnt = 0, ns = 0;
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+        const c = wbHash(cx + dx, cy + dy, cz + dz);
+        let dup = false;
+        for (let s = 0; s < ns; s++) if (seen[s] === c) { dup = true; break; }
+        if (dup) continue;
+        seen[ns++] = c;
+        for (let k = cellStart[c], e = cellStart[c + 1]; k < e && cnt < WB_MAXN; k++) {
+          const j = sorted[k];
+          if (j === i) continue;
+          const jb = j * 3, ex = p[jb] - x, ey = p[jb + 1] - y, ez = p[jb + 2] - z;
+          if (ex * ex + ey * ey + ez * ez < h2) nb[base + cnt++] = j;
+        }
+      }
+      nc[i] = cnt;
+    }
+  }
+
+  relax(dt) {
+    const n = this.n, p = this.p, h = this.h, ih = 1 / h, h2 = h * h, dt2 = dt * dt;
+    const { nb, nq, nc, k: K, kNear: KN, rho0, tension } = this, maxD = 0.1 * h;
+    for (let i = 0; i < n; i++) {
+      const b = i * 3, base = i * WB_MAXN, m = nc[i], x = p[b], y = p[b + 1], z = p[b + 2];
+      let rho = 0, rhoN = 0;
+      for (let k = 0; k < m; k++) {
+        const jb = nb[base + k] * 3, ex = p[jb] - x, ey = p[jb + 1] - y, ez = p[jb + 2] - z, d2 = ex * ex + ey * ey + ez * ez;
+        if (d2 >= h2) { nq[base + k] = 0; continue; }
+        const q = 1 - Math.sqrt(d2) * ih;
+        nq[base + k] = q; rho += q * q; rhoN += q * q * q;
+      }
+      let P = K * (rho - rho0);
+      if (P < 0) P *= tension;
+      const PN = KN * rhoN;
+      let ax = 0, ay = 0, az = 0;
+      for (let k = 0; k < m; k++) {
+        const q = nq[base + k];
+        if (q <= 0) continue;
+        const jb = nb[base + k] * 3, ex = p[jb] - x, ey = p[jb + 1] - y, ez = p[jb + 2] - z;
+        const r = Math.sqrt(ex * ex + ey * ey + ez * ez);
+        if (r < 1e-6) continue;
+        let D = dt2 * (P * q + PN * q * q);
+        if (D > maxD) D = maxD; else if (D < -maxD) D = -maxD;
+        const s = 0.5 * D / r, ux = ex * s, uy = ey * s, uz = ez * s;
+        p[jb] += ux; p[jb + 1] += uy; p[jb + 2] += uz;
+        ax -= ux; ay -= uy; az -= uz;
+      }
+      p[b] += ax; p[b + 1] += ay; p[b + 2] += az;
+    }
+  }
+
+  collide() {
+    const n = this.n, p = this.p, o = this.o, r = this.radius, cols = this.cols, nCols = this.nCols;
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      let x = p[b], y = p[b + 1], z = p[b + 2];
+      for (let c = 0; c < nCols; c++) {
+        const cb = c * 4, R = cols[cb + 3] + r, dx = x - cols[cb], dy = y - cols[cb + 1], dz = z - cols[cb + 2];
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 < R * R) {
+          const d = Math.sqrt(d2) || 1e-6, s = R / d;
+          x = cols[cb] + dx * s; y = cols[cb + 1] + dy * s; z = cols[cb + 2] + dz * s;
+          this.pokes += R - Math.sqrt(d2);
+        }
+      }
+      if (y < r && x * x + z * z < this.floorR2) {
+        const fall = o[b + 1] - y;               // how far it dropped this substep: impact strength
+        if (fall > 4e-3) { this.floorHits += fall; this.floorAt.set(x, 0, z); }
+        y = r; x = o[b] + (x - o[b]) * 0.75; z = o[b + 2] + (z - o[b + 2]) * 0.75; }   // the floor, with friction
+      p[b] = x; p[b + 1] = y; p[b + 2] = z;
+    }
+  }
+
+  viscosity() {
+    const n = this.n, v = this.v, dv = this.dv, { nb, nq, nc, visc, speed } = this;
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      const base = i * WB_MAXN, m = nc[i];
+      let sx = 0, sy = 0, sz = 0, sw = 0;
+      for (let k = 0; k < m; k++) {
+        const q = nq[base + k];
+        if (q <= 0) continue;
+        const jb = nb[base + k] * 3;
+        sx += q * (v[jb] - v[b]); sy += q * (v[jb + 1] - v[b + 1]); sz += q * (v[jb + 2] - v[b + 2]); sw += q;
+      }
+      if (sw > 0) { const f = visc / sw; dv[b] = sx * f; dv[b + 1] = sy * f; dv[b + 2] = sz * f; }
+      else dv[b] = dv[b + 1] = dv[b + 2] = 0;
+    }
+    for (let i = 0, b = 0; i < n; i++, b += 3) {
+      let vx = v[b] + dv[b], vy = v[b + 1] + dv[b + 1], vz = v[b + 2] + dv[b + 2], s = Math.hypot(vx, vy, vz);
+      if (s > 5) { const f = 5 / s; vx *= f; vy *= f; vz *= f; s = 5; }
+      v[b] = vx; v[b + 1] = vy; v[b + 2] = vz; speed[i] = s;
+    }
+  }
+};
+
+// The liquid surface: a density grid that follows the water (sized to the body each frame, snapped to 2 cm
+// steps so it does not swim) and marching cubes over it. Particles outside the grid stay droplets.
+var WaterSurface = class {
+  constructor(sim, resolution, envMap) {
+    this.sim = sim;
+    this.kernel = 0.036;
+    this.center = new THREE6.Vector3();
+    this.ext = new THREE6.Vector3(0.2, 0.2, 0.2);
+    const mat = new THREE6.MeshPhysicalMaterial({
+      color: 0xa8e2ff, roughness: 0.02, metalness: 0, ior: 1.33, envMap, envMapIntensity: 1.7,
+      clearcoat: 1, clearcoatRoughness: 0.03, specularIntensity: 1, transparent: true, depthWrite: false
+    });
+    // fresnel alpha: clear where you look straight through, bright and opaque at grazing angles - water
+    // wbClear: alpha where you look straight through (the transparency slider); wbGlow: rim tint (the palette)
+    this.uniforms = { wbClear: { value: 0.1 }, wbGlow: { value: new THREE6.Color(0x4d9ed9) } };
+    mat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, this.uniforms);
+      sh.fragmentShader = "uniform float wbClear;\nuniform vec3 wbGlow;\n" + sh.fragmentShader.replace("#include <opaque_fragment>", `
+        float wbFres = pow(1.0 - clamp(abs(dot(normal, normalize(vViewPosition))), 0.0, 1.0), 2.2);
+        diffuseColor.a = mix(wbClear, max(wbClear, 0.95), wbFres);
+        outgoingLight = outgoingLight * (0.55 + 0.6 * wbFres) + wbGlow * wbFres * 0.5;
+        #include <opaque_fragment>`);
+    };
+    this.mat = mat;
+    this.mc = new WBMarchingCubes(resolution, mat, false, false, 50000);
+    this.mc.isolation = 1.0;
+    this.mc.frustumCulled = false;
+    this.mc.userData.noCollider = this.mc.userData.noHighlight = true;
+  }
+
+  update() {
+    const s = this.sim, mc = this.mc, N = mc.size, field = mc.field, p = s.p, vis = s.vis, nc = s.nc;
+    // fit the grid to the body (particles with neighbours), snapped so it only changes in 2 cm steps
+    let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
+    const c = s.centroid;
+    for (let i = 0, b = 0; i < s.n; i++, b += 3) {
+      if (nc[i] < 1) continue;
+      const x = p[b], y = p[b + 1], z = p[b + 2];
+      if (Math.abs(x - c.x) > 0.7 || Math.abs(y - c.y) > 0.7 || Math.abs(z - c.z) > 0.7) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (z < z0) z0 = z; if (z > z1) z1 = z;
+    }
+    if (x0 > x1) { mc.visible = false; vis.fill(1); return; }
+    mc.visible = true;
+    const pad = this.kernel + 0.04, snap = (v) => Math.ceil(v / 0.02) * 0.02, snapC = (v) => Math.round(v / 0.02) * 0.02;
+    const ext = this.ext.set(snap(Math.min(0.75, (x1 - x0) / 2 + pad)), snap(Math.min(0.75, (y1 - y0) / 2 + pad)), snap(Math.min(0.75, (z1 - z0) / 2 + pad)));
+    const ctr = this.center.set(snapC((x0 + x1) / 2), snapC((y0 + y1) / 2), snapC((z0 + z1) / 2));
+    mc.position.copy(ctr);
+    mc.scale.copy(ext);
+    field.fill(0);
+    mc.normal_cache.fill(0);
+    const vx = 2 * ext.x / N, vy = 2 * ext.y / N, vz = 2 * ext.z / N;
+    // a stretched grid (water splashed over the floor) gets a wider kernel so thin sheets stay a surface; the
+    // weight is scaled back so the density - and with it the iso level - means the same at any width
+    const half = N / 2, R = Math.max(this.kernel, 1.6 * Math.max(vx, vy, vz)), R2 = R * R, wgt = Math.pow(this.kernel / R, 3);
+    const rx = Math.ceil(R / vx), ry = Math.ceil(R / vy), rz = Math.ceil(R / vz);
+    const splat = (x, y, z) => {
+      const gx = (x - ctr.x) / ext.x * half + half, gy = (y - ctr.y) / ext.y * half + half, gz = (z - ctr.z) / ext.z * half + half;
+      const ix = Math.round(gx), iy = Math.round(gy), iz = Math.round(gz);
+      for (let k = Math.max(iz - rz, 1), k1 = Math.min(iz + rz, N - 2); k <= k1; k++) {
+        const dz = (k - gz) * vz, dz2 = dz * dz;
+        if (dz2 >= R2) continue;
+        const zo = k * N * N;
+        for (let j = Math.max(iy - ry, 1), j1 = Math.min(iy + ry, N - 2); j <= j1; j++) {
+          const dy = (j - gy) * vy, dyz = dy * dy + dz2;
+          if (dyz >= R2) continue;
+          const yo = zo + j * N;
+          for (let i = Math.max(ix - rx, 1), i1 = Math.min(ix + rx, N - 2); i <= i1; i++) {
+            const dx = (i - gx) * vx, d2 = dx * dx + dyz;
+            if (d2 >= R2) continue;
+            const t = 1 - d2 / R2;
+            field[yo + i] += t * t * t * wgt;
+          }
+        }
+      }
+    };
+    const lo = 2, hi = N - 3, M = 0.5 * R;
+    for (let i = 0, b = 0; i < s.n; i++, b += 3) {
+      if (nc[i] < 1) { vis[i] = 1; continue; }        // only a particle with no neighbour at all is a droplet
+      const x = p[b], y = p[b + 1], z = p[b + 2];
+      const gx = (x - ctr.x) / ext.x * half + half, gy = (y - ctr.y) / ext.y * half + half, gz = (z - ctr.z) / ext.z * half + half;
+      if (gx < lo || gx > hi || gy < lo || gy > hi || gz < lo || gz > hi) { vis[i] = 1; continue; }
+      vis[i] = 0;
+      splat(x, y, z);
+      if (y < M) splat(x, -y, z);                     // mirror below the floor: puddles meet the ground
+    }
+    mc.update();
+    // flatten anything below the floor onto it
+    const P = mc.positionArray, Nr = mc.normalArray, floor = (0.001 - ctr.y) / ext.y;
+    if (floor > -1) {
+      for (let v = 0, o = 0; v < mc.count; v++, o += 3) {
+        if (P[o + 1] < floor) { P[o + 1] = floor; Nr[o] = 0; Nr[o + 1] = 1; Nr[o + 2] = 0; }
+      }
+    }
+  }
+};
+
+// droplets: lit sphere impostors for the particles the surface does not cover
+function wbDroplets(sim) {
+  const geo = new THREE6.BufferGeometry();
+  const pos = new THREE6.BufferAttribute(sim.p, 3).setUsage(THREE6.DynamicDrawUsage);
+  const vis = new THREE6.BufferAttribute(sim.vis, 1).setUsage(THREE6.DynamicDrawUsage);
+  geo.setAttribute("position", pos);
+  geo.setAttribute("vis", vis);
+  const mat = new THREE6.ShaderMaterial({
+    uniforms: { uRadius: { value: sim.radius * 1.05 }, uViewH: { value: 1000 }, uColor: { value: new THREE6.Color(0xa8e2ff) }, uClear: { value: 0.1 } },
+    vertexShader: `
+      attribute float vis;
+      uniform float uRadius, uViewH;
+      void main() {
+        if (vis < 0.5) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; return; }
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = clamp(uRadius * projectionMatrix[1][1] * uViewH / gl_Position.w, 1.0, 200.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uClear;
+      void main() {
+        float wClear = uClear;
+        vec2 c = gl_PointCoord * 2.0 - 1.0; c.y = -c.y;
+        float d = dot(c, c);
+        if (d > 1.0) discard;
+        vec3 n = vec3(c, sqrt(1.0 - d)), L = normalize(vec3(0.35, 0.8, 0.5));
+        float fres = pow(1.0 - n.z, 2.2);
+        float spec = pow(max(dot(reflect(-L, n), vec3(0.0, 0.0, 1.0)), 0.0), 60.0);
+        gl_FragColor = vec4(uColor * (0.55 + 0.45 * fres) + spec, mix(0.2 + wClear, 0.95, fres) + spec);
+      }`,
+    transparent: true, depthWrite: false
+  });
+  const pts = new THREE6.Points(geo, mat);
+  pts.frustumCulled = false;
+  pts.userData.noCollider = pts.userData.noHighlight = true;
+  const size = new THREE6.Vector2();
+  pts.onBeforeRender = (renderer, scene, camera) => {
+    mat.uniforms.uViewH.value = camera.viewport?.w || renderer.getDrawingBufferSize(size).y;
+  };
+  pts.uniforms = mat.uniforms;
+  pts.sync = () => { pos.needsUpdate = true; vis.needsUpdate = true; };
+  return pts;
+}
+
+var _wbF = new THREE6.Vector3(), _wbU = new THREE6.Vector3();
+var WbSound = class {
+  constructor(sfx) {
+    this.sfx = sfx;
+    this.on = true;
+    this.out = null;
+    this.budget = 0;                    // bubbles allowed right now (refills over time): keeps it a trickle, not noise
+  }
+  _ctx() {
+    const c = this.sfx.ensure();
+    if (!c || c.state !== "running" || !this.on) return null;
+    if (!this.out) {
+      // a little room: a short noise-burst convolution reverb, mixed in quietly
+      const len = Math.round(c.sampleRate * 0.9), ir = c.createBuffer(2, len, c.sampleRate);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.5);
+      }
+      this.verb = c.createConvolver();
+      this.verb.buffer = ir;
+      const wet = c.createGain();
+      wet.gain.value = 0.22;
+      this.out = c.createGain();
+      this.out.gain.value = 0.9;
+      this.out.connect(c.destination);
+      this.verb.connect(wet).connect(this.out);
+    }
+    return c;
+  }
+  setOn(v) { this.on = v; }
+  // a panner at p, feeding the dry out and the reverb
+  _at(c, p) {
+    const pn = c.createPanner();
+    Object.assign(pn, { panningModel: "HRTF", distanceModel: "inverse", refDistance: 0.5, rolloffFactor: 1 });
+    if (pn.positionX) { pn.positionX.value = p.x; pn.positionY.value = p.y; pn.positionZ.value = p.z; }
+    else pn.setPosition(p.x, p.y, p.z);
+    pn.connect(this.out);
+    pn.connect(this.verb);
+    return pn;
+  }
+  listener(h, q) {
+    const c = this.sfx.ctx;
+    if (!c || c.state !== "running") return;
+    const L = c.listener, f = _wbF.set(0, 0, -1).applyQuaternion(q), u = _wbU.set(0, 1, 0).applyQuaternion(q);
+    if (L.positionX) {
+      L.positionX.value = h.x; L.positionY.value = h.y; L.positionZ.value = h.z;
+      L.forwardX.value = f.x; L.forwardY.value = f.y; L.forwardZ.value = f.z;
+      L.upX.value = u.x; L.upY.value = u.y; L.upZ.value = u.z;
+    } else {
+      L.setPosition(h.x, h.y, h.z);
+      L.setOrientation(f.x, f.y, f.z, u.x, u.y, u.z);
+    }
+  }
+  // one bubble: sine at f0 sweeping up by `rise` over its life, fast attack, exponential ring-out.
+  // Small bubbles are high and short, big ones low and longer.
+  bubble(p, { f0 = 900, rise = 2, dur = 0.06, gain = 0.25, delay = 0 } = {}) {
+    const c = this._ctx();
+    if (!c || this.budget <= 0) return;
+    this.budget--;
+    const t = c.currentTime + 0.005 + delay, o = c.createOscillator(), g = c.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f0 * rise, t + dur);
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    o.connect(g).connect(this._at(c, p));
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  // a random small bubble: drips, trickles
+  drip(p, level = 1, delay = 0) {
+    const f0 = 600 + Math.random() * 1400;
+    this.bubble(p, { f0, rise: 1.6 + Math.random() * 1.6, dur: 0.035 + 90 / f0 * 0.03 * (0.6 + Math.random()), gain: 0.12 * level, delay });
+  }
+  // a cluster of drips spread over `spread` seconds
+  burst(p, n, level = 1, spread = 0.12) {
+    for (let i = 0; i < n; i++) this.drip(p, level * (0.5 + Math.random() * 0.6), Math.random() * spread);
+  }
+  bloop(p) {                                  // grabbing: one big low bubble and a small one after it
+    this.budget = Math.max(this.budget, 3);
+    this.bubble(p, { f0: 220 + Math.random() * 60, rise: 2.6, dur: 0.14, gain: 0.32 });
+    this.bubble(p, { f0: 700, rise: 1.8, dur: 0.05, gain: 0.12, delay: 0.07 });
+  }
+  plop(p) {                                   // letting go
+    this.budget = Math.max(this.budget, 3);
+    this.bubble(p, { f0: 380 + Math.random() * 80, rise: 2.2, dur: 0.09, gain: 0.26 });
+    this.drip(p, 0.6, 0.05);
+  }
+  rise(p) {                                   // reform: a chain of bubbles climbing in pitch
+    this.budget = Math.max(this.budget, 16);
+    for (let i = 0; i < 14; i++) this.bubble(p, { f0: 260 * Math.pow(1.13, i) * (0.9 + Math.random() * 0.2), rise: 2, dur: 0.07, gain: 0.14, delay: i * 0.075 + Math.random() * 0.02 });
+  }
+};
+
+// water tints: [swatch, rim glow]
+var WB_WATER = [[0xa8e2ff, 0x4d9ed9], [0x5fe0d2, 0x1fa89a], [0x4f86ff, 0x2350c8], [0x9dffc4, 0x3fc77d], [0xff9ad8, 0xd04c9a], [0xffc06b, 0xd98a1f]];
+// what the water reflects: the chosen sky (brightened) plus two soft light panels, so the reflections are smooth
+// and always match the room colour
+function wbEnvScene([t, h, b]) {
+  const sc = new THREE6.Scene(), lift = (hex, k) => new THREE6.Color(hex).multiplyScalar(k).addScalar(0.06);
+  const mat = new THREE6.ShaderMaterial({
+    uniforms: { top: { value: lift(t, 1.8) }, mid: { value: lift(h, 1.8) }, bot: { value: lift(b, 1.2) } },
+    vertexShader: "varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+    fragmentShader: "uniform vec3 top, mid, bot; varying vec3 vDir; void main() { float y = vDir.y; gl_FragColor = vec4(y > 0.0 ? mix(mid, top, pow(y, 0.6)) : mix(mid, bot, pow(-y, 0.45)), 1.0); }",
+    side: THREE6.BackSide
+  });
+  sc.add(new THREE6.Mesh(new THREE6.SphereGeometry(10, 32, 16), mat));
+  const panel = (w, hgt, k, pos) => {
+    const m = new THREE6.Mesh(new THREE6.PlaneGeometry(w, hgt), new THREE6.MeshBasicMaterial({ color: new THREE6.Color(k, k, k), side: THREE6.DoubleSide }));
+    m.position.set(...pos);
+    m.lookAt(0, 0, 0);
+    sc.add(m);
+  };
+  panel(6, 3, 3.2, [0, 8, 2]);          // soft overhead light
+  panel(2.5, 4, 1.8, [-6, 3, 5]);       // window-like key light, front left
+  return sc;
+}
 // - the exhibits. build(X) fills X.root (stage-local: y up from the plate top, metres) and returns
 // { update(dt, t) }. X.add registers interactables, X.action adds a button to the panel's action row -
 var PC_EXHIBITS = [];
-// 1 - water ball: a liquid with a free surface in a glass sphere you can carry and shake. The surface is the first
-// sloshing mode of a part-filled sphere (a damped pendulum driven by gravity minus the glass's acceleration), with
-// ripples on top (the damped wave equation on a grid, pinned at the glass); Swirl spins up a whirlpool (paraboloid
-// surface, ripples carried round), and in zero g the water gathers into a floating, wobbling droplet
+// 1 - water ball: Water Ball XR's water (src/water.js) floating over the plate: SPH held together by surface
+// tension, drawn as one marching-cubes surface. Pull it apart with one or both hands, throw it, poke it with
+// your fingers, drop it on the plate; Reform calls it back
 PC_EXHIBITS.push({
   id: "water",
   label: "Water ball",
   title: "Water ball",
-  blurb: "Liquid in a glass sphere: it sloshes, ripples and whirls · pick it up, shake it, dip a finger in, try zero g",
+  blurb: "A ball of water held by surface tension · pull it apart with both hands, throw it, poke it, let it fall",
   build(X) {
-    const T = THREE6, R = 0.095, RI = R - 1.5e-3, FILL = 0.42;
-    const ball = new T.Group();
-    ball.position.set(0, R + 0.035, 0);
-    ball.name = "water ball";
-    X.root.add(ball);
-    const glass = new T.Mesh(new T.SphereGeometry(R + 2e-3, 48, 32), PC_MAT.glass(0.14));
-    glass.renderOrder = 3;
-    ball.add(glass);
-    const back = new T.Mesh(new T.SphereGeometry(R + 2e-3, 48, 32), PC_MAT.glass(0.08));
-    back.material.side = T.BackSide;
-    back.userData.noHighlight = true;
-    ball.add(back);
-    // stand: a ring the ball rests in
-    const stand = new T.Mesh(new T.TorusGeometry(0.05, 6e-3, 12, 64).rotateX(Math.PI / 2), PC_MAT.brass());
-    stand.position.y = 0.018;
-    X.root.add(stand);
-    X.root.add(new T.Mesh(new T.CylinderGeometry(0.045, 0.055, 0.012, 48), PC_MAT.dark()).translateY(6e-3));
-    const it = X.add(ball, { draggable: true, twoHand: true, box: new T.Box3(new T.Vector3(-R, -R, -R), new T.Vector3(R, R, R)),
-      constrain: ({ position, scale }) => {
-        scale.setScalar(1);
-        position.y = Math.max(position.y, X.stageY + R + 0.02);
-      } });
-    // the pool: a cap of the sphere whose volume is FILL of the ball; its flat surface sits S along the surface
-    // normal from the centre (the same at any tilt: the sphere is round)
-    const V = FILL * 4 / 3 * Math.PI * RI ** 3;
-    let lo = 0, hi = 2 * RI;
-    for (let k = 0; k < 50; k++) {
-      const m = (lo + hi) / 2;
-      if (Math.PI * m * m * (3 * RI - m) / 3 < V) lo = m;
-      else hi = m;
-    }
-    const S = lo - RI, RC = Math.sqrt(RI * RI - S * S), RB = Math.cbrt(3 * V / (4 * Math.PI));
-    // liquid space: the ball's centre, the stage's axes (the water does not turn with the glass)
-    const liquid = new T.Group();
-    liquid.userData.noCollider = true;
-    X.root.add(liquid);
-    const water = { color: 2124754, roughness: 0.06, metalness: 0, transparent: true, envMap: pcEnv, envMapIntensity: 1.1 };
-    // body: the inside of the sphere, cut off above the surface plane in the shader
-    const cut = { uN: { value: new T.Vector3(0, 1, 0) }, uS: { value: S } };
-    const bodyMat = new T.MeshStandardMaterial({ ...water, opacity: 0.78, side: T.DoubleSide, depthWrite: false });
-    bodyMat.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, cut);
-      sh.vertexShader = sh.vertexShader.replace("#include <common>", "#include <common>\nvarying vec3 vLiq;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvLiq = position;");
-      sh.fragmentShader = sh.fragmentShader.replace("#include <common>", "#include <common>\nvarying vec3 vLiq;\nuniform vec3 uN;\nuniform float uS;").replace("void main() {", "void main() {\n  if (dot(vLiq, uN) > uS) discard;");
+    const T = THREE6, app = X.app, mobile = WB_MOBILE;
+    const home = new T.Vector3(0, 0.17, 0);
+    const sim = new WaterSim(mobile ? 460 : 620);
+    sim.floorR2 = (PC_PLATE_R - 4e-3) ** 2;
+    sim.tension = 0.15 + 0.8 * 0.6;
+    sim.reset(home);
+    // reflections: Water Ball XR's soft sky with two light panels, built once per page
+    pcWaterEnv ||= (() => {
+      const pm = new T.PMREMGenerator(app.renderer), tex = pm.fromScene(wbEnvScene([3426911, 5596796, 2042931]), 0.04).texture;
+      pm.dispose();
+      return tex;
+    })();
+    const surface = new WaterSurface(sim, mobile ? 30 : 40, pcWaterEnv);
+    surface.uniforms.wbClear.value = 0.75 * Math.pow(1 - 0.8, 1.6) + 0.03;
+    surface.mc.renderOrder = 2;
+    X.root.add(surface.mc);
+    const drops = wbDroplets(sim);
+    drops.renderOrder = 3;
+    drops.uniforms.uClear.value = surface.uniforms.wbClear.value;
+    X.root.add(drops);
+    let look = 0;
+    const tint = () => {
+      const [col, glow] = WB_WATER[look];
+      surface.mat.color.setHex(col);
+      surface.uniforms.wbGlow.value.setHex(glow);
+      drops.uniforms.uColor.value.setHex(col);
     };
-    const body = new T.Mesh(new T.SphereGeometry(RI, 64, 40), bodyMat);
-    body.renderOrder = 1;
-    body.userData.noCollider = body.userData.noHighlight = true;
-    liquid.add(body);
-    // surface: a polar mesh over the cut disc, heights from the wave grid
-    const NR = 22, NS = 72, NV = 1 + NR * NS;
-    const capGeo = new T.BufferGeometry(), cp = new Float32Array(NV * 3), ccol = new Float32Array(NV * 3), cidx = [];
-    for (let s = 0; s < NS; s++) cidx.push(0, 1 + (s + 1) % NS, 1 + s);
-    for (let r = 1; r < NR; r++) for (let s = 0; s < NS; s++) {
-      const a = 1 + (r - 1) * NS + s, b = 1 + (r - 1) * NS + (s + 1) % NS, c = a + NS, d = b + NS;
-      cidx.push(a, b, d, a, d, c);
-    }
-    capGeo.setIndex(cidx);
-    capGeo.setAttribute("position", new T.BufferAttribute(cp, 3));
-    capGeo.setAttribute("color", new T.BufferAttribute(ccol, 3));
-    // the surface is glossier than the body, so every wave catches the light
-    const cap = new T.Mesh(capGeo, new T.MeshStandardMaterial({ ...water, color: 16777215, vertexColors: true, opacity: 0.9, roughness: 0.1, envMapIntensity: 0.35, side: T.DoubleSide, depthWrite: false }));
-    cap.renderOrder = 2;
-    cap.frustumCulled = false;
-    cap.userData.noCollider = cap.userData.noHighlight = true;
-    liquid.add(cap);
-    // zero g: one droplet, its l = 2 wobble (Rayleigh) about the last kick's axis
-    const blobGeo = new T.SphereGeometry(RB, 48, 32), bp0 = blobGeo.attributes.position.array.slice();
-    const blob = new T.Mesh(blobGeo, new T.MeshStandardMaterial({ ...water, opacity: 0.8, depthWrite: false }));
-    blob.renderOrder = 2;
-    blob.visible = false;
-    blob.userData.noCollider = blob.userData.noHighlight = true;
-    liquid.add(blob);
-    // ripples: damped wave equation on a G x G grid across the disc (pinned outside it)
-    const G = 44, DX = 2 * RC / (G - 1), CW = 0.26, GAM = 1.1, NU = 9e-5, AMP = 0.012;
-    const hgt = new Float32Array(G * G), hv = new Float32Array(G * G), tmpH = new Float32Array(G * G), inside = new Uint8Array(G * G);
-    for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) inside[i * G + j] = Math.hypot(-RC + i * DX, -RC + j * DX) < RC * 0.97 ? 1 : 0;
-    const sample = (u, v) => {
-      const fi = (u + RC) / DX, fj = (v + RC) / DX, i = Math.floor(fi), j = Math.floor(fj);
-      if (i < 0 || j < 0 || i >= G - 1 || j >= G - 1) return 0;
-      const a = fi - i, b = fj - j, k = i * G + j;
-      return (hgt[k] * (1 - a) + hgt[k + G] * a) * (1 - b) + (hgt[k + 1] * (1 - a) + hgt[k + G + 1] * a) * b;
-    };
-    const splash = (u, v, amp, rad = 2.5) => {
-      const ci = (u + RC) / DX, cj = (v + RC) / DX;
-      for (let i = Math.max(0, Math.floor(ci - 3 * rad)); i <= Math.min(G - 1, Math.ceil(ci + 3 * rad)); i++) for (let j = Math.max(0, Math.floor(cj - 3 * rad)); j <= Math.min(G - 1, Math.ceil(cj + 3 * rad)); j++) {
-        if (inside[i * G + j]) hv[i * G + j] += amp * Math.exp(-((i - ci) ** 2 + (j - cj) ** 2) / (rad * rad));
+    tint();
+    // the ball as one interactable (multi: every hand gets its own grab), following the water's centre and size
+    const collider = new T.Mesh(new T.SphereGeometry(1, 24, 16), new T.MeshBasicMaterial({ visible: false }));
+    collider.name = "water";
+    // (no outline hull for the invisible sphere: the framework would draw it as a grey disc on press)
+    collider.userData.noHighlight = true;
+    X.root.add(collider);
+    const it = X.add(collider, { multi: true, highlight: false, precise: true, dragThreshold: 0 });
+    const sound = new WbSound(app.sfx), grabSources = new Set(), W = (p) => X.stage.localToWorld(p.clone());
+    it.on("press", (e) => {
+      const pt = X.local(e.point);
+      if (sim.grab(e.interactor, pt)) {
+        if (e.interactor?.source) grabSources.add(e.interactor.source);
+        sound.bloop(W(pt));
       }
-    };
-    // state
-    const n = new T.Vector3(0, 1, 0), nv = new T.Vector3(), up = new T.Vector3(), eu = new T.Vector3(), ev = new T.Vector3();
-    const prevP = new T.Vector3().copy(ball.position), vel = new T.Vector3(), prevV = new T.Vector3(), acc = new T.Vector3(), accLP = new T.Vector3(), accHP = new T.Vector3();
-    const prevTip = [];
-    const geff = new T.Vector3(), down = new T.Vector3(), qi = new T.Quaternion(), tv = new T.Vector3();
-    const bpos = new T.Vector3(), bvel = new T.Vector3(), bax = new T.Vector3(0, 1, 0);
-    let gravity = true, shake = 0, omega = 0, mode = "pool", A = 0, Av = 0, first = true;
-    const basis = () => {
-      tv.set(Math.abs(n.z) < 0.9 ? 0 : 1, 0, Math.abs(n.z) < 0.9 ? 1 : 0);
-      eu.crossVectors(tv, n).normalize();
-      ev.crossVectors(n, eu);
-    };
-    const toPool = (kick) => {
-      mode = "pool";
-      hgt.fill(0);
-      hv.fill(0);
-      if (kick) {
-        nv.copy(kick);
-        basis();
-        splash(0, 0, -0.3, 5);
-      }
-      body.visible = cap.visible = true;
-      blob.visible = false;
-    };
-    const toBlob = () => {
-      mode = "blob";
-      bpos.copy(n).multiplyScalar(-(RI - RB) * 0.9);
-      bvel.set(0, 0, 0);
-      A = 0;
-      Av = 1.2;
-      bax.copy(n);
-      body.visible = cap.visible = false;
-      blob.visible = true;
-    };
-    X.action("Swirl", () => mode === "pool" ? omega = 9 : bvel.add(tv.set(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).multiplyScalar(0.25)));
-    X.action("Shake", () => shake = 0.8);
-    X.action("Zero g", (v) => {
-      gravity = !v;
-      if (!gravity && mode === "pool") toBlob();
-    }, { toggle: true });
-    X.action("Refill", () => {
-      ball.position.set(0, R + 0.035, 0);
-      ball.quaternion.identity();
-      n.set(0, 1, 0);
-      nv.set(0, 0, 0);
-      omega = 0;
-      first = true;
-      if (gravity) toPool();
-      else toBlob();
     });
-    const W0 = Math.sqrt(1.3 * PC_G / R), ZETA = 0.045, WB = 1.7, ZB = 0.06;
+    it.on("drag", (e) => sim.grabs.get(e.interactor)?.target.copy(X.local(e.point)));
+    it.on("release", (e) => {
+      const g = sim.grabs.get(e.interactor);
+      if (g) sim.grabs.delete(e.interactor), sound.plop(W(g.target));
+      grabSources.delete(e.interactor?.source);
+    });
+    it.on("tap", (e) => {
+      const pt = X.local(e.point);
+      sim.splash(pt, 0.9, 0.1);
+      sound.budget += 6;
+      sound.burst(W(pt), 5, 1.1);
+    });
+    let reformT = 0, gravity = false;
+    const reform = () => {
+      if (reformT <= 0 && (sim.gravity || sim.centroid.distanceTo(home) > 0.1)) sound.rise(W(home));
+      sim.gravity = gravity = false;
+      gravB?.setValue(false);
+      reformT = 2.2;
+    };
+    X.action("Reform", reform);
+    const gravB = X.action("Gravity", (v) => {
+      gravity = sim.gravity = v;
+      if (!v) reform();
+    }, { toggle: true });
+    X.action("Splash", () => {
+      sim.splash(sim.centroid.clone().add(new T.Vector3(0, -0.04, 0.03)), 2.2, 0.2);
+      sound.budget += 14;
+      sound.burst(W(sim.centroid), 12, 1.3, 0.25);
+    });
+    X.action("Colour", () => {
+      look = (look + 1) % WB_WATER.length;
+      tint();
+    });
+    // fingers and controller tips that are not holding water push it (in plate space)
+    const colliders = () => {
+      const out = [];
+      if (!app.sessionMode) return out;
+      const v = new T.Vector3();
+      for (const s of app.input.sources.values()) {
+        if (!s.tracked || grabSources.has(s)) continue;
+        if (s.kind === "hand") {
+          for (const j of s.joints) if (j.valid) {
+            X.stage.worldToLocal(v.copy(j.pos));
+            out.push([v.x, v.y, v.z, Math.max(j.radius, 8e-3) * 1.5]);
+          }
+          if (s.joints[0].valid) X.stage.worldToLocal(v.copy(s.palmCenter)), out.push([v.x, v.y, v.z, 0.03]);
+        } else if (s.kind === "controller") {
+          if (s.grip.valid) X.stage.worldToLocal(v.copy(s.grip.pos)), out.push([v.x, v.y, v.z, 0.04]);
+          if (s.ray.valid) X.stage.worldToLocal(v.copy(s.pokePoint)), out.push([v.x, v.y, v.z, 0.02]);
+        }
+      }
+      return out;
+    };
+    let agitation = 0, lone0 = 0;
+    const prevC = sim.centroid.clone(), vc = new T.Vector3(), tmp = new T.Vector3();
+    const near = (c, r) => W(tmp.set(c.x + (Math.random() - 0.5) * r, c.y + (Math.random() - 0.5) * r, c.z + (Math.random() - 0.5) * r));
     return {
-      update(dt, t) {
-        // a shake moves the ball itself, so the glass pushes the water around
-        if (shake > 0 && !it.selections.length) {
-          shake = Math.max(0, shake - dt);
-          ball.position.x += Math.sin(t * 40) * 4e-3 * shake;
-          ball.position.y += Math.cos(t * 33) * 3e-3 * shake;
+      update(dt) {
+        sim.updateCentroid();
+        if (reformT > 0) {
+          reformT -= dt;
+          sim.anchor.copy(home);
+          sim.pullMax = 14;
+          sim.damping = 6;
+        } else {
+          sim.anchor.copy(sim.centroid);
+          sim.pullMax = 6;
+          sim.damping = 0.5;
+          // fell off the plate, or drifted away: call it back
+          if (sim.centroid.y < -0.25 || !sim.gravity && sim.centroid.length() > 0.8) reform();
         }
-        liquid.position.copy(ball.position);
-        // the glass's acceleration (smoothed: hand tracking is noisy), and gravity in stage axes
-        if (first) prevP.copy(ball.position), vel.set(0, 0, 0), first = false;
-        vel.subVectors(ball.position, prevP).divideScalar(dt);
-        prevP.copy(ball.position);
-        acc.subVectors(vel, prevV).divideScalar(dt);
-        prevV.copy(vel);
-        if (acc.length() > 60) acc.setLength(60);
-        accLP.lerp(acc, Math.min(1, dt / 0.04));
-        accHP.lerp(accLP, Math.min(1, dt / 0.25));
-        X.root.getWorldQuaternion(qi).invert();
-        down.set(0, -1, 0).applyQuaternion(qi);
-        geff.copy(down).multiplyScalar(gravity ? PC_G : 0).sub(accLP);
-        if (mode === "blob") {
-          // free fall in the glass's frame: gravity (if back on) minus the glass's acceleration
-          bvel.addScaledVector(geff, dt);
-          bpos.addScaledVector(bvel, dt);
-          const lim = RI - RB * (1 + 0.5 * Math.abs(A)), d = bpos.length();
-          if (d > lim) {
-            const nrm = tv.copy(bpos).divideScalar(d), vn = bvel.dot(nrm);
-            bpos.multiplyScalar(lim / d);
-            if (vn > 0) {
-              bvel.addScaledVector(nrm, -1.25 * vn);
-              bax.copy(nrm);
-              Av -= 4 * vn / RB * 0.1;
-              // gravity is back: the droplet lands and becomes a pool again
-              if (gravity && geff.lengthSq() > 4) {
-                n.copy(geff).negate().normalize();
-                toPool(tv.copy(bvel).cross(n).multiplyScalar(-4));
-              }
-            }
-          }
-          bvel.multiplyScalar(Math.exp(-0.3 * dt));
-          Av += (-WB * WB * A - 2 * ZB * WB * Av) * dt;
-          A += Av * dt;
-          A = Math.max(-0.35, Math.min(0.35, A));
-          blob.position.copy(bpos);
-          const P = blobGeo.attributes.position.array;
-          for (let k = 0; k < P.length; k += 3) {
-            const x = bp0[k], y = bp0[k + 1], z = bp0[k + 2], c = (x * bax.x + y * bax.y + z * bax.z) / RB;
-            const f = 1 + A * 0.5 * (3 * c * c - 1);
-            P[k] = x * f;
-            P[k + 1] = y * f;
-            P[k + 2] = z * f;
-          }
-          blobGeo.attributes.position.needsUpdate = true;
-          blobGeo.computeVertexNormals();
-          return;
+        sim.setColliders(colliders());
+        sim.step(dt);
+        surface.update();
+        drops.sync();
+        const ext = surface.ext;
+        collider.position.copy(sim.centroid);
+        collider.scale.setScalar(sim.gravity ? Math.max(ext.x, ext.y, ext.z) * 0.8 : Math.max(0.06, Math.min(ext.x, ext.y, ext.z) - 0.04));
+        collider.updateMatrixWorld();
+        // sound: Water Ball XR's bubbles, placed in the room
+        const head = app.input.head;
+        sound.listener(head, app.sessionMode ? app.input.headQuat : app.camera.quaternion);
+        sound.budget = Math.min(sound.budget + dt * 18, 12);
+        const c = sim.centroid;
+        vc.subVectors(c, prevC).divideScalar(Math.max(dt, 1e-3));
+        prevC.copy(c);
+        const v = sim.v;
+        let a = 0, lone = 0;
+        for (let i = 0, b = 0; i < sim.n; i++, b += 3) {
+          a += Math.abs(v[b] - vc.x) + Math.abs(v[b + 1] - vc.y) + Math.abs(v[b + 2] - vc.z);
+          if (sim.nc[i] < 3) lone++;
         }
-        // sloshing: the surface normal swings toward "up" of the effective gravity
-        const gl = geff.length();
-        if (gl > 0.5) {
-          up.copy(geff).divideScalar(-gl);
-          const w0 = W0 * Math.sqrt(gl / PC_G);
-          nv.addScaledVector(tv.subVectors(up, n), w0 * w0 * dt).multiplyScalar(Math.exp(-2 * ZETA * w0 * dt));
-        }
-        n.addScaledVector(nv, dt).normalize();
-        nv.addScaledVector(n, -nv.dot(n));
-        basis();
-        cut.uN.value.copy(n);
-        // ripples: forced by sudden moves of the glass, shaken drops, carried round by a whirlpool
-        const fu = (accLP.x - accHP.x) * eu.x + (accLP.y - accHP.y) * eu.y + (accLP.z - accHP.z) * eu.z;
-        const fv = (accLP.x - accHP.x) * ev.x + (accLP.y - accHP.y) * ev.y + (accLP.z - accHP.z) * ev.z;
-        if (shake > 0 && Math.random() < 0.6) splash((Math.random() * 2 - 1) * RC * 0.6, (Math.random() * 2 - 1) * RC * 0.6, -0.22 * shake, 4.5);
-        // a still glass is never quite still: now and then a faint ripple
-        if (Math.random() < dt * 1.2) splash((Math.random() * 2 - 1) * RC * 0.5, (Math.random() * 2 - 1) * RC * 0.5, -0.05, 3.5);
-        // fingertips / controller tips dipped in the water push it down and stir it
-        const tips = X.tips();
-        tips.forEach((tp, ti) => {
-          const rel = tv.subVectors(tp, ball.position), y = rel.dot(n) - S, pv = prevTip[ti] ?? (prevTip[ti] = tp.clone());
-          const sp = pv.distanceTo(tp) / Math.max(dt, 1e-3);
-          pv.copy(tp);
-          if (rel.length() > RI || y > 8e-3 || y < -0.04) return;
-          const u = rel.dot(eu), v = rel.dot(ev);
-          if (Math.hypot(u, v) > RC * 0.92) return;
-          splash(u, v, -Math.min(1.2, 0.08 + sp * 1.5) * dt * 60 * 0.12, 3);
-        });
-        prevTip.length = tips.length;
-        // the slosh itself makes waves: the swing of the surface pushes on the water it leaves behind
-        const su = nv.dot(eu) * 2.4, sv = nv.dot(ev) * 2.4;
-        const SUB = 2, h = dt / SUB;
-        for (let s = 0; s < SUB; s++) {
-          for (let i = 1; i < G - 1; i++) for (let j = 1; j < G - 1; j++) {
-            const k = i * G + j;
-            if (!inside[k]) continue;
-            const lap = (hgt[k - G] + hgt[k + G] + hgt[k - 1] + hgt[k + 1] - 4 * hgt[k]) / (DX * DX);
-            // NU: a little viscosity on the surface speed, so grid-size wiggles die out first
-            const lapv = (hv[k - G] + hv[k + G] + hv[k - 1] + hv[k + 1] - 4 * hv[k]) / (DX * DX);
-            hv[k] += (CW * CW * lap + NU * lapv - GAM * hv[k] - (0.55 * (fu * (-RC + i * DX) + fv * (-RC + j * DX)) + 0.9 * (su * (-RC + i * DX) + sv * (-RC + j * DX)))) * h;
-          }
-          // heights saturate softly (a hard clip would turn every crest into a spike)
-          for (let k = 0; k < G * G; k++) hgt[k] = inside[k] ? AMP * Math.tanh((hgt[k] + hv[k] * h) / AMP) : 0;
-        }
-        if (omega > 0.3) {
-          // whirlpool: the ripples ride round with the water
-          const a = omega * dt, c = Math.cos(a), sn = Math.sin(a);
-          tmpH.set(hgt);
-          for (let i = 0; i < G; i++) for (let j = 0; j < G; j++) {
-            const u = -RC + i * DX, v = -RC + j * DX;
-            hgt[i * G + j] = inside[i * G + j] ? 0 : 0;
-            if (!inside[i * G + j]) continue;
-            const fi = (c * u + sn * v + RC) / DX, fj = (-sn * u + c * v + RC) / DX, i0 = Math.floor(fi), j0 = Math.floor(fj);
-            if (i0 < 0 || j0 < 0 || i0 >= G - 1 || j0 >= G - 1) continue;
-            const x = fi - i0, y = fj - j0, k = i0 * G + j0;
-            hgt[i * G + j] = (tmpH[k] * (1 - x) + tmpH[k + G] * x) * (1 - y) + (tmpH[k + 1] * (1 - x) + tmpH[k + G + 1] * x) * y;
-          }
-          if (Math.random() < 0.2) splash((Math.random() - 0.5) * RC, (Math.random() - 0.5) * RC, -0.04, 3);
-        }
-        omega *= Math.exp(-dt / 2.5);
-        // the surface mesh
-        const k2 = omega * omega / (2 * PC_G);
-        let vi = 0;
-        const put = (rho, th) => {
-          const u = rho * Math.cos(th), v = rho * Math.sin(th), y = S + sample(u, v) + k2 * (rho * rho - RC * RC);
-          cp[vi * 3] = n.x * y + eu.x * u + ev.x * v;
-          cp[vi * 3 + 1] = n.y * y + eu.y * u + ev.y * v;
-          cp[vi * 3 + 2] = n.z * y + eu.z * u + ev.z * v;
-          const fi = Math.round((u + RC) / DX), fj = Math.round((v + RC) / DX);
-          const k = Math.max(0, Math.min(G - 1, fi)) * G + Math.max(0, Math.min(G - 1, fj));
-          // troughs deep blue, crests pale, fast-moving water whitens: the waves read even where the light is flat
-          const crest = Math.max(-1, Math.min(1, (hgt[k] || 0) / (AMP * 0.3))), foam = Math.min(1, Math.max(0, Math.abs(hv[k] || 0) / 0.35 - 0.3));
-          // (linear colours) trough (0.02, 0.1, 0.32) -> crest (0.22, 0.5, 0.8) -> foam white
-          const lv = 0.5 + 0.5 * crest, cr = 0.02 + 0.2 * lv, cg = 0.1 + 0.4 * lv, cb = 0.32 + 0.48 * lv;
-          ccol[vi * 3] = cr + (0.9 - cr) * foam;
-          ccol[vi * 3 + 1] = cg + (0.95 - cg) * foam;
-          ccol[vi * 3 + 2] = cb + (1 - cb) * foam;
-          vi++;
-        };
-        put(0, 0);
-        for (let r = 1; r <= NR; r++) for (let s = 0; s < NS; s++) put(RC * r / NR, s / NS * Math.PI * 2);
-        capGeo.attributes.position.needsUpdate = true;
-        capGeo.attributes.color.needsUpdate = true;
-        capGeo.computeVertexNormals();
+        a /= sim.n;
+        agitation += (a - agitation) * Math.min(1, dt * 6);
+        if (Math.random() < Math.max(0, agitation - 0.12) * 22 * dt) sound.drip(near(c, 0.1), Math.min(1, 0.35 + agitation));
+        if (lone < lone0 - 2) sound.burst(near(c, 0.1), Math.min(2, lone0 - lone - 1), 0.8, 0.08);
+        if (lone > lone0 + 6) sound.bubble(W(c), { f0: 300 + Math.random() * 100, rise: 1.7, dur: 0.1, gain: 0.16 });
+        lone0 = lone;
+        if (sim.pokes > 0.03 && Math.random() < Math.min(0.6, sim.pokes * 1.2)) sound.drip(near(c, 0.08), Math.min(1.2, 0.4 + sim.pokes * 4));
+        sim.pokes = 0;
+        if (sim.floorHits > 0.02) sound.burst(W(sim.floorAt), Math.min(6, 1 + Math.floor(sim.floorHits * 12)), Math.min(1.4, 0.5 + sim.floorHits * 2), 0.06);
+        sim.floorHits = 0;
       }
     };
   }
@@ -3629,10 +4043,19 @@ PC_EXHIBITS.push({
     });
     X.action("Turn over", () => flip = { q0: board.quaternion.clone(), q1: board.quaternion.clone().multiply(new T.Quaternion().setFromAxisAngle(new T.Vector3(0, 0, 1), Math.PI)), t: 0 });
     X.action("Curve", (on) => curve.line.visible = on, { toggle: true, value: true });
-    const grid = /* @__PURE__ */ new Map(), gl = new T.Vector3();
+    // a flat uniform grid over the board (counting sort, no allocation per step) and each wall's bounding box, so a
+    // bead only tests the walls it is near
+    const CS = 2 * r, GX = Math.ceil(2 * W2 / CS) + 2, GY = Math.ceil(HT / CS) + 2;
+    const cellStart = new Int32Array(GX * GY + 1), cellOf = new Int32Array(NB), sorted = new Int32Array(NB), fillp = new Int32Array(GX * GY);
+    const gcx = (px) => Math.min(GX - 1, Math.max(0, Math.floor((px + W2) / CS) + 1)), gcy = (py) => Math.min(GY - 1, Math.max(0, Math.floor(py / CS) + 1));
+    const reach = r + 8e-4, segBox = segs.map(([x1, y1, x2, y2]) => [Math.min(x1, x2) - reach, Math.min(y1, y2) - reach, Math.max(x1, x2) + reach, Math.max(y1, y2) + reach]);
+    const gl = new T.Vector3(), hit = new Uint8Array(NB);
+    // a bead that touched a peg, a wall or another bead this step loses most of its speed: steel beads in a
+    // Galton board barely bounce, so each peg is a fair coin flip instead of a ricochet to the sides
     const push = (i, cx, cy, rr) => {
       const dx = x[i * 2] - cx, dy = x[i * 2 + 1] - cy, d2 = dx * dx + dy * dy;
       if (d2 < rr * rr && d2 > 1e-14) {
+        hit[i] = 1;
         const d = Math.sqrt(d2);
         x[i * 2] = cx + dx / d * rr;
         x[i * 2 + 1] = cy + dy / d * rr;
@@ -3659,44 +4082,56 @@ PC_EXHIBITS.push({
             x[i * 2 + 1] += v[i * 2 + 1] * h;
           }
           for (let iter = 0; iter < 2; iter++) {
-            grid.clear();
+            cellStart.fill(0);
             for (let i = 0; i < NB; i++) {
-              const key = Math.floor(x[i * 2] / (2 * r)) * 1e4 + Math.floor(x[i * 2 + 1] / (2 * r));
-              let l = grid.get(key);
-              if (!l) grid.set(key, l = []);
-              l.push(i);
+              cellOf[i] = gcx(x[i * 2]) * GY + gcy(x[i * 2 + 1]);
+              cellStart[cellOf[i] + 1]++;
             }
+            for (let c = 0; c < GX * GY; c++) cellStart[c + 1] += cellStart[c];
+            fillp.set(cellStart.subarray(0, GX * GY));
+            for (let i = 0; i < NB; i++) sorted[fillp[cellOf[i]]++] = i;
             for (let i = 0; i < NB; i++) {
-              const cx = Math.floor(x[i * 2] / (2 * r)), cy = Math.floor(x[i * 2 + 1] / (2 * r));
-              for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
-                const l = grid.get((cx + a) * 1e4 + cy + b);
-                if (!l) continue;
-                for (const j of l) {
+              const ci = gcx(x[i * 2]), cj = gcy(x[i * 2 + 1]);
+              for (let a = Math.max(0, ci - 1); a <= Math.min(GX - 1, ci + 1); a++) for (let b = Math.max(0, cj - 1); b <= Math.min(GY - 1, cj + 1); b++) {
+                const cell = a * GY + b;
+                for (let q = cellStart[cell]; q < cellStart[cell + 1]; q++) {
+                  const j = sorted[q];
                   if (j <= i) continue;
                   const dx = x[j * 2] - x[i * 2], dy = x[j * 2 + 1] - x[i * 2 + 1], d2 = dx * dx + dy * dy;
                   if (d2 >= 4 * r * r || d2 < 1e-14) continue;
                   const d = Math.sqrt(d2), c = (2 * r - d) / 2 / d;
+                  hit[i] = hit[j] = 1;
                   x[i * 2] -= dx * c;
                   x[i * 2 + 1] -= dy * c;
                   x[j * 2] += dx * c;
                   x[j * 2 + 1] += dy * c;
                 }
               }
-              const row = Math.round((Y0 - x[i * 2 + 1]) / DY);
-              for (let rr = row - 1; rr <= row + 1; rr++) {
-                if (rr < 0 || rr >= ROWS) continue;
-                const cc = Math.round(x[i * 2] / DX + (rr + 1) / 2);
-                for (let c = cc - 1; c <= cc + 1; c++) if (c >= 0 && c <= rr + 1) push(i, (c - (rr + 1) / 2) * DX, Y0 - rr * DY, r + PEG);
+              const px = x[i * 2], py = x[i * 2 + 1];
+              if (py > Y0 - (ROWS - 1) * DY - DY && py < Y0 + DY) {
+                const row = Math.round((Y0 - py) / DY);
+                for (let rr = row - 1; rr <= row + 1; rr++) {
+                  if (rr < 0 || rr >= ROWS) continue;
+                  const cc = Math.round(px / DX + (rr + 1) / 2);
+                  for (let c = cc - 1; c <= cc + 1; c++) if (c >= 0 && c <= rr + 1) push(i, (c - (rr + 1) / 2) * DX, Y0 - rr * DY, r + PEG);
+                }
               }
-              for (const [x1, y1, x2, y2] of segs) {
-                const sx = x2 - x1, sy = y2 - y1, t = Math.max(0, Math.min(1, ((x[i * 2] - x1) * sx + (x[i * 2 + 1] - y1) * sy) / (sx * sx + sy * sy)));
-                push(i, x1 + sx * t, y1 + sy * t, r + 8e-4);
+              for (let k = 0; k < segs.length; k++) {
+                const bb = segBox[k], qx = x[i * 2], qy = x[i * 2 + 1];
+                if (qx < bb[0] || qx > bb[2] || qy < bb[1] || qy > bb[3]) continue;
+                const [x1, y1, x2, y2] = segs[k], sx = x2 - x1, sy = y2 - y1, t = Math.max(0, Math.min(1, ((qx - x1) * sx + (qy - y1) * sy) / (sx * sx + sy * sy)));
+                push(i, x1 + sx * t, y1 + sy * t, reach);
               }
               x[i * 2] = Math.max(-W2 + r, Math.min(W2 - r, x[i * 2]));
               x[i * 2 + 1] = Math.max(3e-3 + r, Math.min(HT - r, x[i * 2 + 1]));
             }
           }
-          for (let i = 0; i < NB * 2; i++) v[i] = (x[i] - x0[i]) / h * 0.995;
+          for (let i = 0; i < NB; i++) {
+            const k = hit[i] ? 0.72 : 0.995;
+            v[i * 2] = (x[i * 2] - x0[i * 2]) / h * k;
+            v[i * 2 + 1] = (x[i * 2 + 1] - x0[i * 2 + 1]) / h * k;
+          }
+          hit.fill(0);
         }
         const M = new T.Matrix4();
         for (let i = 0; i < NB; i++) balls.setMatrixAt(i, M.makeTranslation(x[i * 2], x[i * 2 + 1], 0));
