@@ -4924,6 +4924,11 @@ var Archiscape = {
       e.preventDefault();
     };
     addEventListener("keydown", this._kd);
+    // on a desktop the landing card never goes away: the first key, click or wheel hands the camera over
+    this._took = () => this.tookOver = true;
+    addEventListener("keydown", this._took);
+    app2.renderer.domElement.addEventListener("pointerdown", this._took);
+    app2.renderer.domElement.addEventListener("wheel", this._took, { passive: true });
     this.erase = false;
     this.tour = null;
     this.tourEras = this.tourTowns = false;
@@ -5214,7 +5219,7 @@ var Archiscape = {
   // reforming before the next era grows out of it - while the camera circles it slowly. Entering the page ends it
   // (and leaves the tour as you had it)
   _attract(dt) {
-    const a = this.app, on = !a.renderer.xr.isPresenting && !document.getElementById("overlay")?.classList.contains("hidden");
+    const a = this.app, on = !a.renderer.xr.isPresenting && !this.tookOver && !document.getElementById("overlay")?.classList.contains("hidden");
     if (on && !this.attract) {
       this.attract = { ang: null, own: !this.tourEras };
       if (this.attract.own) {
@@ -5241,6 +5246,9 @@ var Archiscape = {
   },
   exit() {
     removeEventListener("keydown", this._kd);
+    removeEventListener("keydown", this._took);
+    this.app.renderer.domElement.removeEventListener("pointerdown", this._took);
+    this.app.renderer.domElement.removeEventListener("wheel", this._took);
     asMusic?.stop();
   }
 };
