@@ -84,7 +84,7 @@ swap('<p class="sub">Interaction framework &middot; see-through by default &midd
      '<p class="sub">A portal cube the size of a diorama: each of its six faces opens onto its own little world. '
      '<strong>Goal:</strong> turn the cube until half a shape on one face meets its other half on the next face, '
      'across the glowing edge, and makes one whole shape. Each whole shape joins two worlds.</p>\n'
-     '    <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> '
+     '    <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> '
      '&middot; built on the VibeXR interaction framework</p>')
 swap('  #ver {', '  .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }\n'
      '  .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }\n'
@@ -121,8 +121,8 @@ page = f'''<!DOCTYPE html>
 <meta property="og:type" content="website">
 <meta property="og:title" content="Dream Cage - Rongxuan Mu">
 <meta property="og:description" content="{desc}">
-<meta property="og:url" content="https://rongxuanmu.github.io/dream-cage/">
-<meta property="og:image" content="https://rongxuanmu.github.io/Resources/dream-cage/DreamCage.jpg">
+<meta property="og:url" content="https://rongxuanmu.com/dream-cage/">
+<meta property="og:image" content="https://rongxuanmu.com/Resources/dream-cage/DreamCage.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../Resources/common/favicon-64.png" type="image/png">
 </head>

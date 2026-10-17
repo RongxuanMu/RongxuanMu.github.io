@@ -15,7 +15,7 @@
 import { toCreasedNormals as rzCreased } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { RoomEnvironment as RzRoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 var RZ_URL = {
-  assets: "https://rongxuanmu.github.io/robot-zoo-xr/assets/"
+  assets: "https://rongxuanmu.com/robot-zoo-xr/assets/"
 };
 var RZ_UNITREE_KP = {
   g1_walk: [100, 100, 100, 150, 40, 40, 100, 100, 100, 150, 40, 40],

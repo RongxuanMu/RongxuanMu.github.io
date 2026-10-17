@@ -1,6 +1,6 @@
 # Robot Zoo XR
 
-Live: https://rongxuanmu.github.io/robot-zoo-xr/ · Built on the [VibeXR framework](../vibexr/README.md)
+Live: https://rongxuanmu.com/robot-zoo-xr/ · Built on the [VibeXR framework](../vibexr/README.md)
 
 Open-source robots running the policies their makers (and the community) published, simulated in MuJoCo WASM
 with ONNX Runtime Web.

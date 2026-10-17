@@ -60,7 +60,7 @@ s = landing.apply(s, updated='16 Oct 2026', notes="three robot dogs: Unitree Go2
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Open-source robots running their real policies &middot; Microduck, humanoids and robot dogs from Unitree, Booster, AgiBot, Berkeley &middot; '
      'life-size on your floor or on a tabletop</p>\n'
-     '    <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> '
+     '    <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> '
      '&middot; built on the VibeXR interaction framework</p>')
 swap('  #ver {', '  .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }\n'
      '  .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }\n'
@@ -121,8 +121,8 @@ page = f'''<!DOCTYPE html>
 <meta property="og:type" content="website">
 <meta property="og:title" content="Robot Zoo XR - Rongxuan Mu">
 <meta property="og:description" content="{desc}">
-<meta property="og:url" content="https://rongxuanmu.github.io/robot-zoo-xr/">
-<meta property="og:image" content="https://rongxuanmu.github.io/Resources/robot-zoo-xr/RobotZoo.jpg">
+<meta property="og:url" content="https://rongxuanmu.com/robot-zoo-xr/">
+<meta property="og:image" content="https://rongxuanmu.com/Resources/robot-zoo-xr/RobotZoo.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/jpeg">
 </head>

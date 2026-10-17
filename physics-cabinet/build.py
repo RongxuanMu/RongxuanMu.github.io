@@ -43,7 +43,7 @@ s = landing.apply(s, updated='16 Oct 2026', notes="the water ball is Water Ball 
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Ten physics experiments on your table &middot; water ball, Newton&rsquo;s cradle, chaos, cloth, '
      'jelly, orbits and more &middot; grab, shake and throw</p>\n'
-     '    <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a> '
+     '    <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> '
      '&middot; built on the VibeXR interaction framework</p>')
 swap('  #ver {', '  .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }\n'
      '  .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }\n'
@@ -82,8 +82,8 @@ page = f'''<!DOCTYPE html>
 <meta property="og:type" content="website">
 <meta property="og:title" content="Physics Cabinet - Rongxuan Mu">
 <meta property="og:description" content="{desc}">
-<meta property="og:url" content="https://rongxuanmu.github.io/physics-cabinet/">
-<meta property="og:image" content="https://rongxuanmu.github.io/Resources/physics-cabinet/PhysicsCabinet.jpg">
+<meta property="og:url" content="https://rongxuanmu.com/physics-cabinet/">
+<meta property="og:image" content="https://rongxuanmu.com/Resources/physics-cabinet/PhysicsCabinet.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/jpeg">
 </head>

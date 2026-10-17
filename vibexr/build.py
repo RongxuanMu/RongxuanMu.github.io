@@ -46,8 +46,8 @@ def build(folder, root, dev):
 <meta property="og:type" content="website">
 <meta property="og:title" content="VibeXR Interaction Framework - Rongxuan Mu">
 <meta property="og:description" content="{description}">
-<meta property="og:url" content="https://rongxuanmu.github.io/vibexr/">
-<meta property="og:image" content="https://rongxuanmu.github.io/Resources/vibexr-framework/VibeXRFramework.jpg">
+<meta property="og:url" content="https://rongxuanmu.com/vibexr/">
+<meta property="og:image" content="https://rongxuanmu.com/Resources/vibexr-framework/VibeXRFramework.jpg">
 <meta name="twitter:card" content="summary_large_image">'''
         title = f'VibeXR Interaction Framework v{version}'
     page = f'''<!DOCTYPE html>

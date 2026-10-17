@@ -1,6 +1,6 @@
 # VibeXR Interaction Framework
 
-Work page: [Works/VibeXRFramework.html](../Works/VibeXRFramework.html) · Live: https://rongxuanmu.github.io/vibexr/
+Work page: [Works/VibeXRFramework.html](../Works/VibeXRFramework.html) · Live: https://rongxuanmu.com/vibexr/
 
 | File | What it is |
 | --- | --- |
@@ -10,7 +10,7 @@ Work page: [Works/VibeXRFramework.html](../Works/VibeXRFramework.html) · Live: 
 
 ## Testing in a headset first
 
-`dev/codepen.html` holds work in progress and builds to https://rongxuanmu.github.io/vibexr/dev/. That page isn't linked anywhere and is marked noindex.
+`dev/codepen.html` holds work in progress and builds to https://rongxuanmu.com/vibexr/dev/. That page isn't linked anywhere and is marked noindex.
 
 1. Edit `dev/codepen.html`, run `python3 vibexr/build.py`, and push to `main`. Pages deploys in about a minute.
 2. Open `/vibexr/dev/?v=2` in the headset browser. Change the number each time to skip the browser cache.

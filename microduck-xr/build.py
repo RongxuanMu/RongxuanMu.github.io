@@ -63,7 +63,7 @@ s = landing.apply(s, updated='16 Oct 2026', notes='console panels can be dragged
 # author credit on the landing card
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>\n'
-     '    <p class="by">by <a href="https://rongxuanmu.github.io/" target="_blank" rel="noopener">Rongxuan Mu</a></p>')
+     '    <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a></p>')
 swap('  #ver {', '  .by { margin: -10px 0 18px; font-size: 13px; color: rgba(255,255,255,0.5); }\n'
      '  .by a { color: rgba(255,255,255,0.85); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.35); }\n'
      '  .by a:hover { color: #fff; border-color: #fff; }\n  #ver {')
@@ -86,7 +86,7 @@ swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0, 1.7
 swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(0, 0.35, -1.3);')
 # head: portrait favicon (like the rest of the portfolio) + social preview card. Absolute URLs, so they also
 # resolve when the file is pasted into CodePen.
-SITE = 'https://rongxuanmu.github.io'
+SITE = 'https://rongxuanmu.com'
 head = f"""<meta charset="utf-8">
 <title>Microduck XR</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
