@@ -419,7 +419,8 @@ var Archiscape = {
       e.preventDefault();
     };
     addEventListener("keydown", this._kd);
-    // on a desktop the landing card never goes away: the first key, click or wheel hands the camera over
+    // on a desktop the landing card never goes away: the first key, click or wheel hands the camera over (the
+    // camera only: the tour plays on until its button stops it)
     this._took = () => this.tookOver = true;
     addEventListener("keydown", this._took);
     app2.renderer.domElement.addEventListener("pointerdown", this._took);
@@ -715,19 +716,15 @@ var Archiscape = {
   // (and leaves the tour as you had it)
   _attract(dt) {
     const a = this.app, on = !a.renderer.xr.isPresenting && !this.tookOver && !document.getElementById("overlay")?.classList.contains("hidden");
+    // the landing page starts the era tour once, through the Tour eras button so the panel always shows the
+    // real state; after that only the button starts or stops it (taking the camera or entering leaves it running)
     if (on && !this.attract) {
-      this.attract = { ang: null, own: !this.tourEras };
-      if (this.attract.own) {
-        this.tourEras = true;
-        this.tour ??= 0;
+      this.attract = { ang: null };
+      if (!this.autoTour) {
+        this.autoTour = true;
+        if (!this.tourEras) this.tourErasB._click();
       }
-    } else if (!on && this.attract) {
-      if (this.attract.own) {
-        this.tourEras = false;
-        if (!this.tourTowns) this.tour = null;
-      }
-      this.attract = null;
-    }
+    } else if (!on && this.attract) this.attract = null;
     // the panel would swing through the shot as the camera circles: it waits off stage until you enter
     if (this.panelRoot) this.panelRoot.visible = this.hintLabel.visible = !this.attract;
     if (!this.attract) return;
