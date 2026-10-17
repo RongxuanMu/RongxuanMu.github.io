@@ -270,9 +270,17 @@ function* rnStraight(car, accel, done, onStep = null) {
 }
 // in the air: ballistic, cold-gas burns (lift until `liftFor` s, roll about the car's long axis by `roll` rad),
 // then a landing burn timed so it touches down softly; returns once it is back on its wheels
-function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, rollFrom = 0, rollFor = 1, onPuff = null, sound = null }) {
+// level: seconds to right the car from however it was let go (heading kept) before it may touch down
+function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, rollFrom = 0, rollFor = 1, onPuff = null, sound = null, level = 0 }) {
   car.air = true;
   const q0 = car.q.clone(), axis = new THREE6.Vector3(1, 0, 0), vel = new THREE6.Vector3(vx, vy, vz);
+  let qL = null;
+  if (level) {
+    // the heading: the nose's direction on the ground, or the roof's when it was let go nose-up or nose-down
+    const f = car.fwd(new THREE6.Vector3());
+    if (Math.hypot(f.x, f.z) < 0.25) f.set(0, -1, 0).applyQuaternion(q0).multiplyScalar(Math.sign(f.y) || 1);
+    qL = new THREE6.Quaternion().setFromAxisAngle(RN_UP, Math.atan2(-f.z, f.x));
+  }
   let t = 0, burning = false;
   const LAND = 14;
   while (true) {
@@ -292,9 +300,15 @@ function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, roll
     vel.x *= 1 - k * dt;
     vel.z *= 1 - k * dt;
     car.pos.addScaledVector(vel, dt);
+    // righting itself on the pad: it rests there instead of sinking through
+    if (qL && car.pos.y < 0) car.pos.y = 0, vel.y = 0;
     car.v = Math.hypot(vel.x, vel.z);
     const rt = THREE6.MathUtils.clamp((t - rollFrom) / rollFor, 0, 1), e = rt * rt * (3 - 2 * rt);
     car.q.copy(q0).multiply(_rnQ.setFromAxisAngle(axis, roll * e));
+    if (qL) {
+      const u = Math.min(1, t / level);
+      car.q.slerpQuaternions(q0, qL, u * u * (3 - 2 * u));
+    }
     // puffs: under the car while lifting or braking the fall, from the flanks while rolling
     if (lifting || burning) {
       for (const [x, z] of [[1.6, 0.8], [1.6, -0.8], [-1.6, 0.8], [-1.6, -0.8]]) car.thrust(x, 0.1, z, 0, -1, 0, 70, dt, 16);
@@ -306,7 +320,7 @@ function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, roll
       sound?.hiss(0.5);
     }
     onPuff?.(dt, t);
-    if (car.pos.y <= 0 && vel.y <= 0 && t > 0.2) {
+    if (car.pos.y <= 0 && vel.y <= 0 && t > Math.max(0.2, level)) {
       car.pos.y = 0;
       car.air = false;
       // back on four wheels: keep the heading, drop pitch and roll

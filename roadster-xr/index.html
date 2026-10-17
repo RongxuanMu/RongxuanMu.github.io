@@ -3253,9 +3253,17 @@ function* rnStraight(car, accel, done, onStep = null) {
 }
 // in the air: ballistic, cold-gas burns (lift until `liftFor` s, roll about the car's long axis by `roll` rad),
 // then a landing burn timed so it touches down softly; returns once it is back on its wheels
-function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, rollFrom = 0, rollFor = 1, onPuff = null, sound = null }) {
+// level: seconds to right the car from however it was let go (heading kept) before it may touch down
+function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, rollFrom = 0, rollFor = 1, onPuff = null, sound = null, level = 0 }) {
   car.air = true;
   const q0 = car.q.clone(), axis = new THREE6.Vector3(1, 0, 0), vel = new THREE6.Vector3(vx, vy, vz);
+  let qL = null;
+  if (level) {
+    // the heading: the nose's direction on the ground, or the roof's when it was let go nose-up or nose-down
+    const f = car.fwd(new THREE6.Vector3());
+    if (Math.hypot(f.x, f.z) < 0.25) f.set(0, -1, 0).applyQuaternion(q0).multiplyScalar(Math.sign(f.y) || 1);
+    qL = new THREE6.Quaternion().setFromAxisAngle(RN_UP, Math.atan2(-f.z, f.x));
+  }
   let t = 0, burning = false;
   const LAND = 14;
   while (true) {
@@ -3275,9 +3283,15 @@ function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, roll
     vel.x *= 1 - k * dt;
     vel.z *= 1 - k * dt;
     car.pos.addScaledVector(vel, dt);
+    // righting itself on the pad: it rests there instead of sinking through
+    if (qL && car.pos.y < 0) car.pos.y = 0, vel.y = 0;
     car.v = Math.hypot(vel.x, vel.z);
     const rt = THREE6.MathUtils.clamp((t - rollFrom) / rollFor, 0, 1), e = rt * rt * (3 - 2 * rt);
     car.q.copy(q0).multiply(_rnQ.setFromAxisAngle(axis, roll * e));
+    if (qL) {
+      const u = Math.min(1, t / level);
+      car.q.slerpQuaternions(q0, qL, u * u * (3 - 2 * u));
+    }
     // puffs: under the car while lifting or braking the fall, from the flanks while rolling
     if (lifting || burning) {
       for (const [x, z] of [[1.6, 0.8], [1.6, -0.8], [-1.6, 0.8], [-1.6, -0.8]]) car.thrust(x, 0.1, z, 0, -1, 0, 70, dt, 16);
@@ -3289,7 +3303,7 @@ function* rnFly(car, { vx, vz = 0, vy = 0, lift = 0, liftFor = 0, roll = 0, roll
       sound?.hiss(0.5);
     }
     onPuff?.(dt, t);
-    if (car.pos.y <= 0 && vel.y <= 0 && t > 0.2) {
+    if (car.pos.y <= 0 && vel.y <= 0 && t > Math.max(0.2, level)) {
       car.pos.y = 0;
       car.air = false;
       // back on four wheels: keep the heading, drop pitch and roll
@@ -3700,16 +3714,16 @@ var RoadsterNight = {
       const p = this.mini.worldToLocal(e.point.clone());
       if (Math.hypot(p.x, p.z) < RN_PAD_R - 3) this.goTo(p.x, p.z);
     });
-    // the car: grab it, lift it, let go - it lands on its thrusters
+    // the car: grab it, lift it, turn it in your hand, let go - it rights itself as it falls and lands on its
+    // thrusters (only its size is held)
     this.carIt = ctx.add(carG, {
       draggable: true, highlight: false,
       box: new T.Box3(new T.Vector3(-3.2, -0.4, -1.8), new T.Vector3(3.2, 2.2, 1.8)),
-      constrain: ({ quaternion, scale }) => {
-        if (this._grabQ) quaternion.copy(this._grabQ), scale.copy(this._grabS);
+      constrain: ({ scale }) => {
+        if (this._grabS) scale.copy(this._grabS);
       }
     });
     this.carIt.on("dragstart", () => {
-      this._grabQ = carG.getWorldQuaternion(new T.Quaternion());
       this._grabS = carG.getWorldScale(new T.Vector3());
       this.setMode("drive");
       this.manualGen = null;
@@ -3718,8 +3732,9 @@ var RoadsterNight = {
       this.goal.visible = false;
     }).on("dragend", () => {
       this.car.held = false;
-      this._grabQ = null;
-      if (this.car.pos.y > 0.05) this._run(rnFly(this.car, { vx: 0, sound: this.sound }));
+      this._grabS = null;
+      const up = new T.Vector3(0, 1, 0).applyQuaternion(this.car.q).y;
+      if (this.car.pos.y > 0.05 || up < 0.999) this._run(rnFly(this.car, { vx: 0, sound: this.sound, level: 0.7 }));
     });
     this._buildConsole(ctx);
     // status line over the far side of the stage, and a hint along its near edge
@@ -4054,7 +4069,8 @@ var RoadsterNight = {
     }
     for (const s of this.app.input.sources.values()) if (s.kind === "controller" && s.buttonDown?.a) this.thrust();
     if (!car.held) car.sync(sd);
-    else car.g.quaternion.copy(car.q);
+    // held: the car turns with the hand
+    else car.q.copy(car.g.quaternion);
     const ws = this.stage.scale.x * RN_SC;
     this.puffs.update(sd, ws);
     this.smoke.update(sd, ws);
