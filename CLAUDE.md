@@ -17,5 +17,6 @@
 
 ## Voice input
 
-Rongxuan often dictates by voice. The transcription regularly turns "Micro Duck" (Microduck XR) into "Micro" or
-"Microsoft": read those as Microduck, e.g. "像 Microsoft 那个交互" means Microduck XR's interaction model.
+Rongxuan often dictates by voice, and the transcription sometimes turns "Micro Duck" (Microduck XR) into "Micro" or
+"Microsoft". Judge from context: about these projects' interaction, stage or robots it is usually Microduck; about
+HoloLens, MRTK, Windows or the company it may really be Microsoft. When it could be either, ask.
