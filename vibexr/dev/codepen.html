@@ -2495,7 +2495,21 @@ var Playground = {
     const tableRims = rims(table.geometry, 0.9, 4);
     tableRims.position.copy(table.position);
     root.add(tableRims);
-    const tl = ctx.label("Pinch / ray-grab \u00b7 two hands: rotate + scale \u00b7 tap: color \u00b7 hold: spin \u00b7 stays on the table", { height: 0.018 });
+    // the table's own height can be set by hand: grab its rim (pinch or ray) and lift or lower it to your real
+    // desk; everything placed on the table rides along (see update)
+    this.table = table;
+    this.plateH = PLATE_H;
+    ctx.add(table, {
+      draggable: true,
+      translateOnly: true,
+      highlight: false,
+      constrain: ({ position }) => {
+        position.x = 0;
+        position.z = -0.5;
+        position.y = THREE6.MathUtils.clamp(position.y, 0.3 - PLATE_H / 2, 2 - PLATE_H / 2);
+      }
+    });
+    const tl = ctx.label("Pinch / ray-grab \u00b7 two hands: rotate + scale \u00b7 tap: color \u00b7 hold: spin \u00b7 grab the table rim to set its height", { height: 0.018 });
     tl.position.set(0, TABLE_TOP + 0.02, -0.19);
     tl.rotation.x = -Math.PI / 2.6;
     root.add(tl);
@@ -2598,6 +2612,7 @@ var Playground = {
     log.position.set(0.72, TABLE_TOP + 0.38, -0.78);
     log.lookAt(0, TABLE_TOP + 0.46, 0.1);
     root.add(log);
+    this.onTable = [tableRims, tl, ...this.spinners, orb, ol, bell, bl, panel.root, board.root, log];
   },
   update(dt, t) {
     const a = this.app.sessionMode === "ar" ? this.app.vst.opacity : 1;
@@ -2610,6 +2625,13 @@ var Playground = {
     //  - distance scaling: fixed inside BOARD_SCALE_NEAR, beyond it linear in distance with slope BOARD_SCALE_K
     //    (K = 0.8: slightly smaller with distance as a depth cue, still legible; no upper clamp), relative to
     //    the designed size at the initial placement distance. A two-hand scale edits the user factor instead.
+    // the table was lifted or lowered: TABLE_TOP follows it, and so does everything on it
+    const top = this.table.position.y + this.plateH / 2;
+    if (Math.abs(top - TABLE_TOP) > 1e-5) {
+      const d = top - TABLE_TOP;
+      TABLE_TOP = top;
+      for (const o of this.onTable) o.position.y += d;
+    }
     const head = this.app.input.head, bd = this.board;
     const dist = Math.max(BOARD_SCALE_NEAR, bd.root.position.distanceTo(head));
     if (!bd.refDist) bd.refDist = dist;

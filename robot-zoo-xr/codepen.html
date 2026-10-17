@@ -3265,9 +3265,10 @@ var Microduck = {
       twoHand: true,
       highlight: false,
       box: new T.Box3(new T.Vector3(R - 0.035, 0, -0.21), new T.Vector3(R + 0.035, 0.07, 0.21)),
-      // slides at its placed height (floor or desk), turns about the vertical only
+      // on the floor it slides at floor height; on a desk the bar also lifts and lowers it to the desk's height.
+      // It turns about the vertical only
       constrain: ({ position, quaternion }) => {
-        position.y = this.stageY ?? 0;
+        position.y = this.tabletop ? T6clamp(position.y, 0.25, 2.2) : this.stageY ?? 0;
         const e = new T.Euler().setFromQuaternion(quaternion, "YXZ");
         quaternion.setFromEuler(e.set(0, e.y, 0, "YXZ"));
       }

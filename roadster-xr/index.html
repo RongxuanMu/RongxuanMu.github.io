@@ -3488,7 +3488,8 @@ var RoadsterNight = {
       highlight: false,
       box: new T.Box3(new T.Vector3(-0.21, 0, R - 0.035), new T.Vector3(0.21, 0.07, R + 0.035)),
       constrain: ({ position, quaternion, scale }) => {
-        position.y = this.stageY ?? position.y;
+        // floor: stays on the floor; tabletop: the bar also raises and lowers it to your desk's height
+        position.y = this.tabletop ? T.MathUtils.clamp(position.y, 0.25, 2.2) : this.stageY ?? position.y;
         const e = new T.Euler().setFromQuaternion(quaternion, "YXZ");
         quaternion.setFromEuler(e.set(0, e.y, 0, "YXZ"));
         scale.setScalar(T.MathUtils.clamp(scale.x, 0.2, 1.6));
@@ -3531,7 +3532,7 @@ var RoadsterNight = {
     this.capMesh = new T.Mesh(new T.PlaneGeometry(0.9, 0.9 / 16), new T.MeshBasicMaterial({ map: this.capTex, transparent: true, depthWrite: false }));
     this.capMesh.userData.noCollider = this.capMesh.userData.noHighlight = true;
     root.add(this.capMesh);
-    const hint = ctx.label("Grab the joystick to drive · pinch the pad to send the car · grab the car · the bar moves the stage", { height: 0.016 });
+    const hint = ctx.label("Grab the joystick to drive · pinch the pad to send the car · grab the car · the bar moves the stage (and its height on a table)", { height: 0.016 });
     hint.position.set(0, 0.004, R + 0.08);
     hint.rotation.x = -Math.PI / 2.4;
     hint.userData.noCollider = hint.userData.noHighlight = true;
