@@ -3735,7 +3735,8 @@ var Microduck = {
         if (token !== this.token) return;
         // hull drawn ~one duck-size behind the duck: its own parts hide every inner edge, only the silhouette shows
         // twoHand: a second hand turns the grab into move + rotate (the physics does it; scale is ignored)
-        const it = this._grabbable(this.ctx, rig.trunk, "duck", { twoHand: true, outlinePush: () => 0.3 * this.stage.scale.x });
+        // (scale is held too: the framework would otherwise scale the trunk alone)
+        const it = this._grabbable(this.ctx, rig.trunk, "duck", { twoHand: true, outlinePush: () => 0.3 * this.stage.scale.x, constrain: ({ scale }) => rig.trunk.getWorldScale(scale) });
         it.on("transformstart", () => this._grab2Start()).on("transformend", () => this.S?.grab?.two && this._grabEnd());
         it.on("tap", () => this.quack()).on("longpress", () => this.S?.loco === "legs" && this.btn.sit._click());
         this.rigs[loco] = { group, rig, it };

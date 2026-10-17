@@ -311,7 +311,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
       const box = new THREE6.Box3();
       for (let b = 1; b < S.model.nbody; b++) box.expandByPoint(new THREE6.Vector3(x[b * 3], x[b * 3 + 1], x[b * 3 + 2]).applyMatrix4(inv));
       box.expandByScalar(0.06 * R.height);
-      it = this._grabbable(this.ctx, rootG, "duck", { twoHand: true, highlight: false, box });
+      // two hands carry and turn it, but never scale it: the scale would land on the one body grabbed
+      it = this._grabbable(this.ctx, rootG, "duck", { twoHand: true, highlight: false, box, constrain: ({ scale }) => rootG.getWorldScale(scale) });
       it.on("transformstart", () => this._grab2Start()).on("transformend", () => this.S?.grab?.two && this._grabEnd());
       it.on("tap", () => this.sound.hup()).on("statechange", ({ level }) => this._tint(level));
       this.hIts.set(R.id, it);
