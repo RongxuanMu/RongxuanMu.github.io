@@ -74,7 +74,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Archiscape</h1>
     <p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; Stonehenge to Zaha Hadid</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; this page plays the eras by itself while you read; the panel moved to your right, clear of this card; nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate</p>
+    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; this page plays the eras by itself while you read, opening on the Forbidden City; Jiangnan walls in one even white; the tour reforms each town once per era; panels on your right, clear of this card; nineteen eras with Kyoto and Thai temples</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -2573,7 +2573,10 @@ var AS_KINDS = {
   metal: { roughness: 0.26, metalness: 0.95, env: true },
   gold: { roughness: 0.28, metalness: 1, env: true },
   glass: { roughness: 0.06, metalness: 0.5, env: true },
-  glow: { glow: true }
+  glow: { glow: true },
+  // matte, but light colours glow a little from within, so every white wall reads as one even plane whichever
+  // way it faces (ink-wash painting); dark tiles and ink lines stay as they are
+  wash: { roughness: 0.95, metalness: 0, wash: 0.6 }
 };
 var _asV = new THREE6.Vector3(), _asN = new THREE6.Vector3(), _asM = new THREE6.Matrix4(), _asNM = new THREE6.Matrix3();
 var _asC = new THREE6.Color(), _asA = new THREE6.Vector3(), _asB = new THREE6.Vector3();
@@ -2593,9 +2596,12 @@ var AS_PROFILES = {
   spire: [[1, 0], [0.97, 0.12], [0.88, 0.3], [0.72, 0.5], [0.52, 0.68], [0.32, 0.83], [0.15, 0.94], [0, 1]],
   stepped: [[1, 0], [1, 0.08], [0.92, 0.08], [0.92, 0.16], [0.84, 0.16], [0.84, 0.22], [0.8, 0.3], [0.7, 0.5], [0.5, 0.7], [0.26, 0.82], [0.2, 0.84], [0.2, 0.86], [0, 0.86]]
 };
-function asKit(tess = null) {
+function asKit(tess = null, remap = null) {
   const B = {};
-  const batch = (k) => B[k] || (B[k] = { p: [], n: [], c: [] });
+  const batch = (k0) => {
+    const k = remap?.[k0] ?? k0;
+    return B[k] || (B[k] = { p: [], n: [], c: [] });
+  };
   const col = (hex, vary = 0, r = 0.5) => {
     _asC.setHex(hex);
     if (vary) _asC.offsetHSL(0, 0, (r - 0.5) * vary);
@@ -3142,8 +3148,9 @@ var AS_STYLES = [
     title: "Jiangnan · after Wu Guanzhong",
     era: "Water towns south of the Yangtze, as Wu Guanzhong painted them",
     blurb: "Planes of white wall, lines of black tile, a few dots of colour over still water",
-    // one white for every wall and horse-head: a face reads as one plane, as in the paintings
+    // one white for every wall and horse-head, lit evenly (wash): a face reads as one plane, as in the paintings
     palette: [16053999],
+    kinds: { matte: "wash" },
     ground: { water: true, hex: 9348524, side: 4605510 },
     found: 6052956,
     wall(K, E) {
@@ -4454,7 +4461,7 @@ var AS_MUSIC = {
 // geometry depends only on its own height and its neighbours', so it is cached under that key and an edit
 // regenerates just the handful of cells around it -
 function asCellChunk(grid, h, style, cell) {
-  const K = asKit(style.tess || null), H = AS_H, water = !!style.ground.water;
+  const K = asKit(style.tess || null, style.kinds || null), H = AS_H, water = !!style.ground.water;
   const v3 = (p, y) => new THREE6.Vector3(p.x, y, p.y);
   const hc = h[cell.i], r = asHash(cell.i, 11);
   if (!hc) {
@@ -4720,7 +4727,7 @@ var Archiscape = {
     this.h = new Int8Array(asGenerate(this.grid.cells, 7));
     this.history = [];
     this.caches = {};
-    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "jiangnan");
+    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "forbidden");
     this.town = null;
     this.leaving = [];
     this.islandIt = ctx.add(island, {
@@ -4786,7 +4793,7 @@ var Archiscape = {
     } });
     const undo = tool("Undo", { onClick: () => this.undo() });
     const clear = tool("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
-    // tours. Eras: each era reforms its town twice (New town, grown out of the last shape), then the next era
+    // tours. Eras: each era reforms its town once (New town, grown out of the last shape), then the next era
     // takes over the same shape. Towns: stay in this era, reforming again and again
     const tour = () => this.tour = this.tourEras || this.tourTowns ? this.tour ?? 0 : null;
     this.tourErasB = tool("Tour eras", { w: 0.0885, toggle: true, onClick: (v) => {
@@ -5173,13 +5180,20 @@ var AS_TOUR_S = 6.4;
 var AS_ATTRACT_S = 3.6;
 var AS_ISLAND_SCALE = 0.88;
 // how many times each era reforms its town on the tour before the next era; s: how long a reform takes to sweep
-var AS_TOUR_REFORMS = 2, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;
+var AS_TOUR_REFORMS = 1, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;
 function asMaterials() {
   const cache = {};
   const kind = (k) => {
     if (cache[k]) return cache[k];
     const o = AS_KINDS[k];
     const m = o.glow ? new THREE6.MeshBasicMaterial({ vertexColors: true, side: THREE6.DoubleSide }) : new THREE6.MeshStandardMaterial({ vertexColors: true, side: THREE6.DoubleSide, roughness: o.roughness, metalness: o.metalness, envMap: o.env ? asEnv : null, envMapIntensity: 0.9 });
+    if (o.wash) {
+      m.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader.replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+  totalEmissiveRadiance += diffuseColor.rgb * ${o.wash.toFixed(2)} * smoothstep(0.35, 0.75, dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)));`);
+      };
+      m.customProgramCacheKey = () => `wash${o.wash}`;
+    }
     return cache[k] = m;
   };
   const own = (m) => (m.userData.own = true, m);

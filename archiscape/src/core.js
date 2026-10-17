@@ -183,7 +183,10 @@ var AS_KINDS = {
   metal: { roughness: 0.26, metalness: 0.95, env: true },
   gold: { roughness: 0.28, metalness: 1, env: true },
   glass: { roughness: 0.06, metalness: 0.5, env: true },
-  glow: { glow: true }
+  glow: { glow: true },
+  // matte, but light colours glow a little from within, so every white wall reads as one even plane whichever
+  // way it faces (ink-wash painting); dark tiles and ink lines stay as they are
+  wash: { roughness: 0.95, metalness: 0, wash: 0.6 }
 };
 var _asV = new THREE6.Vector3(), _asN = new THREE6.Vector3(), _asM = new THREE6.Matrix4(), _asNM = new THREE6.Matrix3();
 var _asC = new THREE6.Color(), _asA = new THREE6.Vector3(), _asB = new THREE6.Vector3();
@@ -203,9 +206,12 @@ var AS_PROFILES = {
   spire: [[1, 0], [0.97, 0.12], [0.88, 0.3], [0.72, 0.5], [0.52, 0.68], [0.32, 0.83], [0.15, 0.94], [0, 1]],
   stepped: [[1, 0], [1, 0.08], [0.92, 0.08], [0.92, 0.16], [0.84, 0.16], [0.84, 0.22], [0.8, 0.3], [0.7, 0.5], [0.5, 0.7], [0.26, 0.82], [0.2, 0.84], [0.2, 0.86], [0, 0.86]]
 };
-function asKit(tess = null) {
+function asKit(tess = null, remap = null) {
   const B = {};
-  const batch = (k) => B[k] || (B[k] = { p: [], n: [], c: [] });
+  const batch = (k0) => {
+    const k = remap?.[k0] ?? k0;
+    return B[k] || (B[k] = { p: [], n: [], c: [] });
+  };
   const col = (hex, vary = 0, r = 0.5) => {
     _asC.setHex(hex);
     if (vary) _asC.offsetHSL(0, 0, (r - 0.5) * vary);

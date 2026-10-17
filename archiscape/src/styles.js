@@ -292,8 +292,9 @@ var AS_STYLES = [
     title: "Jiangnan · after Wu Guanzhong",
     era: "Water towns south of the Yangtze, as Wu Guanzhong painted them",
     blurb: "Planes of white wall, lines of black tile, a few dots of colour over still water",
-    // one white for every wall and horse-head: a face reads as one plane, as in the paintings
+    // one white for every wall and horse-head, lit evenly (wash): a face reads as one plane, as in the paintings
     palette: [16053999],
+    kinds: { matte: "wash" },
     ground: { water: true, hex: 9348524, side: 4605510 },
     found: 6052956,
     wall(K, E) {

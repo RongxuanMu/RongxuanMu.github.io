@@ -2,7 +2,7 @@
 // geometry depends only on its own height and its neighbours', so it is cached under that key and an edit
 // regenerates just the handful of cells around it -
 function asCellChunk(grid, h, style, cell) {
-  const K = asKit(style.tess || null), H = AS_H, water = !!style.ground.water;
+  const K = asKit(style.tess || null, style.kinds || null), H = AS_H, water = !!style.ground.water;
   const v3 = (p, y) => new THREE6.Vector3(p.x, y, p.y);
   const hc = h[cell.i], r = asHash(cell.i, 11);
   if (!hc) {
@@ -268,7 +268,7 @@ var Archiscape = {
     this.h = new Int8Array(asGenerate(this.grid.cells, 7));
     this.history = [];
     this.caches = {};
-    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "jiangnan");
+    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "forbidden");
     this.town = null;
     this.leaving = [];
     this.islandIt = ctx.add(island, {
@@ -334,7 +334,7 @@ var Archiscape = {
     } });
     const undo = tool("Undo", { onClick: () => this.undo() });
     const clear = tool("Clear", { onClick: () => this._commit(new Int8Array(this.h.length)) });
-    // tours. Eras: each era reforms its town twice (New town, grown out of the last shape), then the next era
+    // tours. Eras: each era reforms its town once (New town, grown out of the last shape), then the next era
     // takes over the same shape. Towns: stay in this era, reforming again and again
     const tour = () => this.tour = this.tourEras || this.tourTowns ? this.tour ?? 0 : null;
     this.tourErasB = tool("Tour eras", { w: 0.0885, toggle: true, onClick: (v) => {
@@ -721,13 +721,20 @@ var AS_TOUR_S = 6.4;
 var AS_ATTRACT_S = 3.6;
 var AS_ISLAND_SCALE = 0.88;
 // how many times each era reforms its town on the tour before the next era; s: how long a reform takes to sweep
-var AS_TOUR_REFORMS = 2, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;
+var AS_TOUR_REFORMS = 1, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;
 function asMaterials() {
   const cache = {};
   const kind = (k) => {
     if (cache[k]) return cache[k];
     const o = AS_KINDS[k];
     const m = o.glow ? new THREE6.MeshBasicMaterial({ vertexColors: true, side: THREE6.DoubleSide }) : new THREE6.MeshStandardMaterial({ vertexColors: true, side: THREE6.DoubleSide, roughness: o.roughness, metalness: o.metalness, envMap: o.env ? asEnv : null, envMapIntensity: 0.9 });
+    if (o.wash) {
+      m.onBeforeCompile = (sh) => {
+        sh.fragmentShader = sh.fragmentShader.replace("#include <emissivemap_fragment>", `#include <emissivemap_fragment>
+  totalEmissiveRadiance += diffuseColor.rgb * ${o.wash.toFixed(2)} * smoothstep(0.35, 0.75, dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)));`);
+      };
+      m.customProgramCacheKey = () => `wash${o.wash}`;
+    }
     return cache[k] = m;
   };
   const own = (m) => (m.userData.own = true, m);
