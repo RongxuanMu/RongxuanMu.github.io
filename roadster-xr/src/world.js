@@ -311,8 +311,12 @@ var RoadsterNight = {
     if (this.car.held) return;
     if (this.mode !== "drive") this.setMode("drive");
     if (this.car.air) return;
-    const h = Math.atan2(-(z - this.car.pos.z), x - this.car.pos.x) * 180 / Math.PI;
-    this._run(rnFollow(this.car, rnRoute(this.car, [[x, z, h]], { vmax: 12 })));
+    // around everything on the pad (the line-up, the ramp, stands, posts); straight there if nothing is in the way
+    const c = this.car, path = rnPlan(c.pos.x, c.pos.z, x, z, this.V.lineup);
+    if (!path) return;
+    const end = path[path.length - 1];
+    x = end[0], z = end[1];
+    this._run(rnFollow(c, rnProfile(c, path, { vmax: 12 })));
     this.manualGen.route = true;
     this.goal.position.set(x, 0.06, z);
     this.goal.visible = true;
@@ -329,7 +333,7 @@ var RoadsterNight = {
     this.goal.visible = false;
     const car = this.car, t0 = this.clock;
     this.sound.whoosh();
-    this._run(rnStraight(car, () => 33.1, (c) => c.v >= 26.82 || this._blocked(c.pos), (dt) => {
+    this._run(rnStraight(car, () => 33.1, (c) => c.v >= 26.82 || this._carHits(), (dt) => {
       car.thrust(-2.35, 0.48, 0, -1, 0, 0, 140, dt, 18);
       this.sound.hiss(1);
       this.screen({ title: `${(this.clock - t0).toFixed(2)} s`, sub: `${Math.round(car.v * 2.237)} MPH`, big: true });
@@ -406,6 +410,16 @@ var RoadsterNight = {
     if (p.y < 1) for (const v of this.V.lineup) if (p.x > v.x0 - 1.1 && p.x < v.x1 + 1.1 && p.z > v.z0 - 1.1 && p.z < v.z1 + 1.1) return true;
     return false;
   },
+  // the car's outline (corners and flanks) against everything on the pad; the ramp's run-in lane is open
+  _carHits() {
+    const car = this.car, L = RN_LOOP;
+    for (const [x, z] of [[2.3, 1], [2.3, -1], [-2.3, 1], [-2.3, -1], [0, 1.05], [0, -1.05]]) {
+      const p = car.at(x, 0, z, _rnV);
+      if (Math.abs(p.z - L.z) < 2.6 && p.x < L.x + 0.3 && p.x > L.x - L.entry - 2) continue;
+      if (!rnClear(p.x, p.z, 0.15, this.V.lineup)) return true;
+    }
+    return false;
+  },
   _drive(dt) {
     const car = this.car, m = this._readManual(this._m ??= [0, 0]), L = RN_LOOP;
     const thr = m[0], st = m[1];
@@ -415,11 +429,13 @@ var RoadsterNight = {
     car.v = THREE6.MathUtils.clamp(car.v - car.v * 0.06 * dt, -7, 36);
     car.steer += (st - car.steer) * Math.min(1, dt * 6);
     const yr = THREE6.MathUtils.clamp(car.v * Math.tan(car.steer * 0.5) / 2.84, -2.4, 2.4);
+    const old = car.pos.clone(), oldYaw = car.yaw, wasIn = this._carHits();
     car.setYaw(car.yaw + yr * dt);
-    const old = car.pos.clone();
     car.pos.addScaledVector(car.fwd(_rnV), car.v * dt);
-    if (this._blocked(car.pos)) {
+    // (a car already touching something, e.g. dropped there, may always drive out)
+    if (!wasIn && this._carHits()) {
       car.pos.copy(old);
+      car.setYaw(oldYaw);
       if (Math.abs(car.v) > 2) this.sound.thud();
       car.v *= -0.3;
     }

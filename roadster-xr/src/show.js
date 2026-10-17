@@ -75,6 +75,9 @@ function rnRoute(car, wps, { vmax = 14, acc = 7, dec = 9, grip = 9, v1 = 0 } = {
       pts.push([h1 * ax + h2 * ta[0] + h3 * bx + h4 * tb[0], h1 * az + h2 * ta[1] + h3 * bz + h4 * tb[1]]);
     }
   }
+  return rnProfile(car, pts, { vmax, acc, dec, grip, v1 });
+}
+function rnProfile(car, pts, { vmax = 14, acc = 7, dec = 9, grip = 9, v1 = 0 } = {}) {
   const s = [0], hd = [];
   for (let i = 1; i < pts.length; i++) s.push(s[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
   for (let i = 0; i < pts.length; i++) {
@@ -91,6 +94,145 @@ function rnRoute(car, wps, { vmax = 14, acc = 7, dec = 9, grip = 9, v1 = 0 } = {
   v[v.length - 1] = Math.min(v[v.length - 1], v1);
   for (let i = v.length - 2; i >= 0; i--) v[i] = Math.min(v[i], Math.sqrt(v[i + 1] ** 2 + 2 * dec * (s[i + 1] - s[i])));
   return { pts, s, hd, v, L: s[s.length - 1] };
+}
+// - avoiding things: an occupancy grid (1 m cells) of everything on the pad, grown by a clearance margin; A*
+// across it, the path pulled taut, its corners rounded, then checked again -
+var RN_POSTS = [[RN_LAUNCH.x0 + 2.3, RN_LAUNCH.z - 3.4, 0.4], [RN_LAUNCH.x0 + 2.3, RN_LAUNCH.z + 3.4, 0.4], ...[200, 232, 312, 340].map((d) => [Math.cos(d * Math.PI / 180) * 49, Math.sin(d * Math.PI / 180) * 49, 0.6])];
+function rnClear(x, z, m, lineup) {
+  const r = Math.hypot(x, z), L = RN_LOOP;
+  if (r > RN_PAD_R - 2.5 - m) return false;
+  const a = (Math.atan2(z, x) * 180 / Math.PI + 360) % 360, da = m / Math.max(r, 1) * 180 / Math.PI;
+  if (r > 37 - m && a > 243 - da && a < 301 + da) return false;
+  if (Math.hypot(x + 32.1, z + 35.7) < 7 + m) return false;
+  if (x > L.x - 1.8 - m && x < L.x + L.R + 1 + m && Math.abs(z - L.z) < 4.8 + m) return false;
+  for (const [px, pz, pr] of RN_POSTS) if (Math.hypot(x - px, z - pz) < pr + m) return false;
+  for (const v of lineup) if (x > v.x0 - m && x < v.x1 + m && z > v.z0 - m && z < v.z1 + m) return false;
+  return true;
+}
+var rnGrids = /* @__PURE__ */ new Map();
+function rnGrid(m, lineup) {
+  if (!rnGrids.has(m)) {
+    const N = 2 * RN_PAD_R, g = new Uint8Array(N * N);
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) g[i * N + j] = rnClear(i - RN_PAD_R + 0.5, j - RN_PAD_R + 0.5, m, lineup) ? 1 : 0;
+    rnGrids.set(m, g);
+  }
+  return rnGrids.get(m);
+}
+function rnSegClear(a, b, m, lineup) {
+  const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.4);
+  for (let k = 0; k <= n; k++) if (!rnClear(a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n, m, lineup)) return false;
+  return true;
+}
+// a collision-free path [[x, z], ...] from (x0, z0) to (x1, z1), or null
+function rnPlan(x0, z0, x1, z1, lineup, m = 1.8) {
+  const N = 2 * RN_PAD_R, H = RN_PAD_R, g = rnGrid(m, lineup);
+  const cell = (x, z) => [Math.max(0, Math.min(N - 1, Math.floor(x + H))), Math.max(0, Math.min(N - 1, Math.floor(z + H)))];
+  // a start or goal inside the margin snaps to the nearest free cell
+  const nearest = (x, z) => {
+    const [ci, cj] = cell(x, z);
+    for (let r = 0; r < 12; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) {
+      if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue;
+      const i = ci + di, j = cj + dj;
+      if (i >= 0 && j >= 0 && i < N && j < N && g[i * N + j]) return i * N + j;
+    }
+    return -1;
+  };
+  // a goal inside something becomes the nearest spot the whole car (not just its middle) fits in
+  if (!rnClear(x1, z1, m * 0.6, lineup)) {
+    const g2 = rnGrid(m + 1.2, lineup), [ci, cj] = cell(x1, z1);
+    let best = null;
+    for (let r = 0; r < 14 && !best; r++) for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) {
+      const i = ci + di, j = cj + dj;
+      if (Math.max(Math.abs(di), Math.abs(dj)) === r && i >= 0 && j >= 0 && i < N && j < N && g2[i * N + j] && !best) best = [i - H + 0.5, j - H + 0.5];
+    }
+    if (best) [x1, z1] = best;
+  }
+  const S = nearest(x0, z0), G = nearest(x1, z1);
+  if (S < 0 || G < 0) return null;
+  const gi = Math.floor(G / N), gj = G % N, hcost = (k) => {
+    const di = Math.abs(Math.floor(k / N) - gi), dj = Math.abs(k % N - gj);
+    return di + dj + (Math.SQRT2 - 2) * Math.min(di, dj);
+  };
+  const cost = new Float32Array(N * N).fill(Infinity), from = new Int32Array(N * N).fill(-1), heap = [[hcost(S), S]];
+  cost[S] = 0;
+  const push = (e) => {
+    heap.push(e);
+    for (let i = heap.length - 1; i > 0; ) {
+      const p = i - 1 >> 1;
+      if (heap[p][0] <= heap[i][0]) break;
+      [heap[p], heap[i]] = [heap[i], heap[p]];
+      i = p;
+    }
+  };
+  const pop = () => {
+    const top = heap[0], last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      for (let i = 0; ; ) {
+        const l = 2 * i + 1, r = l + 1;
+        let k = i;
+        if (l < heap.length && heap[l][0] < heap[k][0]) k = l;
+        if (r < heap.length && heap[r][0] < heap[k][0]) k = r;
+        if (k === i) break;
+        [heap[k], heap[i]] = [heap[i], heap[k]];
+        i = k;
+      }
+    }
+    return top;
+  };
+  while (heap.length) {
+    const [, k] = pop();
+    if (k === G) break;
+    const i = Math.floor(k / N), j = k % N;
+    for (let di = -1; di <= 1; di++) for (let dj = -1; dj <= 1; dj++) {
+      if (!di && !dj) continue;
+      const ni = i + di, nj = j + dj;
+      if (ni < 0 || nj < 0 || ni >= N || nj >= N) continue;
+      const nk = ni * N + nj;
+      if (!g[nk] || di && dj && !(g[i * N + nj] && g[ni * N + j])) continue;
+      const c = cost[k] + (di && dj ? Math.SQRT2 : 1);
+      if (c < cost[nk]) {
+        cost[nk] = c;
+        from[nk] = k;
+        push([c + hcost(nk), nk]);
+      }
+    }
+  }
+  if (from[G] < 0 && G !== S) return null;
+  const cells = [];
+  for (let k = G; k >= 0; k = from[k]) cells.unshift([Math.floor(k / N) - H + 0.5, k % N - H + 0.5]);
+  // the real start and goal, unless they sit inside something (then the nearest free cell stands in)
+  if (rnClear(x0, z0, m * 0.6, lineup)) cells[0] = [x0, z0];
+  else cells.unshift([x0, z0]);
+  if (rnClear(x1, z1, m * 0.6, lineup)) cells[cells.length - 1] = [x1, z1];
+  // pulled taut: from each kept point, jump to the farthest one still in clear sight
+  const taut = [cells[0]];
+  for (let i = 0; i < cells.length - 1; ) {
+    let j = cells.length - 1;
+    while (j > i + 1 && !rnSegClear(cells[i], cells[j], m * 0.85, lineup)) j--;
+    taut.push(cells[j]);
+    i = j;
+  }
+  // rounded corners (Chaikin), kept only where they stay clear
+  let pts = taut;
+  for (let it = 0; it < 3; it++) {
+    const out = [pts[0]];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
+      if (i > 0) out.push([ax * 0.75 + bx * 0.25, az * 0.75 + bz * 0.25]);
+      if (i < pts.length - 2) out.push([ax * 0.25 + bx * 0.75, az * 0.25 + bz * 0.75]);
+    }
+    out.push(pts[pts.length - 1]);
+    if (out.every((p, i) => i === 0 || rnSegClear(out[i - 1], p, m * 0.6, lineup))) pts = out;
+    else break;
+  }
+  // even spacing for the follower
+  const dense = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const [ax, az] = pts[i - 1], [bx, bz] = pts[i], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / 0.5));
+    for (let k = 1; k <= n; k++) dense.push([ax + (bx - ax) * k / n, az + (bz - az) * k / n]);
+  }
+  return dense;
 }
 function* rnFollow(car, route) {
   let d = 0, i = 0;
@@ -236,7 +378,7 @@ function rnRouteTo(car, x, z) {
     } else out.push([p.x - 7, zc, 180]);
   }
   if (out.length === 0 || out[out.length - 1][0] > -30) out.push([-34, zc, 180]);
-  out.push([-46, (zc + z) / 2, z > zc ? -90 : 90], [x, z, 0]);
+  out.push([-44, (zc + z) / 2, z > zc ? -90 : 90], [x, z, 0]);
   return out;
 }
 // the curl-ramp stunt from the run-in: up the half loop clinging by suction, off the top upside down, a 180°

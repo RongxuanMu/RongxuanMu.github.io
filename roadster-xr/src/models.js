@@ -23,7 +23,7 @@ var RN_G = 9.81;
 // thruster jump behind it, the stands, screen and test stand at the back
 var RN_LAUNCH = { x0: -42, z: 16 };
 var RN_LOOP = { x: -6, z: -6, R: 9, entry: 30, w: 5.2 };
-var RN_JUMP = { x0: -32, z: -24, take: 0, line: 9 };
+var RN_JUMP = { x0: -30, z: -24, take: 0, line: 9 };
 var rnEnv = null;
 var RN_WRAP = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 var _rnV = new THREE6.Vector3(), _rnV2 = new THREE6.Vector3(), _rnQ = new THREE6.Quaternion(), _rnM = new THREE6.Matrix4();
