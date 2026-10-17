@@ -294,10 +294,11 @@ function asGenerate(cells, seed) {
     const v = noise(c.c.x, c.c.y) * 0.55 + 0.62 - d * 0.75;
     if (Math.abs(c.c.dot(cn) - off + Math.sin(c.c.dot(new THREE6.Vector2(-cn.y, cn.x)) * 22) * 0.012) < 0.016) return 0;
     if (c.c.distanceTo(sq) < 0.04) return 0;
-    return v > 0.2 ? Math.min(5, 1 + Math.floor((v - 0.2) * 7 + rnd() * 0.8)) : 0;
+    // fewer blocks than a full town: a headset (and the landing tour) rebuilds every one of them on an era change
+    return v > 0.32 ? Math.min(4, 1 + Math.floor((v - 0.32) * 6 + rnd() * 0.6)) : 0;
   });
   const built = cells.filter((c) => h[c.i] >= 2);
-  for (let t = 0; t < 3 && built.length; t++) {
+  for (let t = 0; t < 2 && built.length; t++) {
     const c = built[Math.floor(rnd() * built.length)];
     h[c.i] = Math.min(AS_MAXH, h[c.i] + 2 + Math.floor(rnd() * 2));
     for (const n of c.nb) if (n >= 0) h[n] = Math.min(h[n], h[c.i] - 2);
@@ -827,7 +828,7 @@ var asEnv = null, asMusic = null;
 // s: how long the tour stays on each era / town
 var AS_TOUR_S = 6.4;
 // s: the same on the landing page's self-playing tour
-var AS_ATTRACT_S = 3.6;
+var AS_ATTRACT_S = 4.5;
 var AS_ISLAND_SCALE = 0.88;
 // how many times each era reforms its town on the tour before the next era; s: how long a reform takes to sweep
 var AS_TOUR_REFORMS = 1, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;

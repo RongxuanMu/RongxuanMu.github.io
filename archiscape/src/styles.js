@@ -59,10 +59,10 @@ var AS_STYLES = [
       asWall(K, E, "satin", E.bh, 0, ruin && E.top ? AS_H * 0.45 : AS_H, -5.5e-3, 0.03);
       if (E.L === 0) {
         // the stylobate: three steps
-        for (let i = 0; i < 3; i++) asBand(K, E, "satin", marble, i * 1.1e-3, 1.1e-3, 3.6e-3 - i * 1.2e-3, 6e-3, 0.012 - i * 2e-3);
+        for (let i = 0; i < 2; i++) asBand(K, E, "satin", marble, i * 1.65e-3, 1.65e-3, 3.6e-3 - i * 1.8e-3, 6e-3, 0.012 - i * 3e-3);
       }
       const y0 = E.L === 0 ? 3.3e-3 : 0, top = E.y1 - E.a3.y - 4.4e-3;
-      for (const u of asSlots(E.len, 7.5e-3, 0.3)) {
+      for (const u of asSlots(E.len, 0.01, 0.3)) {
         const p = asAt(E, u, y0, 1.6e-3);
         // a ruin: broken columns of uneven height, the entablature gone
         const hh = ruin && E.top ? (top - y0) * (0.25 + 0.75 * asHash(E.ci, E.k, Math.round(u * 50))) : top - y0;
@@ -73,7 +73,7 @@ var AS_STYLES = [
       // entablature: architrave, a frieze of triglyphs, cornice - all marble
       asBand(K, E, "satin", marble, AS_H - 4.4e-3, 1.8e-3, 1.6e-3, 3.2e-3, 2e-3);
       asBand(K, E, "satin", 15329769, AS_H - 2.6e-3, 1.6e-3, 1.7e-3, 3.2e-3, 2e-3);
-      for (const u of asSlots(E.len, 3.75e-3, 0.3)) asOn(K, E, "satin", 13421250, u, AS_H - 1.8e-3, 1e-3, 1.4e-3, 3.4e-3, 4e-4);
+      for (const u of asSlots(E.len, 7.5e-3, 0.3)) asOn(K, E, "satin", 13421250, u, AS_H - 1.8e-3, 1e-3, 1.4e-3, 3.4e-3, 4e-4);
       if (E.top) asBand(K, E, "satin", marble, AS_H - 1e-3, 1e-3, 2.4e-3, 3.4e-3, 2.5e-3);
     },
     roof(K, R) {
@@ -114,8 +114,8 @@ var AS_STYLES = [
     ground: { hex: 11773327, side: 8418150 },
     wall(K, E) {
       asWall(K, E, "matte", E.bh, 0, AS_H, 0, 0.05);
-      const s = asSlots(E.len, 0.011, 0.5);
-      for (const u of s) asArch(K, E, "matte", 3877152, u, 0.012, 6.4e-3, 0.014);
+      const s = asSlots(E.len, 0.014, 0.5);
+      for (const u of s) asArch(K, E, "matte", 3877152, u, 0.012, 7.4e-3, 0.014);
       for (let i = 0; i <= s.length; i++) if (s.length) asOn(K, E, "matte", 15195352, i / s.length, AS_H / 2, 1.6e-3, AS_H - 4e-3, 7e-4, 1.6e-3);
       asBand(K, E, "matte", 15195352, AS_H - 2.6e-3, 2.6e-3, 1.2e-3, 2.6e-3, 1e-3);
       if (E.L === 0) asBand(K, E, "matte", 11316396, 0, 3e-3, 1e-3, 2.4e-3, 1e-3);

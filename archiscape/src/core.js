@@ -277,6 +277,8 @@ function asKit(tess = null, remap = null) {
     },
     // frustum from a (radius r0) to b (radius r1)
     cyl(kind, hex, a, b, r0, r1, seg = 8, vary = 0, r = 0.5) {
+      // thin shafts (columns, posts, arch rings) look round enough with six sides: the towns are mostly these
+      if (Math.max(r0, r1) < 2.5e-3) seg = Math.min(seg, 6);
       const ratio = Math.round(r1 / r0 * 50) / 50;
       const g = asUnit(`cyl${seg}:${ratio}`, () => new THREE6.CylinderGeometry(ratio, 1, 1, seg, 1, false));
       const ay = _asB.subVectors(b, a), len = ay.length();
