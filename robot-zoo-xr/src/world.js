@@ -96,7 +96,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
   id: "robot-zoo",
   title: "Robot Zoo",
   init(ctx) {
-    this.idx ??= 0;
+    // the zoo opens on the Go2 robot dog
+    this.idx ??= RZ_ROBOTS.findIndex((R) => R.id === "go2");
     this.R = RZ_ROBOTS[this.idx];
     // everything per world instance (a session start reloads the world)
     this.A = this.rigs = this.HS = this.hvis = this.camBody = this.duckIt = this.rig = null;
