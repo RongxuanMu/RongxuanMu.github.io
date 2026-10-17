@@ -19,6 +19,9 @@ var RN_FLOOR_BELOW_HEAD = 1.6;
 var RN_TABLE_BELOW_HEAD = 0.5;
 var RN_TABLE_SCALE = 0.42;
 var RN_G = 9.81;
+// diorama time vs yours: true-scale speed at 1:60 reads as slow motion (a miniature needs about sqrt(60) = 7.7x to
+// look real, which is too fast to follow); 2.5x keeps the stunts readable and lively
+var RN_PACE = 2.5;
 // the course (real metres; +x right, -z away from you): launch strip in front, the curl ramp and the
 // thruster jump behind it, the stands, screen and test stand at the back
 var RN_LAUNCH = { x0: -42, z: 16 };
