@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VibeXR Sharing Slides</title>
+<meta name="description" content="A short talk on WebXR, what makes it hard to build for, and the VibeXR interaction framework: one file, one Enter button, one interaction model for hands, controllers, gaze and mouse.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="VibeXR Sharing Slides - Rongxuan Mu">
+<meta property="og:description" content="WebXR, the trouble with today's frameworks, and the VibeXR approach, in twelve slides.">
+<meta property="og:url" content="https://rongxuanmu.com/Works/VibeXRSlides.html">
+<meta property="og:image" content="https://rongxuanmu.com/Resources/vibexr-framework/VibeXRFramework.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../Resources/common/Rongxuan.jpeg" type="image/jpeg">
+<style>
+  :root {
+    --bg: #050608;
+    --fg: #f4f5f7;
+    --dim: rgba(244, 245, 247, 0.62);
+    --faint: rgba(244, 245, 247, 0.16);
+    --line: rgba(244, 245, 247, 0.32);
+    --accent: #7fb2ff;
+    --warm: #ffcc66;
+    --card: rgba(255, 255, 255, 0.045);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); overflow: hidden;
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif; }
+  /* the deck: a 1600 x 900 stage scaled to fit the window */
+  #viewport { position: fixed; inset: 0; display: grid; place-items: center; }
+  #stage { width: 1600px; height: 900px; position: relative; transform-origin: center center; }
+  .slide { position: absolute; inset: 0; padding: 90px 110px 80px; opacity: 0; pointer-events: none;
+    transition: opacity 0.5s ease; display: flex; flex-direction: column; }
+  .slide.on { opacity: 1; pointer-events: auto; }
+  .slide .in { opacity: 0; transform: translateY(18px); transition: opacity 0.55s ease, transform 0.55s ease; }
+  .slide.on .in { opacity: 1; transform: none; }
+  .slide.on .in:nth-child(2) { transition-delay: 0.08s; } .slide.on .in:nth-child(3) { transition-delay: 0.16s; }
+  .slide.on .in:nth-child(4) { transition-delay: 0.24s; } .slide.on .in:nth-child(5) { transition-delay: 0.32s; }
+  .slide.on .in:nth-child(6) { transition-delay: 0.4s; } .slide.on .in:nth-child(7) { transition-delay: 0.48s; }
+  .kicker { font-size: 22px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent); margin: 0 0 18px; font-weight: 600; }
+  h1 { font-size: 96px; line-height: 1.02; margin: 0 0 26px; font-weight: 800; letter-spacing: -0.02em; }
+  h2 { font-size: 60px; line-height: 1.08; margin: 0 0 40px; font-weight: 750; letter-spacing: -0.01em; }
+  p.lead { font-size: 32px; line-height: 1.45; color: var(--dim); margin: 0 0 30px; max-width: 1250px; }
+  ul.pts { list-style: none; padding: 0; margin: 0; display: grid; gap: 22px; }
+  ul.pts li { font-size: 30px; line-height: 1.4; padding-left: 38px; position: relative; color: var(--dim); }
+  ul.pts li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 18px; height: 2px; background: var(--accent); }
+  ul.pts b { color: var(--fg); font-weight: 650; }
+  .grid { display: grid; gap: 22px; }
+  .card { border: 1.5px solid var(--line); border-radius: 22px; padding: 28px 30px; background: var(--card); }
+  .card h3 { margin: 0 0 12px; font-size: 30px; font-weight: 700; }
+  .card p { margin: 0; font-size: 23px; line-height: 1.45; color: var(--dim); }
+  .card .tag { display: inline-block; font-size: 17px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warm); margin-bottom: 10px; font-weight: 600; }
+  .card .big { font-size: 64px; line-height: 1; font-weight: 800; color: var(--fg); margin: 0 0 8px; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  pre { margin: 0; font-size: 21px; line-height: 1.5; background: rgba(255, 255, 255, 0.05); border: 1.5px solid var(--line);
+    border-radius: 20px; padding: 28px 32px; color: #dfe6f3; white-space: pre; overflow: hidden; }
+  pre .c { color: #7f8a9c; } pre .k { color: var(--accent); } pre .s { color: var(--warm); }
+  /* flow diagrams */
+  .flow { display: flex; align-items: center; gap: 18px; }
+  .node { border: 1.5px solid var(--line); border-radius: 18px; padding: 22px 26px; font-size: 26px; text-align: center; background: var(--card); min-width: 180px; }
+  .node small { display: block; font-size: 18px; color: var(--dim); margin-top: 6px; }
+  .node.hi { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .arrow { flex: 0 0 auto; width: 60px; height: 2px; background: var(--line); position: relative; }
+  .arrow::after { content: ""; position: absolute; right: -2px; top: -6px; border: 7px solid transparent; border-left: 10px solid var(--line); border-right: 0; }
+  .col { display: flex; flex-direction: column; gap: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 23px; }
+  th, td { text-align: left; padding: 15px 18px; border-bottom: 1px solid var(--faint); vertical-align: top; }
+  th { color: var(--accent); font-weight: 600; font-size: 19px; letter-spacing: 0.08em; text-transform: uppercase; }
+  td:first-child { color: var(--fg); font-weight: 650; white-space: nowrap; }
+  td { color: var(--dim); }
+  .shots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+  .shot { color: var(--fg); text-decoration: none; border-radius: 16px; overflow: hidden; border: 1.5px solid var(--faint); background: #000; }
+  .shot img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+  .shot div { padding: 12px 16px; font-size: 21px; font-weight: 650; }
+  .shot div span { display: block; font-weight: 400; color: var(--dim); font-size: 17px; margin-top: 3px; }
+  .bgvid { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.32; z-index: -1; }
+  .fade { position: absolute; inset: 0; background: linear-gradient(90deg, var(--bg) 25%, rgba(5, 6, 8, 0.2)); z-index: -1; }
+  .foot { margin-top: auto; font-size: 22px; color: var(--dim); }
+  .foot a, .links a { color: var(--accent); text-decoration: none; }
+  .links { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; }
+  .links a { border: 1.5px solid var(--line); border-radius: 999px; padding: 14px 26px; font-size: 24px; color: var(--fg); }
+  .links a:hover { border-color: var(--accent); }
+  /* chrome: progress, counter, controls; the cover's Play */
+  #bar { position: fixed; left: 0; bottom: 0; height: 3px; background: var(--accent); width: 0; transition: width 0.4s ease; z-index: 5; }
+  #hud { position: fixed; right: 18px; bottom: 14px; display: flex; gap: 8px; align-items: center; z-index: 6; font-size: 14px; color: var(--dim);
+    opacity: 0; transition: opacity 0.3s; }
+  body.ui #hud, #hud:hover { opacity: 1; }
+  #hud button { background: rgba(255, 255, 255, 0.08); color: var(--fg); border: 1px solid var(--faint); border-radius: 999px; padding: 7px 13px; font: inherit; cursor: pointer; }
+  #hud button.on { border-color: var(--accent); color: var(--accent); }
+  #hud a { color: var(--dim); text-decoration: none; margin-right: 6px; }
+  #cover { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: rgba(5, 6, 8, 0.72); backdrop-filter: blur(6px); transition: opacity 0.4s; }
+  #cover.gone { opacity: 0; pointer-events: none; }
+  #cover .box { text-align: center; padding: 0 16px; }
+  #cover h1 { font-size: clamp(34px, 6vw, 64px); margin: 0 0 10px; }
+  #cover p { color: var(--dim); font-size: clamp(15px, 2.2vw, 20px); margin: 0 0 28px; }
+  #play { font: 700 clamp(18px, 2.6vw, 24px) system-ui, sans-serif; color: #000; background: var(--fg); border: 0; border-radius: 999px; padding: 18px 40px; cursor: pointer; }
+  #play:hover { background: var(--accent); }
+  #cover .alt { display: block; margin-top: 18px; color: var(--dim); font-size: 15px; }
+  #cover .alt a { color: var(--dim); }
+  #cover kbd { border: 1px solid var(--faint); border-radius: 6px; padding: 1px 7px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage">
+
+  <!-- 1 -->
+  <section class="slide" data-title="VibeXR">
+    <video class="bgvid" autoplay muted loop playsinline preload="metadata" poster="../Resources/vibexr-framework/VibeXRFramework.jpg"><source src="../Resources/vibexr-framework/VibeXRFramework.mp4" type="video/mp4"></video>
+    <div class="fade"></div>
+    <p class="kicker in" style="margin-top: 120px">Sharing · October 2026</p>
+    <h1 class="in">VibeXR</h1>
+    <p class="lead in" style="font-size: 40px; color: var(--fg); max-width: 1000px">An interaction framework for vibe-coded WebXR. From a link to hands-on XR in one HTML file.</p>
+    <p class="foot in">Rongxuan Mu · <a href="https://rongxuanmu.com">rongxuanmu.com</a></p>
+  </section>
+
+  <!-- 2 -->
+  <section class="slide" data-title="What is WebXR">
+    <p class="kicker in">01 · WebXR</p>
+    <h2 class="in">The browser's door into headsets</h2>
+    <p class="lead in">WebXR is the web standard that lets a page take over a headset: open a link, tap Enter, you are in.</p>
+    <div class="grid in" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 10px">
+      <div class="card"><span class="tag">Sessions</span><h3>VR and AR</h3><p><code>immersive-vr</code> for full immersion, <code>immersive-ar</code> for the room through passthrough.</p></div>
+      <div class="card"><span class="tag">Input</span><h3>Hands to gaze</h3><p>Head pose, controllers, tracked hands with 25 joints, and gaze-and-pinch on Vision Pro.</p></div>
+      <div class="card"><span class="tag">Reach</span><h3>No install</h3><p>Quest, PICO, Vision Pro, Galaxy XR and Android XR browsers. A URL is the whole distribution.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section class="slide" data-title="Why prototype on the web">
+    <p class="kicker in">02 · Why it matters</p>
+    <h2 class="in">The fastest loop from idea to headset</h2>
+    <div class="flow in" style="margin: 30px 0 50px">
+      <div class="node">Idea<small>said out loud</small></div><div class="arrow"></div>
+      <div class="node">One HTML file<small>written with AI</small></div><div class="arrow"></div>
+      <div class="node">Push or paste<small>GitHub Pages · CodePen</small></div><div class="arrow"></div>
+      <div class="node hi">Headset<small>refresh and try</small></div>
+    </div>
+    <ul class="pts in">
+      <li><b>Minutes, not builds:</b> edit, refresh in the headset, feel it.</li>
+      <li><b>Shareable:</b> a link works on someone else's device the same day.</li>
+      <li><b>AI-friendly:</b> models write HTML and three.js fluently; a single file is easy to read, diff and paste.</li>
+    </ul>
+  </section>
+
+  <!-- 4 -->
+  <section class="slide" data-title="Common frameworks">
+    <p class="kicker in">03 · What's out there</p>
+    <h2 class="in">Good engines, thin interaction</h2>
+    <table class="in">
+      <tr><th>Framework</th><th>Strong at</th><th>What you still build yourself</th></tr>
+      <tr><td>three.js</td><td>Rendering, a light WebXR manager</td><td>Rays, grabs, pokes, UI, hand logic: all of it</td></tr>
+      <tr><td>A-Frame</td><td>HTML-like scenes, quick starts</td><td>Polished near / far interaction across inputs</td></tr>
+      <tr><td>Babylon.js</td><td>A full engine with XR features</td><td>Weight and an engine's way of doing things</td></tr>
+      <tr><td>React Three Fiber + xr</td><td>Pointer events in XR, React</td><td>An npm / bundler toolchain around every idea</td></tr>
+      <tr><td>Unity WebXR export</td><td>Familiar tools and assets</td><td>Heavy builds, slow iteration in a browser</td></tr>
+    </table>
+  </section>
+
+  <!-- 5 -->
+  <section class="slide" data-title="Where it hurts">
+    <p class="kicker in">04 · The problems</p>
+    <h2 class="in">Every prototype starts by rebuilding the same things</h2>
+    <ul class="pts in">
+      <li><b>Interaction is left to you:</b> ray, pinch, grab, poke, two-hand scale and buttons, written again for each project.</li>
+      <li><b>Inputs diverge:</b> hands, controllers, Vision Pro's gaze pointer and a desktop mouse each behave differently.</li>
+      <li><b>VR-first habits:</b> passthrough is an afterthought, and "VR only" makes no sense on see-through glasses.</li>
+      <li><b>Toolchains get in the way:</b> npm, bundlers and frameworks, while AI works best with one file you can paste.</li>
+      <li><b>No desk testing:</b> without a headset on, you can't try the interaction at all.</li>
+    </ul>
+  </section>
+
+  <!-- 6 -->
+  <section class="slide" data-title="The VibeXR idea">
+    <p class="kicker in">05 · Our approach</p>
+    <h2 class="in">Start every idea from interaction that already feels right</h2>
+    <div class="grid in" style="grid-template-columns: repeat(4, minmax(0, 1fr))">
+      <div class="card"><p class="big">1</p><h3>file</h3><p>One HTML file on three.js. Paste it into CodePen or push it to a site: that's the build.</p></div>
+      <div class="card"><p class="big">1</p><h3>Enter button</h3><p>AR with passthrough by default; headsets without AR quietly get VR. No "VR only".</p></div>
+      <div class="card"><p class="big">1</p><h3>interaction model</h3><p>Hands, controllers, gaze and mouse all point, pinch, poke and grab, near or far.</p></div>
+      <div class="card"><p class="big">∞</p><h3>worlds</h3><p>A project supplies only its world. The framework brings the hands, UI and feel.</p></div>
+    </div>
+    <p class="lead in" style="margin-top: 36px; font-size: 26px">The tuning comes from XR OS interaction design work: when the ray appears, how far a far grab travels, how big a poke volume is, how a hover outline reads on a messy model.</p>
+  </section>
+
+  <!-- 7 -->
+  <section class="slide" data-title="One interaction model">
+    <p class="kicker in">06 · How it works</p>
+    <h2 class="in">Four inputs, one interactor, the same events</h2>
+    <div class="flow in" style="align-items: stretch; margin-top: 10px">
+      <div class="col">
+        <div class="node">Hand<small>pinch · poke · grab</small></div>
+        <div class="node">Controller<small>trigger · grip · stick</small></div>
+        <div class="node">Gaze<small>Vision Pro pinch</small></div>
+        <div class="node">Mouse · keys<small>desktop preview</small></div>
+      </div>
+      <div class="arrow" style="align-self: center"></div>
+      <div class="node hi" style="align-self: center; min-width: 260px">Interactor<small>hover decides:<br>near touch or far ray</small></div>
+      <div class="arrow" style="align-self: center"></div>
+      <div class="col" style="flex: 1">
+        <div class="card"><h3>Interactables</h3><p><code>draggable</code> · <code>twoHand</code> · <code>precise</code> · <code>constrain</code> · <code>translateOnly</code> · <code>multi</code></p></div>
+        <div class="card"><h3>Events</h3><p><code>press</code> · <code>drag</code> · <code>tap</code> · <code>longpress</code> · <code>release</code> · <code>statechange</code></p></div>
+        <div class="card"><h3>UI kit</h3><p>Panels, buttons, sliders, labels, a palm-up hand menu, a sketch board, a log.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section class="slide" data-title="A world in a few lines">
+    <p class="kicker in">07 · Build on it</p>
+    <h2 class="in">A world is a few lines</h2>
+<pre class="in"><span class="k">const</span> Hello = {
+  id: <span class="s">"hello"</span>,
+  init(ctx) {
+    <span class="k">const</span> { root, THREE } = ctx;
+    root.add(<span class="k">new</span> THREE.HemisphereLight(0xffffff, 0x222222, 2));
+    <span class="k">const</span> cube = <span class="k">new</span> THREE.Mesh(<span class="k">new</span> THREE.BoxGeometry(0.1, 0.1, 0.1),
+                              <span class="k">new</span> THREE.MeshStandardMaterial());
+    cube.position.set(0, 1.3, -0.5);
+    root.add(cube);
+    <span class="c">// grab near or far; two hands rotate and scale</span>
+    ctx.add(cube, { draggable: <span class="k">true</span>, twoHand: <span class="k">true</span> })
+       <span class="c">// one event, whether a hand, a controller, a gaze pinch or a mouse did it</span>
+       .on(<span class="s">"tap"</span>, () =&gt; ctx.log(<span class="s">"tapped"</span>));
+  },
+};
+app.worlds.register(Hello);</pre>
+  </section>
+
+  <!-- 9 -->
+  <section class="slide" data-title="Built on VibeXR">
+    <p class="kicker in">08 · Built on it</p>
+    <h2 class="in">Seven worlds, one framework</h2>
+    <div class="shots in">
+      <a class="shot" href="../microduck-xr/" target="_blank" rel="noopener"><img src="../Resources/microduck/MicroduckXR.jpg" alt="Microduck XR"><div>Microduck XR<span>a real robot policy on your floor</span></div></a>
+      <a class="shot" href="../robot-zoo-xr/" target="_blank" rel="noopener"><img src="../Resources/robot-zoo-xr/RobotZoo.jpg" alt="Robot Zoo XR"><div>Robot Zoo XR<span>humanoids and robot dogs</span></div></a>
+      <a class="shot" href="../roadster-xr/" target="_blank" rel="noopener"><img src="../Resources/roadster-xr/RoadsterNight.jpg" alt="Roadster Night"><div>Roadster Night<span>a launch event as a diorama</span></div></a>
+      <a class="shot" href="../archiscape/" target="_blank" rel="noopener"><img src="../Resources/archiscape/Archiscape.jpg" alt="Archiscape"><div>Archiscape<span>architecture through the ages</span></div></a>
+      <a class="shot" href="../physics-cabinet/" target="_blank" rel="noopener"><img src="../Resources/physics-cabinet/PhysicsCabinet.jpg" alt="Physics Cabinet"><div>Physics Cabinet<span>ten experiments in your hands</span></div></a>
+      <a class="shot" href="../dream-cage/" target="_blank" rel="noopener"><img src="../Resources/dream-cage/DreamCage.jpg" alt="Dream Cage"><div>Dream Cage<span>a portal cube puzzle</span></div></a>
+      <a class="shot" href="../immersive-vibe/" target="_blank" rel="noopener"><img src="../immersive-vibe/assets/social-preview.png" alt="Immersive Vibe"><div>Immersive Vibe<span>paintings you step into</span></div></a>
+      <a class="shot" href="../vibexr/" target="_blank" rel="noopener"><img src="../Resources/vibexr-framework/VibeXRFramework.jpg" alt="Interaction Playground"><div>Playground<span>the framework itself</span></div></a>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section class="slide" data-title="Principles">
+    <p class="kicker in">09 · What we learned</p>
+    <h2 class="in">Design rules that keep it working everywhere</h2>
+    <div class="grid in" style="grid-template-columns: repeat(2, minmax(0, 1fr))">
+      <div class="card"><h3>Passthrough first</h3><p>Things live in your room: a stage on the real floor or a desk at your height, measured from your head.</p></div>
+      <div class="card"><h3>Diorama scale</h3><p>Big worlds become tabletop or floor miniatures you can walk around, with time sped up so they don't read as slow motion.</p></div>
+      <div class="card"><h3>The console rides along</h3><p>Panels follow the stage they control, and each can be dragged by its own bar.</p></div>
+      <div class="card"><h3>Light enough for glasses</h3><p>Generated geometry, no heavy assets, so standalone headsets and puck-tethered see-through glasses keep up.</p></div>
+    </div>
+  </section>
+
+  <!-- 11 -->
+  <section class="slide" data-title="The vibe loop">
+    <p class="kicker in">10 · Workflow</p>
+    <h2 class="in">How these were made</h2>
+    <div class="flow in" style="margin: 20px 0 46px">
+      <div class="node">Voice note<small>in the headset</small></div><div class="arrow"></div>
+      <div class="node">AI coding agent<small>edits the world</small></div><div class="arrow"></div>
+      <div class="node">Headless tests<small>screenshots · physics checks</small></div><div class="arrow"></div>
+      <div class="node">/dev page<small>try in a headset</small></div><div class="arrow"></div>
+      <div class="node hi">Release<small>site + CodePen</small></div>
+    </div>
+    <ul class="pts in">
+      <li><b>The framework is the stable part:</b> the agent only writes the world, so interaction quality never regresses.</li>
+      <li><b>Rules live in the repo:</b> "one Enter button, passthrough first" is written down once and followed every time.</li>
+      <li><b>Every change is shown before it ships:</b> screenshots, measured trajectories, a test page.</li>
+    </ul>
+  </section>
+
+  <!-- 12 -->
+  <section class="slide" data-title="Try it">
+    <p class="kicker in">Demo · thank you</p>
+    <h2 class="in">Put on a headset and open a link</h2>
+    <p class="lead in">Any WebXR browser: Quest, PICO, Vision Pro, Galaxy XR. On a laptop, everything runs as a desktop preview.</p>
+    <div class="links in">
+      <a href="../vibexr/" target="_blank" rel="noopener">Interaction Playground ↗</a>
+      <a href="../microduck-xr/" target="_blank" rel="noopener">Microduck XR ↗</a>
+      <a href="../roadster-xr/" target="_blank" rel="noopener">Roadster Night ↗</a>
+      <a href="VibeXRFramework.html" target="_blank" rel="noopener">Framework page ↗</a>
+    </div>
+    <p class="foot in" style="font-size: 30px; color: var(--fg)">Rongxuan Mu · <a href="https://rongxuanmu.com">rongxuanmu.com</a></p>
+  </section>
+
+</div></div>
+
+<div id="bar"></div>
+<div id="hud">
+  <a href="VibeXRFramework.html">← Framework</a>
+  <span id="count">1 / 12</span>
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <button id="next" aria-label="Next slide">›</button>
+  <button id="auto" aria-label="Auto-advance">Auto</button>
+  <button id="full" aria-label="Full screen">Full screen</button>
+</div>
+<div id="cover">
+  <div class="box">
+    <h1>VibeXR · Sharing Slides</h1>
+    <p>WebXR, why it's hard to build for, and the VibeXR approach · 12 slides</p>
+    <button id="play">▶ Play full screen</button>
+    <span class="alt"><a href="#" id="window">or present in this window</a> · <kbd>←</kbd> <kbd>→</kbd> <kbd>Space</kbd> to move · <kbd>F</kbd> full screen · <kbd>A</kbd> auto</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll(".slide")], stage = document.getElementById("stage");
+  const bar = document.getElementById("bar"), count = document.getElementById("count"), cover = document.getElementById("cover");
+  const autoBtn = document.getElementById("auto"), AUTO_S = 9;
+  let i = 0, timer = null;
+  const fit = () => stage.style.transform = `scale(${Math.min(innerWidth / 1600, innerHeight / 900)})`;
+  const show = (n) => {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle("on", k === i));
+    bar.style.width = `${(i + 1) / slides.length * 100}%`;
+    count.textContent = `${i + 1} / ${slides.length}`;
+    document.title = `${slides[i].dataset.title} · VibeXR Sharing Slides`;
+    history.replaceState(null, "", `#${i + 1}`);
+    if (timer) restartAuto();
+  };
+  const next = () => show(i + 1 < slides.length ? i + 1 : (timer ? 0 : i));
+  const prev = () => show(i - 1);
+  const restartAuto = () => {
+    clearInterval(timer);
+    timer = setInterval(next, AUTO_S * 1000);
+  };
+  const setAuto = (on) => {
+    clearInterval(timer);
+    timer = on ? setInterval(next, AUTO_S * 1000) : null;
+    autoBtn.classList.toggle("on", on);
+  };
+  const full = () => {
+    const d = document.documentElement;
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else (d.requestFullscreen || d.webkitRequestFullscreen)?.call(d);
+  };
+  const start = (fs) => {
+    cover.classList.add("gone");
+    if (fs && !document.fullscreenElement) full();
+  };
+  document.getElementById("play").onclick = () => start(true);
+  document.getElementById("window").onclick = (e) => { e.preventDefault(); start(false); };
+  document.getElementById("next").onclick = next;
+  document.getElementById("prev").onclick = prev;
+  document.getElementById("full").onclick = full;
+  autoBtn.onclick = () => setAuto(!timer);
+  addEventListener("keydown", (e) => {
+    if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
+      if (!cover.classList.contains("gone")) start(e.key === "Enter");
+      else next();
+    } else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) prev();
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(slides.length - 1);
+    else if (e.key === "f" || e.key === "F") full();
+    else if (e.key === "a" || e.key === "A") setAuto(!timer);
+    else return;
+    e.preventDefault();
+  });
+  // click the right part of a slide to go on, the left edge to go back (links still work)
+  document.getElementById("viewport").addEventListener("click", (e) => {
+    if (e.target.closest("a, button") || !cover.classList.contains("gone")) return;
+    if (e.clientX < innerWidth * 0.25) prev(); else next();
+  });
+  let tx = null;
+  addEventListener("touchstart", (e) => tx = e.touches[0].clientX, { passive: true });
+  addEventListener("touchend", (e) => {
+    if (tx === null) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) dx < 0 ? next() : prev();
+    tx = null;
+  });
+  // the controls show while the mouse moves, then fade
+  let hide = null;
+  addEventListener("mousemove", () => {
+    document.body.classList.add("ui");
+    clearTimeout(hide);
+    hide = setTimeout(() => document.body.classList.remove("ui"), 1800);
+  });
+  addEventListener("resize", fit);
+  fit();
+  const h = parseInt(location.hash.slice(1), 10);
+  show(Number.isFinite(h) ? h - 1 : 0);
+  if (Number.isFinite(h) && h > 1) cover.classList.add("gone");
+})();
+</script>
+</body>
+</html>
