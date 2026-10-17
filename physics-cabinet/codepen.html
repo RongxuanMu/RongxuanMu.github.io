@@ -3469,8 +3469,10 @@ PC_EXHIBITS.push({
   title: "Pendulum wave",
   blurb: "Fifteen lengths, 51 to 65 swings a minute: snakes, splits and realigns every 60 s",
   build(X) {
-    const T = THREE6, NP = 15, TOP = 0.3, PERIOD = 60, N0 = 51, W = 0.26;
+    const T = THREE6, NP = 15, PERIOD = 60, N0 = 51, W = 0.26;
     const L = Array.from({ length: NP }, (_, k) => PC_G * (PERIOD / (2 * Math.PI * (N0 + k))) ** 2);
+    // the frame is as tall as the longest pendulum (34 cm for 51 swings a minute) plus room for its bob over the base
+    const TOP = Math.max(...L) + 0.035;
     const om = L.map((l) => Math.sqrt(PC_G / l));
     const chrome = PC_MAT.chrome(), str = PC_MAT.string();
     X.root.add(new T.Mesh(new T.BoxGeometry(W + 0.04, 0.012, 0.08), PC_MAT.wood()).translateY(6e-3));
@@ -4648,7 +4650,7 @@ var PhysicsCabinet = {
     // the title floats behind the plate, facing the viewer
     const head = this.app.input.head, sp = this.stage.getWorldPosition(new THREE6.Vector3());
     const away = new THREE6.Vector3(sp.x - head.x, 0, sp.z - head.z).normalize();
-    this.title.position.copy(sp).addScaledVector(away, PC_PLATE_R + 0.05).setY(sp.y + 0.46);
+    this.title.position.copy(sp).addScaledVector(away, PC_PLATE_R + 0.05).setY(sp.y + 0.52);
     this.title.lookAt(head.x, this.title.position.y, head.z);
   },
   exit() {

@@ -390,8 +390,10 @@ PC_EXHIBITS.push({
   title: "Pendulum wave",
   blurb: "Fifteen lengths, 51 to 65 swings a minute: snakes, splits and realigns every 60 s",
   build(X) {
-    const T = THREE6, NP = 15, TOP = 0.3, PERIOD = 60, N0 = 51, W = 0.26;
+    const T = THREE6, NP = 15, PERIOD = 60, N0 = 51, W = 0.26;
     const L = Array.from({ length: NP }, (_, k) => PC_G * (PERIOD / (2 * Math.PI * (N0 + k))) ** 2);
+    // the frame is as tall as the longest pendulum (34 cm for 51 swings a minute) plus room for its bob over the base
+    const TOP = Math.max(...L) + 0.035;
     const om = L.map((l) => Math.sqrt(PC_G / l));
     const chrome = PC_MAT.chrome(), str = PC_MAT.string();
     X.root.add(new T.Mesh(new T.BoxGeometry(W + 0.04, 0.012, 0.08), PC_MAT.wood()).translateY(6e-3));

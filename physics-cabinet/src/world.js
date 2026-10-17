@@ -196,7 +196,7 @@ var PhysicsCabinet = {
     // the title floats behind the plate, facing the viewer
     const head = this.app.input.head, sp = this.stage.getWorldPosition(new THREE6.Vector3());
     const away = new THREE6.Vector3(sp.x - head.x, 0, sp.z - head.z).normalize();
-    this.title.position.copy(sp).addScaledVector(away, PC_PLATE_R + 0.05).setY(sp.y + 0.46);
+    this.title.position.copy(sp).addScaledVector(away, PC_PLATE_R + 0.05).setY(sp.y + 0.52);
     this.title.lookAt(head.x, this.title.position.y, head.z);
   },
   exit() {
