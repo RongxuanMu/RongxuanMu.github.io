@@ -4683,7 +4683,7 @@ function asTileMeshes(grid, h, style, mats, cache, tile) {
     for (const [kind, c] of Object.entries(e.chunk)) (parts[kind] ||= []).push(c);
   }
   const meshes = [];
-  // ink and watercolour draw the edges too: worked out per cell (and cached with it) only once a look asks for them
+  // watercolour and sketch draw the edges too: worked out per cell (and cached with it) only once a look asks for them
   const ls = mats.lines();
   if (ls) {
     const segs = [];
@@ -4950,7 +4950,7 @@ var Archiscape = {
       this.tourTowns = v;
       tour();
     } });
-    // the render look: vivid colour, white clay, black-and-white ink, watercolour
+    // the render look: vivid colour, white clay, watercolour, pencil sketch
     this.lookIdx = 0;
     this.lookB = tool("Look: Vivid", { onClick: () => this.setLook((this.lookIdx + 1) % AS_LOOKS.length) });
     asMusic ||= new AsMusic(app2.sfx);
@@ -5350,11 +5350,10 @@ var AS_ISLAND_SCALE = 0.88;
 var AS_TOUR_REFORMS = 1, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;
 // render looks. Every town material reads one shared uniform, so a switch is instant and costs no recompile
 var AS_LOOKS = [
-  { id: "vivid", label: "Vivid" },
-  { id: "clay", label: "Clay" },
-  { id: "ink", label: "Ink", lines: { hex: 1710618, opacity: 0.9 } },
-  { id: "watercolor", label: "Watercolor", lines: { hex: 5913144, opacity: 0.32 } },
-  { id: "sketch", label: "Sketch", lines: { hex: 3355443, opacity: 0.7, sketch: true } }
+  { id: "vivid", label: "Vivid", code: 0 },
+  { id: "clay", label: "Clay", code: 1 },
+  { id: "watercolor", label: "Watercolor", code: 3, lines: { hex: 5913144, opacity: 0.32 } },
+  { id: "sketch", label: "Sketch", code: 4, lines: { hex: 3355443, opacity: 0.7, sketch: true } }
 ];
 var AS_LOOK_GLSL = `uniform int asLook;
 varying vec3 vAsP;
@@ -5374,24 +5373,21 @@ function asLookify(m, look) {
     sh.uniforms.asLook = look;
     sh.vertexShader = "varying vec3 vAsP;\nvarying vec3 vAsN;\n" + (lit ? sh.vertexShader.replace("#include <beginnormal_vertex>", "#include <beginnormal_vertex>\n  vAsN = objectNormal;") : sh.vertexShader).replace("#include <begin_vertex>", "#include <begin_vertex>\n  vAsP = transformed;" + (lit ? "" : "\n  vAsN = vec3(0.0, 1.0, 0.0);"));
     let f = AS_LOOK_GLSL + sh.fragmentShader;
-    // clay and ink: every surface one white; watercolour: colours a little paler, as if thinned with water
+    // clay: every surface one white; watercolour: colours a little paler, as if thinned with water
     f = f.replace("#include <color_fragment>", `#include <color_fragment>
-  if (asLook == 1 || asLook == 2) diffuseColor.rgb = vec3(asLook == 1 ? 0.82 : 0.95);
+  if (asLook == 1) diffuseColor.rgb = vec3(0.82);
   else if (asLook == 4) diffuseColor.rgb = mix(vec3(0.95, 0.93, 0.88), diffuseColor.rgb, 0.22);
   else if (asLook == 3) diffuseColor.rgb = mix(mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114))), 0.12), vec3(0.97, 0.95, 0.9), 0.16);`);
     if (lit) {
       f = f.replace("#include <metalnessmap_fragment>", `#include <metalnessmap_fragment>
   if (asLook != 0) { metalnessFactor = 0.0; roughnessFactor = max(roughnessFactor, 0.8); }`);
-      // ink: two flat tones and dark contours where a surface turns away; watercolour: soft-edged washes, cool
+      // watercolour: soft-edged washes, cool
       // blue shade instead of grey, pigment that granulates and pools at the edges, paper showing through
       f = f.replace("#include <opaque_fragment>", `if (asLook >= 2) {
     float ndv = abs(dot(normalize(normal), normalize(vViewPosition)));
     float base = max(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)), 0.02);
     float s = clamp(dot(outgoingLight, vec3(0.299, 0.587, 0.114)) / base, 0.0, 3.0);
-    if (asLook == 2) {
-      float tone = mix(0.74, 1.0, smoothstep(0.75, 0.95, s));
-      outgoingLight = vec3(tone) * (1.0 - 0.8 * smoothstep(0.3, 0.06, ndv));
-    } else if (asLook == 3) {
+    if (asLook == 3) {
       float n = asNoise(vAsP * 700.0) * 0.55 + asNoise(vAsP * 160.0) * 0.45;
       float sh = smoothstep(0.3, 0.8, s + (n - 0.5) * 0.25);
       vec3 col = diffuseColor.rgb * mix(vec3(0.68, 0.7, 0.84), vec3(1.1, 1.08, 1.04), sh);
@@ -5424,7 +5420,9 @@ function asLookify(m, look) {
   return m;
 }
 function asMaterials() {
+  // the shader's look codes (0 vivid, 1 clay, 3 watercolour, 4 sketch) stay fixed as looks come and go
   const cache = {}, look = { value: 0 }, time = { value: 0 };
+  let cur = AS_LOOKS[0];
   const lineMat = new THREE6.LineBasicMaterial({ color: 0, transparent: true, opacity: 0.9 });
   const kind = (k) => {
     if (cache[k]) return cache[k];
@@ -5460,13 +5458,14 @@ function asMaterials() {
   const make = (name, hex) => own(new THREE6.MeshStandardMaterial({ color: hex, roughness: 0.95 }));
   const water = (hex) => own(new THREE6.MeshStandardMaterial({ color: hex, roughness: 0.3, metalness: 0.05, envMap: asEnv, envMapIntensity: 0.22 }));
   const setLook = (i) => {
-    look.value = i;
-    const L = AS_LOOKS[i].lines;
+    cur = AS_LOOKS[i];
+    look.value = cur.code;
+    const L = cur.lines;
     if (L) lineMat.color.setHex(L.hex), lineMat.opacity = L.opacity;
   };
   // "" no lines, "L" clean edges, "S" sketched strokes
   const lines = () => {
-    const L = AS_LOOKS[look.value].lines;
+    const L = cur.lines;
     return L ? L.sketch ? "S" : "L" : "";
   };
   return { kind, make, water, look, time, lineMat, setLook, lines };
@@ -5491,12 +5490,37 @@ var AS_LEAVES = {
   jiangnan: [9418581, 11192933, 13221233],
   default: [13141050, 14263361, 10903854, 12298280]
 };
+// each era's birds: colour, size, wing length (x stretch), wingbeat speed, how much they glide (0 flap all the
+// time .. 1 mostly soar), flock size, circle radius and height, angular speed
+var AS_BIRDS = {
+  default: { hex: 2829104, size: 0.85, wing: 1, beat: 13, glide: 0.5, n: 9, r: 0.2, y: 0.2, w: 0.32 },
+  stonehenge: { hex: 1381653, size: 1.05, wing: 1.1, beat: 8, glide: 0.4, n: 6, r: 0.22, y: 0.22, w: 0.22 },
+  greek: { hex: 15724527, size: 0.95, wing: 1.5, beat: 7, glide: 0.85, n: 5, r: 0.23, y: 0.24, w: 0.2 },
+  roman: { hex: 7369604, size: 0.7, wing: 1, beat: 15, glide: 0.3, n: 12, r: 0.17, y: 0.19, w: 0.4 },
+  hagia: { hex: 15724527, size: 0.95, wing: 1.5, beat: 7, glide: 0.85, n: 6, r: 0.23, y: 0.25, w: 0.2 },
+  islamic: { hex: 7369604, size: 0.7, wing: 1, beat: 15, glide: 0.3, n: 12, r: 0.16, y: 0.2, w: 0.42 },
+  forbidden: { hex: 1381653, size: 0.85, wing: 1.05, beat: 10, glide: 0.5, n: 8, r: 0.21, y: 0.23, w: 0.28 },
+  jiangnan: { hex: 16250871, size: 1.1, wing: 1.6, beat: 5, glide: 0.75, n: 3, r: 0.16, y: 0.11, w: 0.16 },
+  kyoto: { hex: 15790320, size: 1.25, wing: 1.7, beat: 4.5, glide: 0.7, n: 3, r: 0.2, y: 0.22, w: 0.14 },
+  kremlin: { hex: 1381653, size: 0.85, wing: 1.05, beat: 10, glide: 0.45, n: 10, r: 0.2, y: 0.26, w: 0.3 },
+  thai: { hex: 1716304, size: 0.6, wing: 1.3, beat: 18, glide: 0.25, n: 14, r: 0.15, y: 0.17, w: 0.6 },
+  prussian: { hex: 3355443, size: 0.8, wing: 1, beat: 12, glide: 0.4, n: 9, r: 0.19, y: 0.22, w: 0.3 },
+  gaudi: { hex: 2236962, size: 0.6, wing: 1.6, beat: 20, glide: 0.35, n: 16, r: 0.16, y: 0.24, w: 0.65 },
+  wright: { hex: 7029314, size: 1.4, wing: 1.6, beat: 5, glide: 0.95, n: 1, r: 0.18, y: 0.3, w: 0.15 },
+  corbusier: { hex: 7369604, size: 0.7, wing: 1, beat: 15, glide: 0.3, n: 10, r: 0.17, y: 0.2, w: 0.4 },
+  meier: { hex: 15724527, size: 0.95, wing: 1.5, beat: 7, glide: 0.85, n: 5, r: 0.22, y: 0.25, w: 0.2 },
+  ando: { hex: 1381653, size: 0.9, wing: 1.05, beat: 9, glide: 0.5, n: 4, r: 0.2, y: 0.23, w: 0.24 },
+  pei: { hex: 1716304, size: 0.6, wing: 1.3, beat: 18, glide: 0.25, n: 12, r: 0.16, y: 0.18, w: 0.55 },
+  gehry: { hex: 15724527, size: 0.95, wing: 1.5, beat: 7, glide: 0.85, n: 6, r: 0.22, y: 0.24, w: 0.22 },
+  hadid: { hex: 2236962, size: 0.6, wing: 1.6, beat: 20, glide: 0.35, n: 16, r: 0.17, y: 0.26, w: 0.65 }
+};
 var AS_KOI = [15233066, 15921128, 14240555, 15315516, 15921128];
 var _lifeM = new THREE6.Matrix4(), _lifeQ = new THREE6.Quaternion(), _lifeE = new THREE6.Euler(), _lifeS = new THREE6.Vector3(), _lifeP = new THREE6.Vector3();
-function asLifeMat(m, time, shaderLine) {
+function asLifeMat(m, time, shaderLine, extra = {}) {
   m.onBeforeCompile = (sh) => {
     sh.uniforms.asTime = time;
-    sh.vertexShader = "attribute float aPhase;\nuniform float asTime;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n" + shaderLine);
+    Object.assign(sh.uniforms, extra);
+    sh.vertexShader = "attribute float aPhase;\nuniform float asTime;\n" + Object.keys(extra).map((k) => `uniform float ${k};\n`).join("") + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n" + shaderLine);
   };
   m.customProgramCacheKey = () => shaderLine;
   return m;
@@ -5528,9 +5552,11 @@ var AsLife = class {
       0, 0, 2e-3, -7.5e-3, 0, -6e-4, 0, 0, -1.5e-3,
       0, 0, 2e-3, 0, 0, -1.5e-3, 7.5e-3, 0, -6e-4
     ]);
+    this.birdU = { uBeat: { value: 13 }, uGlide: { value: 0.5 }, uWing: { value: 1 } };
     this.birds = inst(bird, asLifeMat(new THREE6.MeshBasicMaterial({ color: 2829104, side: THREE6.DoubleSide }), time,
-      "float fl = smoothstep(-0.3, 0.3, sin(asTime * 0.8 + aPhase * 1.7));\n  transformed.y += abs(transformed.x) * (sin(asTime * 13.0 + aPhase) * 0.75 * fl + 0.12);"), 9);
-    this.flock = Array.from({ length: 9 }, (_, i) => ({ da: (asHash(i, 1) - 0.5) * 0.7, dr: (asHash(i, 2) - 0.5) * 0.05, dy: (asHash(i, 3) - 0.5) * 0.04, ph: asHash(i, 4) * 6.28 }));
+      "transformed.x *= uWing;\n  float fl = smoothstep(-0.3 + uGlide, 0.3 + uGlide, sin(asTime * 0.8 + aPhase * 1.7));\n  transformed.y += abs(transformed.x) * (sin(asTime * uBeat + aPhase) * 0.75 * fl + 0.12);", this.birdU), 16);
+    this.bird = AS_BIRDS.default;
+    this.flock = Array.from({ length: 16 }, (_, i) => ({ da: (asHash(i, 1) - 0.5) * 0.7, dr: (asHash(i, 2) - 0.5) * 0.05, dy: (asHash(i, 3) - 0.5) * 0.04, ph: asHash(i, 4) * 6.28 }));
     // leaves: a small bent quad that spins as it flutters down
     const leaf = geo([-1.1e-3, 0, -7e-4, 1.1e-3, 0, -7e-4, 1.1e-3, 3e-4, 7e-4, -1.1e-3, 0, -7e-4, 1.1e-3, 3e-4, 7e-4, -1.1e-3, 0, 7e-4]);
     this.leafMesh = inst(leaf, new THREE6.MeshStandardMaterial({ side: THREE6.DoubleSide, roughness: 0.8 }), 30);
@@ -5551,6 +5577,12 @@ var AsLife = class {
     this.t = 0;
   }
   setStyle(style) {
+    const B = this.bird = { ...AS_BIRDS.default, ...AS_BIRDS[style.id] };
+    this.birds.material.color.setHex(B.hex);
+    this.birds.count = B.n;
+    this.birdU.uBeat.value = B.beat;
+    this.birdU.uGlide.value = B.glide;
+    this.birdU.uWing.value = B.wing;
     this.water = !!style.ground.water;
     this.fishMesh.visible = this.water;
     for (const f of this.fish) f.cell = -1;
@@ -5565,14 +5597,15 @@ var AsLife = class {
   update(dt) {
     const t = this.t += dt, W = this.w, grid = W.grid, h = W.h;
     // the flock wheels around a centre that wanders over the island, rising and falling together
-    const cx = Math.sin(t * 0.07) * 0.05, cz = Math.cos(t * 0.05) * 0.05, A = t * 0.32;
+    const B = this.bird, cx = Math.sin(t * 0.07) * 0.05, cz = Math.cos(t * 0.05) * 0.05, A = t * B.w;
     this.flock.forEach((b, i) => {
-      const a = A + b.da, r = 0.2 + b.dr + Math.sin(t * 0.2 + b.ph) * 0.02;
-      const y = 0.2 + b.dy + Math.sin(t * 0.5 + b.ph) * 0.012;
+      if (i >= B.n) return;
+      const a = A + b.da * Math.min(1, B.n / 6), r = B.r + b.dr + Math.sin(t * 0.2 + b.ph) * 0.02;
+      const y = B.y + b.dy + Math.sin(t * 0.5 + b.ph) * 0.012;
       _lifeP.set(cx + Math.sin(a) * r, y, cz + Math.cos(a) * r);
       // heading along the circle (counter-clockwise from above), banked into the turn
       _lifeQ.setFromEuler(_lifeE.set(0, a + Math.PI / 2, -0.35, "YXZ"));
-      this.birds.setMatrixAt(i, _lifeM.compose(_lifeP, _lifeQ, _lifeS.setScalar(0.85)));
+      this.birds.setMatrixAt(i, _lifeM.compose(_lifeP, _lifeQ, _lifeS.setScalar(B.size)));
     });
     this.birds.instanceMatrix.needsUpdate = true;
     // leaves let go from open ground (where the trees are), drift downwind and settle, then fade
