@@ -3684,7 +3684,6 @@ var RoadsterNight = {
     addEventListener("keydown", this._kd);
     addEventListener("keyup", this._ku);
     this.clock = 0;
-    this.slow = 1;
     this.cheerT = 0;
     this.fw = false;
     this.fwAt = 0;
@@ -3699,20 +3698,7 @@ var RoadsterNight = {
     this.btn = {
       play: b("Playing", { toggle: true, value: true, onClick: (v) => this.setPlaying(v) }),
       acts: RN_ACTS.map((a, i) => b(a.label, { onClick: () => this.setMode("show", i) })),
-      slow: b("Slow-mo", { toggle: true, onClick: (v) => {
-        this.slow = v ? 0.35 : 1;
-        if (v) {
-          this.pace = 1;
-          this.btn.fast.setValue(false);
-        }
-      } }),
-      fast: b("Fast", { toggle: true, onClick: (v) => {
-        this.pace = v ? RN_FAST : 1;
-        if (v) {
-          this.slow = 1;
-          this.btn.slow.setValue(false);
-        }
-      } }),
+      fast: b("Fast", { toggle: true, onClick: (v) => this.pace = v ? RN_FAST : 1 }),
       drive: b("Drive", { toggle: true, onClick: (v) => v ? this.setMode("drive") : this.setMode("show", 0) }),
       table: b("Tabletop", { toggle: true, value: !!this.tabletop, onClick: (v) => {
         this._placeStage(v);
@@ -3721,7 +3707,7 @@ var RoadsterNight = {
       reset: b("Reset", { onClick: () => this.reset() })
     };
     const B = this.btn;
-    panel.layout([B.play, ...B.acts, B.slow, B.fast, B.drive, B.table, B.sound, B.reset], { cols: 4, top: 0.03 });
+    panel.layout([B.play, ...B.acts, B.fast, B.drive, B.table, B.sound, B.reset], { cols: 4, top: 0.03 });
     ctx.add(panel.root.children[0], { near: false, highlight: false });
     ctx.root.add(panel.root);
     const joy = this.joyPanel = ctx.panel("Drive · grab the knob", { w: 0.15, h: 0.19 });
@@ -3973,7 +3959,7 @@ var RoadsterNight = {
     dt = Math.min(dt, 1 / 30);
     // diorama time: real time, or RN_FAST times faster with Fast on (a true-speed miniature reads as slow motion), in
     // steps of at most 1/60 s so the stunts' physics stay smooth
-    const sd = dt * this.slow * (this.pace ?? 1), car = this.car, n = Math.ceil(sd * 60 - 1e-6), h = sd / Math.max(n, 1);
+    const sd = dt * (this.pace ?? 1), car = this.car, n = Math.ceil(sd * 60 - 1e-6), h = sd / Math.max(n, 1);
     for (let k = 0; k < n; k++) {
       this.clock += h;
       if (this.mode === "show") {

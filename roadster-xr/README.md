@@ -18,7 +18,7 @@ The interaction follows Microduck XR: the stage sits on the real floor (1.6 m be
 0.42 scale. Its bar moves it, and two hands on the bar turn and scale it. The console rides with the stage, and every
 panel can be dragged by its own bar.
 
-- **Show panel**: play / pause, jump to an act, slow-mo, Drive, Tabletop, Sound, Reset.
+- **Show panel**: play / pause, jump to an act, Fast, Drive, Tabletop, Sound, Reset.
 - **Drive panel**: a joystick (or thumbstick, or WASD) takes the car; Thrust hops it (Space, or A on a controller);
   Launch does 0–60 (Shift).
 - **Pinch the pad** anywhere and the car drives there.
