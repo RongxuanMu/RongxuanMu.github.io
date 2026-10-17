@@ -74,7 +74,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Archiscape</h1>
     <p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; Stonehenge to Zaha Hadid</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; the panel moved to your right, clear of this card; nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate</p>
+    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; this page plays the eras by itself while you read; the panel moved to your right, clear of this card; nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4813,6 +4813,7 @@ var Archiscape = {
     // the panel rides on the plate, and its bar moves it
     island.updateWorldMatrix(true, false);
     island.attach(panel.root);
+    this.panelRoot = panel.root;
     asPanelHandle(ctx, panel.root, { w: 0.16, y: -PH / 2 - 0.014 });
     const tl = ctx.label("Tap a tile to build · tap a wall to build beside it · hold to remove · grab the plate to move, two hands to turn", { height: 0.011 });
     tl.position.set(0, TABLE + 0.012, -0.22);
@@ -4821,6 +4822,7 @@ var Archiscape = {
     // the hint rides on the plate: moved, turned or scaled, it goes along
     this.island.updateWorldMatrix(true, false);
     this.island.attach(tl);
+    this.hintLabel = tl;
     // desktop keys: arrows change era, N new town, E erase, Z undo
     this._kd = (e) => {
       if (e.key === "ArrowRight") this.setStyle((this.styleIdx + 1) % AS_STYLES.length);
@@ -5088,13 +5090,14 @@ var Archiscape = {
       this.flash.material.opacity = 0.55 * Math.max(0, 1 - this.flashT);
       if (this.flashT >= 1) this.flash.visible = false;
     }
+    this._attract(dt);
     if (this.morph) this._morphStep(dt);
     // on the era tour, the quiet seconds before the next era are spent building its town a few cells at a time,
     // so the switch itself costs almost nothing
     else if (this.tour !== null && this.tourEras && ((this.tourK ?? 0) + 1) % (AS_TOUR_REFORMS + 1) === 0) this._warm(AS_STYLES[(this.styleIdx + 1) % AS_STYLES.length], 3);
     if (this.tour !== null) {
       this.tour += dt;
-      if (this.tour > AS_TOUR_S) {
+      if (this.tour > (this.attract ? AS_ATTRACT_S : AS_TOUR_S)) {
         this.tour = 0;
         this._tourStep();
       }
@@ -5107,6 +5110,35 @@ var Archiscape = {
     this.title.position.copy(ip).addScaledVector(away, (AS_R + 0.04) * s).setY(ip.y + 0.26 * Math.max(0.7, s));
     this.title.lookAt(head.x, this.title.position.y, head.z);
     this.title.scale.setScalar(Math.max(0.7, s));
+  },
+  // landing (desktop, before Enter): the island plays by itself - the era tour at a brisker pace, each town
+  // reforming before the next era grows out of it - while the camera circles it slowly. Entering the page ends it
+  // (and leaves the tour as you had it)
+  _attract(dt) {
+    const a = this.app, on = !a.renderer.xr.isPresenting && !document.getElementById("overlay")?.classList.contains("hidden");
+    if (on && !this.attract) {
+      this.attract = { ang: null, own: !this.tourEras };
+      if (this.attract.own) {
+        this.tourEras = true;
+        this.tour ??= 0;
+      }
+    } else if (!on && this.attract) {
+      if (this.attract.own) {
+        this.tourEras = false;
+        if (!this.tourTowns) this.tour = null;
+      }
+      this.attract = null;
+    }
+    // the panel would swing through the shot as the camera circles: it waits off stage until you enter
+    if (this.panelRoot) this.panelRoot.visible = this.hintLabel.visible = !this.attract;
+    if (!this.attract) return;
+    const A = this.attract, cam = a.camera, ctl = a.controls, c = this.island.getWorldPosition(new THREE6.Vector3());
+    if (A.ang === null) A.ang = Math.atan2(cam.position.x - c.x, cam.position.z - c.z);
+    A.ang += dt * 0.07;
+    ctl.target.set(c.x, c.y + 0.06, c.z);
+    cam.position.set(c.x + Math.sin(A.ang) * 0.62, c.y + 0.36, c.z + Math.cos(A.ang) * 0.62);
+    cam.lookAt(ctl.target);
+    ctl.update();
   },
   exit() {
     removeEventListener("keydown", this._kd);
@@ -5137,6 +5169,8 @@ function asPanelHandle(ctx, root, { w = 0.12, y = -0.16 } = {}) {
 var asEnv = null, asMusic = null;
 // s: how long the tour stays on each era / town
 var AS_TOUR_S = 6.4;
+// s: the same on the landing page's self-playing tour
+var AS_ATTRACT_S = 3.6;
 var AS_ISLAND_SCALE = 0.88;
 // how many times each era reforms its town on the tour before the next era; s: how long a reform takes to sweep
 var AS_TOUR_REFORMS = 2, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;
