@@ -26,7 +26,7 @@ var RN_FAST = 2.5;
 // thruster jump behind it, the stands, screen and test stand at the back
 var RN_LAUNCH = { x0: -42, z: 16 };
 var RN_LOOP = { x: -6, z: -6, R: 9, entry: 30, w: 5.2 };
-var RN_JUMP = { x0: -30, z: -24, take: 0, line: 9 };
+var RN_JUMP = { x0: -30, z: -24, take: -3, line: 9 };
 var rnEnv = null;
 var RN_WRAP = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 var _rnV = new THREE6.Vector3(), _rnV2 = new THREE6.Vector3(), _rnQ = new THREE6.Quaternion(), _rnM = new THREE6.Matrix4();
@@ -465,7 +465,7 @@ function rnBuildVenue() {
     v.rotation.y = kind === "semi" ? Math.PI / 2 : -Math.PI / 2;
     g.add(v);
     lineup.push({ kind, x0: x, x1: x + wid, z0: RN_JUMP.z - v.userData.len / 2, z1: RN_JUMP.z + v.userData.len / 2, h: v.userData.hgt });
-    x += wid + 0.7;
+    x += wid + 1.5;
   }
   g.add(rnBuildRamp());
   g.userData = { pad, lamps, gate, crowd, phones, screen, screenCanvas, screenTex, beams, sky, blink, lineup };

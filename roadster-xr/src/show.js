@@ -418,7 +418,7 @@ function* rnActJump(W) {
   W.screen({ title: "THRUST", sub: "10 COLD-GAS THRUSTERS" });
   yield* rnFollow(car, rnRoute(car, rnRouteTo(car, J.x0, J.z), { vmax: 13 }));
   W.caption(RN_ACTS[2].caption);
-  yield* rnStraight(car, (c) => c.v < 8 ? 5 : 0, (c) => c.pos.x >= J.take);
+  yield* rnStraight(car, (c) => c.v < 10 ? 5 : 0, (c) => c.pos.x >= J.take);
   yield* rnHop(W, { roll: Math.PI * 2 });
   W.cheer(1);
   yield* rnStraight(car, () => -8, (c) => c.v <= 0);
