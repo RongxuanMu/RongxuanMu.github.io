@@ -4500,6 +4500,8 @@ function asCellChunk(grid, h, style, cell) {
       style.column(K, { ci: cell.i, h: hc, cell, corners: cell.v.map((vi) => grid.verts[vi]), cen2: cell.c, exposed });
       if (!water) K.poly("ground", style.ground.hex, cell.v.map((vi) => v3(grid.verts[vi], 1e-4)), 0.07, r);
     } else {
+      // floor under the building too: styles that set their walls back (Greek colonnades) would show the void
+      if (!water) K.poly("ground", style.ground.hex, cell.v.map((vi) => v3(grid.verts[vi], 1e-4)), 0.07, r);
       for (let L = 0; L < hc; L++) {
         const y0 = L * H;
         cell.e.forEach((e, k) => {
