@@ -2600,24 +2600,38 @@ function rnVehicle(kind) {
     hgt = 1.9;
     wid = 2.03;
   } else if (kind === "semi") {
-    const paint = rnStd(14211288, { metalness: 0.4, roughness: 0.3, envMap: rnEnv });
-    const cab = new THREE6.Mesh(rnLoft([[-1.2, 1.25, 0.9, 2.6, 3.9, 1.1], [0.8, 1.25, 0.9, 2.6, 3.9, 1.1], [2.2, 1.25, 0.6, 1.4, 3.0, 1.05], [2.6, 1.2, 0.6, 1.0, 1.6, 1.1]], { steps: 6 }), paint);
-    cab.position.x = 1.3;
-    g.add(cab);
-    const ws = new THREE6.Mesh(new THREE6.PlaneGeometry(2.2, 1.2), glass);
-    ws.position.set(3.15, 2.75, 0);
-    ws.rotation.set(0, Math.PI / 2, 0);
-    ws.rotateX(-0.6);
-    g.add(ws);
-    const frame = new THREE6.Mesh(new THREE6.BoxGeometry(5, 0.4, 1.1), rnStd(2236962));
-    frame.position.set(-1.2, 0.85, 0);
-    g.add(frame);
-    const fifth = new THREE6.Mesh(new THREE6.CylinderGeometry(0.55, 0.55, 0.15, 16), rnStd(3355443));
-    fifth.position.set(-2.2, 1.1, 0);
-    g.add(fifth);
-    wheels([2.6, -1.6, -3.0], 1.05, 0.52);
-    len = 7.2;
-    hgt = 3.9;
+    // a cab-over tractor: tall cab with a raked nose, sitting above its wheels; frame, fifth wheel, two drive axles
+    const paint = rnStd(14211288, { metalness: 0.4, roughness: 0.3, envMap: rnEnv }), dark = rnStd(2236962, { roughness: 0.7 });
+    const body = new THREE6.Group();
+    body.position.x = 0.28;
+    g.add(body);
+    const cab = new THREE6.Mesh(rnLoft([[0.2, 1.24, 1.15, 3.0, 3.5, 1.14], [1.8, 1.24, 1.15, 3.0, 3.5, 1.14], [2.6, 1.24, 1.15, 2.0, 2.85, 1.16], [3.0, 1.2, 1.15, 1.2, 1.7, 1.16]], { steps: 6 }), paint);
+    body.add(cab);
+    // the windshield on the raked nose, just proud of the panel
+    const ws = new THREE6.BufferGeometry();
+    // (the raked face runs from (1.8, 3.5) to (2.6, 2.85); the glass sits 2 cm out along its normal)
+    const P = [[1.86, 3.45, -1.0], [1.86, 3.45, 1.0], [2.55, 2.89, 1.02], [2.55, 2.89, -1.02]].map(([x, y, z]) => [x + 0.013, y + 0.016, z]);
+    ws.setAttribute("position", new THREE6.Float32BufferAttribute([...P[0], ...P[2], ...P[1], ...P[0], ...P[3], ...P[2]], 3));
+    ws.computeVertexNormals();
+    body.add(new THREE6.Mesh(ws, new THREE6.MeshStandardMaterial({ color: 1055264, roughness: 0.1, metalness: 0.5, envMap: rnEnv, side: THREE6.DoubleSide })));
+    const box = (x0, x1, y0, y1, w, m) => {
+      const b = new THREE6.Mesh(new THREE6.BoxGeometry(x1 - x0, y1 - y0, w), m);
+      b.position.set((x0 + x1) / 2, (y0 + y1) / 2, 0);
+      body.add(b);
+    };
+    box(2.78, 3.08, 0.35, 1.18, 2.38, paint);
+    box(-0.6, 1.6, 0.45, 1.12, 2.3, paint);
+    box(-3.6, 0.2, 0.72, 1.12, 1.0, dark);
+    const fifth = new THREE6.Mesh(new THREE6.CylinderGeometry(0.55, 0.55, 0.12, 16), dark);
+    fifth.position.set(-1.9, 1.18, 0);
+    body.add(fifth);
+    for (const x of [2.3, -1.4, -2.7]) for (const s2 of [-1, 1]) {
+      const w = rnWheel(0.52, 0.32, tyre, rim);
+      w.position.set(x, 0.52, s2 * 1.04);
+      body.add(w);
+    }
+    len = 6.7;
+    hgt = 3.5;
     wid = 2.5;
   } else {
     const spec = {
