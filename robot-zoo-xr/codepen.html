@@ -4923,12 +4923,51 @@ function rzBuildVisual(A, R) {
 // m: how tall a humanoid stands on the tabletop stage (Microduck keeps Microduck XR's 0.4 scale)
 var RZ_TABLE_HEIGHT = 0.42;
 // m: the robot picker's height (eleven robots in three rows of four, the picked one's credits below)
-var RZ_PICKER_H = 0.2;
+var RZ_PICKER_H = 0.26;
 // Robot Zoo IS Microduck XR: the same world object (stage in the room, its bar, the console riding with it, goal
 // flag, floor pinch, grab spring, follow me, boundary, tabletop, sounds, desktop camera), with a robot picker.
 // Microduck runs Microduck XR's own code path unchanged; a humanoid plugs its MuJoCo model and published policy
 // into the same stage. The stage is placed once when the world starts (from your head) and never moves on its
 // own: robots walk across it, in your room.
+// a picker card: the framework button (sketch outline, hover and pressed states) with the robot's portrait
+// painted over its face and the name underneath; the portrait loads in the background
+function rzCard(ctx, R, onClick) {
+  const b = ctx.button(R.label, { w: 0.068, h: 0.054, fontSize: 24, toggle: true, onClick });
+  const paint = b._paint.bind(b), img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => b._paint();
+  img.src = `${RZ_URL.assets}thumbs/${R.id}.jpg`;
+  b._paint = () => {
+    const label = b.label;
+    b.label = "";
+    paint();
+    b.label = label;
+    const c = b.tex.image, g = c.getContext("2d"), W = c.width, H = c.height;
+    const dark = b.toggle && b.value || b.it?._level === 2;
+    const s = H - 58;
+    if (img.complete && img.naturalWidth) {
+      g.save();
+      g.beginPath();
+      g.roundRect?.((W - s) / 2, 10, s, s, 12);
+      g.clip();
+      g.drawImage(img, (W - s) / 2, 10, s, s);
+      g.restore();
+    } else {
+      g.fillStyle = dark ? "#dddddd" : "#1c1c1c";
+      g.fillRect((W - s) / 2, 10, s, s);
+    }
+    g.fillStyle = dark ? "#000000" : "#ffffff";
+    g.font = '600 26px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    let fs = 26;
+    while (fs > 14 && g.measureText(label).width > W - 24) g.font = `600 ${fs -= 2}px system-ui, sans-serif`;
+    g.fillText(label, W / 2, H - 24);
+    b.tex.needsUpdate = true;
+  };
+  b._paint();
+  return b;
+}
 var RobotZoo = Object.assign(Object.create(Microduck), {
   id: "robot-zoo",
   title: "Robot Zoo",
@@ -4964,8 +5003,9 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     Microduck._buildConsole.call(this, ctx);
     const T = THREE6;
     const pk = this.picker = ctx.panel("Robot Zoo · pick a robot", { w: 0.3, h: RZ_PICKER_H });
-    this.robotBtns = RZ_ROBOTS.map((R, i) => ctx.button(R.label, { w: 0.068, h: 0.026, fontSize: 24, toggle: true, onClick: () => this.pick(i) }));
-    pk.layout(this.robotBtns, { cols: 4, top: 0.03 });
+    // one card per robot: its portrait over its name
+    this.robotBtns = RZ_ROBOTS.map((R, i) => rzCard(ctx, R, () => this.pick(i)));
+    pk.layout(this.robotBtns, { cols: 4, top: 0.03, cellH: 0.054 });
     this.infoTex = textTexture("", { w: 1024, h: 120, size: 30, color: "#ffffff" });
     const info = new T.Mesh(new T.PlaneGeometry(0.28, 0.28 * 120 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
     info.position.set(0, -RZ_PICKER_H / 2 + 0.024, 2e-3);
