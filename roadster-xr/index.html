@@ -2426,9 +2426,9 @@ var RN_FLOOR_BELOW_HEAD = 1.6;
 var RN_TABLE_BELOW_HEAD = 0.5;
 var RN_TABLE_SCALE = 0.42;
 var RN_G = 9.81;
-// diorama time vs yours: true-scale speed at 1:60 reads as slow motion (a miniature needs about sqrt(60) = 7.7x to
-// look real, which is too fast to follow); 2.5x keeps the stunts readable and lively
-var RN_PACE = 2.5;
+// the Fast option: diorama time runs this much faster than yours. At 1:60 true-scale speed reads as slow motion (a
+// miniature needs about sqrt(60) = 7.7x to look real, too fast to follow); 2.5x keeps the stunts readable and lively
+var RN_FAST = 2.5;
 // the course (real metres; +x right, -z away from you): launch strip in front, the curl ramp and the
 // thruster jump behind it, the stands, screen and test stand at the back
 var RN_LAUNCH = { x0: -42, z: 16 };
@@ -3716,7 +3716,20 @@ var RoadsterNight = {
     this.btn = {
       play: b("Playing", { toggle: true, value: true, onClick: (v) => this.setPlaying(v) }),
       acts: RN_ACTS.map((a, i) => b(a.label, { onClick: () => this.setMode("show", i) })),
-      slow: b("Slow-mo", { toggle: true, onClick: (v) => this.slow = v ? 0.15 : 1 }),
+      slow: b("Slow-mo", { toggle: true, onClick: (v) => {
+        this.slow = v ? 0.35 : 1;
+        if (v) {
+          this.pace = 1;
+          this.btn.fast.setValue(false);
+        }
+      } }),
+      fast: b("Fast", { toggle: true, onClick: (v) => {
+        this.pace = v ? RN_FAST : 1;
+        if (v) {
+          this.slow = 1;
+          this.btn.slow.setValue(false);
+        }
+      } }),
       drive: b("Drive", { toggle: true, onClick: (v) => v ? this.setMode("drive") : this.setMode("show", 0) }),
       table: b("Tabletop", { toggle: true, value: !!this.tabletop, onClick: (v) => {
         this._placeStage(v);
@@ -3725,7 +3738,7 @@ var RoadsterNight = {
       reset: b("Reset", { onClick: () => this.reset() })
     };
     const B = this.btn;
-    panel.layout([B.play, ...B.acts, B.slow, B.drive, B.table, B.sound, B.reset], { cols: 4, top: 0.03 });
+    panel.layout([B.play, ...B.acts, B.slow, B.fast, B.drive, B.table, B.sound, B.reset], { cols: 4, top: 0.03 });
     ctx.add(panel.root.children[0], { near: false, highlight: false });
     ctx.root.add(panel.root);
     const joy = this.joyPanel = ctx.panel("Drive · grab the knob", { w: 0.15, h: 0.19 });
@@ -3975,9 +3988,9 @@ var RoadsterNight = {
   },
   update(dt, t) {
     dt = Math.min(dt, 1 / 30);
-    // diorama time runs RN_PACE times faster than yours (a miniature at true speed reads as slow motion), in
+    // diorama time: real time, or RN_FAST times faster with Fast on (a true-speed miniature reads as slow motion), in
     // steps of at most 1/60 s so the stunts' physics stay smooth
-    const sd = dt * this.slow * RN_PACE, car = this.car, n = Math.ceil(sd * 60 - 1e-6), h = sd / Math.max(n, 1);
+    const sd = dt * this.slow * (this.pace ?? 1), car = this.car, n = Math.ceil(sd * 60 - 1e-6), h = sd / Math.max(n, 1);
     for (let k = 0; k < n; k++) {
       this.clock += h;
       if (this.mode === "show") {

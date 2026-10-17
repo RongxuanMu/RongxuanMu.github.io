@@ -25,9 +25,9 @@ panel can be dragged by its own bar.
 - **Grab the car** to lift it; let go and it lands on its thrusters.
 - **Roll into the curl ramp's run-in**, square and quick enough, and it takes the ramp.
 
-Diorama time runs 2.5 times faster than real time. At 1:60 a car moving at its true speed covers 1/60 of the distance
-in front of you and reads as slow motion; a miniature would need about sqrt(60) = 7.7 times to look physically right,
-which is too fast to follow. The big screen still shows the scene's own clock (0.81 s). The car finds its way around
+It runs in real time by default. At 1:60 a car moving at its true speed covers 1/60 of the distance in front of you
+and can read as slow motion (a miniature would need about sqrt(60) = 7.7 times to look physically right), so the
+**Fast** button runs diorama time 2.5 times faster. The big screen still shows the scene's own clock (0.81 s). The car finds its way around
 the line-up, the ramp, the stands and the posts (A* over an occupancy grid), and when you drive it checks the car's
 whole outline.
 
