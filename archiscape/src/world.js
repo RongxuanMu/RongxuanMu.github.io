@@ -268,7 +268,7 @@ var Archiscape = {
     this.h = new Int8Array(asGenerate(this.grid.cells, 7));
     this.history = [];
     this.caches = {};
-    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "forbidden");
+    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "stonehenge");
     this.town = null;
     this.leaving = [];
     this.islandIt = ctx.add(island, {

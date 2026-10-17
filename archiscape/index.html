@@ -91,7 +91,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Archiscape</h1>
     <p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; Stonehenge to Zaha Hadid</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; this page plays the eras by itself while you read, opening on the Forbidden City; Jiangnan walls in one even white; the tour reforms each town once per era; panels on your right, clear of this card; nineteen eras with Kyoto and Thai temples</p>
+    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; this page plays the eras by itself while you read, opening on Stonehenge and walking forward in time; Jiangnan walls in one even white; the tour reforms each town once per era; panels on your right, clear of this card; nineteen eras with Kyoto and Thai temples</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4744,7 +4744,7 @@ var Archiscape = {
     this.h = new Int8Array(asGenerate(this.grid.cells, 7));
     this.history = [];
     this.caches = {};
-    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "forbidden");
+    this.styleIdx = AS_STYLES.findIndex((s) => s.id === "stonehenge");
     this.town = null;
     this.leaving = [];
     this.islandIt = ctx.add(island, {

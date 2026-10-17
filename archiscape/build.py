@@ -40,7 +40,7 @@ swap('<h1>VibeXR</h1>', '<h1>Archiscape</h1>')
 # the shared landing page: card on the left, the scene framed beside it, the latest update on the card
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='17 Oct 2026', notes='this page plays the eras by itself while you read, opening on the Forbidden City; Jiangnan walls in one even white; the tour reforms each town once per era; panels on your right, clear of this card; nineteen eras with Kyoto and Thai temples')
+s = landing.apply(s, updated='17 Oct 2026', notes='this page plays the eras by itself while you read, opening on Stonehenge and walking forward in time; Jiangnan walls in one even white; the tour reforms each town once per era; panels on your right, clear of this card; nineteen eras with Kyoto and Thai temples')
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; '
      'Stonehenge to Zaha Hadid</p>\n'
