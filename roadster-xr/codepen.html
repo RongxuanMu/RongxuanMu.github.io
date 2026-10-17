@@ -2476,8 +2476,9 @@ function rnLoft(list, { steps = 14, section = rnSection, caps = true } = {}) {
     quad(a, d, c, b);
   }
   if (caps) for (const [r, flip] of [[rings[0], false], [rings[steps], true]]) for (let k = 1; k < n - 1; k++) {
-    if (flip) pos.push(...r[0], ...r[k], ...r[k + 1]);
-    else pos.push(...r[0], ...r[k + 1], ...r[k]);
+    // end caps wound to face out (nose forward, tail back)
+    if (flip) pos.push(...r[0], ...r[k + 1], ...r[k]);
+    else pos.push(...r[0], ...r[k], ...r[k + 1]);
   }
   const g = new THREE6.BufferGeometry();
   g.setAttribute("position", new THREE6.Float32BufferAttribute(pos, 3));
@@ -2506,7 +2507,7 @@ function rnBuildRoadster() {
   const body = new THREE6.Mesh(rnLoft(RN_ROADSTER), white);
   car.add(body);
   // the canopy: a dark glass band over the cabin
-  const glass = rnStd(1055264, { roughness: 0.08, metalness: 0.6, envMap: rnEnv });
+  const glass = rnStd(1055264, { roughness: 0.08, metalness: 0.6, envMap: rnEnv, side: THREE6.DoubleSide });
   const canopy = new THREE6.Mesh(rnLoft(RN_ROADSTER.map((s) => s.slice()).filter((s) => s[0] > -1.7 && s[0] < 1.6), {
     steps: 8, caps: false,
     section: ([x, w, yb, ys, yr, wr]) => {
@@ -2558,7 +2559,7 @@ function rnBuildRoadster() {
 // - the line-up it jumps over, as simple silhouettes (no badges): Cybercab, Cybertruck, Semi, Model Y, Model 3 -
 function rnVehicle(kind) {
   const g = new THREE6.Group(), tyre = rnStd(1052688, { roughness: 0.85 }), rim = rnStd(7368816, { metalness: 0.8, roughness: 0.4 });
-  const glass = rnStd(1055264, { roughness: 0.1, metalness: 0.5, envMap: rnEnv });
+  const glass = rnStd(1055264, { roughness: 0.1, metalness: 0.5, envMap: rnEnv, side: THREE6.DoubleSide });
   const wheels = (xs, z, r) => {
     for (const x of xs) for (const s of [-1, 1]) {
       const w = rnWheel(r, 0.28, tyre, rim);
@@ -2588,7 +2589,7 @@ function rnVehicle(kind) {
     const body = new THREE6.Group();
     body.position.x = 0.28;
     g.add(body);
-    const cab = new THREE6.Mesh(rnLoft([[0.2, 1.24, 1.15, 3.0, 3.5, 1.14], [1.8, 1.24, 1.15, 3.0, 3.5, 1.14], [2.6, 1.24, 1.15, 2.0, 2.85, 1.16], [3.0, 1.2, 1.15, 1.2, 1.7, 1.16]], { steps: 6 }), paint);
+    const cab = new THREE6.Mesh(rnLoft([[0.2, 1.24, 1.15, 3.0, 3.5, 1.14], [1.8, 1.24, 1.15, 3.0, 3.5, 1.14], [2.6, 1.24, 1.15, 2.0, 2.85, 1.16], [3.0, 1.2, 1.15, 1.4, 1.75, 1.16]], { steps: 6 }), paint);
     body.add(cab);
     // the windshield on the raked nose, just proud of the panel
     const ws = new THREE6.BufferGeometry();
