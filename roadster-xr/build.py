@@ -40,7 +40,7 @@ swap(f'<!-- VibeXR Interaction Framework v{version} - single-file build',
 swap('<h1>VibeXR</h1>', '<h1>Roadster Night</h1>')
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='17 Oct 2026', notes="first version: the reveal as a floor diorama that plays itself - 0-60, the curl ramp, the jump over the line-up, the finale - and a joystick to drive")
+s = landing.apply(s, updated='17 Oct 2026', notes='the show panel moved to your right, the joystick to your left; the car drives around things; a Fast option; first version: the reveal as a floor diorama that plays itself - 0-60, the curl ramp, the jump over the line-up, the finale - and a joystick to drive')
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">The Roadster reveal as a diorama on your floor &middot; it plays the show by itself &middot; '
      'grab the joystick to drive, pinch the pad to send it, thrusters to hop</p>\n'
@@ -53,8 +53,8 @@ swap(re.search(r'"WebXR not available - desktop preview \([^"]*\)"', s).group(0)
      '"Desktop preview: WASD drives, Space thrusts, Shift launches, P plays / pauses, 1-4 pick an act, right-drag orbits"')
 swap('document.getElementById("ver").textContent = `v${VERSION}`;',
      'document.getElementById("ver").textContent = `Roadster Night \\u00b7 VibeXR v${VERSION}`;')
-swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0, 1.3, 0.35);')
-swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(0, 0.1, -1.5);')
+swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0, 1.75, 0.95);')
+swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(0, 0.45, -1.15);')
 
 # single-module sanity: no binding imported twice
 names = re.findall(r'^import (?:\* as (\w+)|\{([^}]*)\}|(\w+)) from', s, re.M)

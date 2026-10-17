@@ -59,7 +59,7 @@ swap('<h1>VibeXR</h1>', '<h1>Microduck XR</h1>')
 # the shared landing page: card on the left, the scene framed beside it, the latest update on the card
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='16 Oct 2026', notes='console panels can be dragged by their bars and ride with the stage', css=False)
+s = landing.apply(s, updated='17 Oct 2026', notes='the command panel moved to your right and the joystick to your left, clear of this card; console panels can be dragged by their bars and ride with the stage', css=False)
 # author credit on the landing card
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>\n'

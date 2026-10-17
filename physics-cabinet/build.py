@@ -39,7 +39,7 @@ swap('<h1>VibeXR</h1>', '<h1>Physics Cabinet</h1>')
 # the shared landing page: card on the left, the scene framed beside it, the latest update on the card
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='16 Oct 2026', notes="the water ball is Water Ball XR's water; a real Newton's cradle; two-hand jelly; a fair Galton board; draggable panels")
+s = landing.apply(s, updated='17 Oct 2026', notes="the panel moved to your right, clear of this card; the pendulum wave's frame fits its longest pendulum; the water ball is Water Ball XR's water; a real Newton's cradle; two-hand jelly; a fair Galton board; draggable panels")
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Ten physics experiments on your table &middot; water ball, Newton&rsquo;s cradle, chaos, cloth, '
      'jelly, orbits and more &middot; grab, shake and throw</p>\n'
@@ -52,8 +52,8 @@ swap(re.search(r'"WebXR not available - desktop preview \([^"]*\)"', s).group(0)
      '"Desktop preview: drag with the left button, number keys or arrows change experiment, right-drag orbits"')
 swap('document.getElementById("ver").textContent = `v${VERSION}`;',
      'document.getElementById("ver").textContent = `Physics Cabinet \\u00b7 VibeXR v${VERSION}`;')
-swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0, 1.8, 0.2);')
-swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(-0.06, 1.58, -0.52);')
+swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0.2, 1.9, 0.5);')
+swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(0.2, 1.55, -0.45);')
 
 # single-module sanity: no binding imported twice
 names = re.findall(r'^import (?:\* as (\w+)|\{([^}]*)\}|(\w+)) from', s, re.M)

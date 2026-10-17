@@ -182,8 +182,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     if (this.inMenu) this._zooMenu(ctx);
     this.trackPanel = make("Unitree G1 · pick a motion", [...RZ_TRACK_CLIPS.map((l) => ctx.button(l, { w: 0.078, h: 0.026, fontSize: 24, onClick: () => this._play(l) })), ...common()], 0.25, false);
   },
-  // the picker sits on your left with the commands, stacked above them as one console (as Microduck XR keeps
-  // everything you press on the left and only the drive joystick on the right)
+  // the picker sits on your right with the commands, stacked above them as one console (as Microduck XR keeps
+  // everything you press on the right and only the drive joystick on the left)
   // the hand menu (XR): a Robot Zoo home page - the robots and the commands every robot shares - with
   // Microduck's own moves one page away and the framework's Settings page
   _zooMenu(ctx) {
@@ -213,10 +213,10 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     this.menuBack.onClick = () => app.menu.show("zoo");
   },
   _placeConsole(y) {
-    this.picker.root.position.set(-0.42, y + 0.29 / 2 + RZ_PICKER_H / 2 + 0.012, -0.36);
+    this.picker.root.position.set(0.42, y + 0.29 / 2 + RZ_PICKER_H / 2 + 0.012, -0.36);
     this.picker.root.lookAt(0, y + 0.45, 0.35);
     // where Microduck XR puts its command panel (_placeStage sets that one only after asking us)
-    this.humSlot.position.set(-0.42, y, -0.36);
+    this.humSlot.position.set(0.42, y, -0.36);
     this.humSlot.lookAt(0, y + 0.45, 0.35);
     return [this.picker.root, this.humSlot];
   },

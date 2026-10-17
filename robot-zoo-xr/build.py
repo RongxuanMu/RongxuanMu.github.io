@@ -56,7 +56,7 @@ swap('<h1>VibeXR</h1>', '<h1>Robot Zoo XR</h1>')
 # the shared landing page: card on the left, the scene framed beside it, the latest update on the card
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='16 Oct 2026', notes="three robot dogs: Unitree Go2, Unitree B2 and AgiBot D1; robots walk through your room on Microduck XR's stage; a Robot Zoo hand menu; draggable panels")
+s = landing.apply(s, updated='17 Oct 2026', notes="the robot picker and commands moved to your right, clear of this card; three robot dogs: Unitree Go2, Unitree B2 and AgiBot D1; robots walk through your room on Microduck XR's stage; a Robot Zoo hand menu; draggable panels")
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">Open-source robots running their real policies &middot; Microduck, humanoids and robot dogs from Unitree, Booster, AgiBot, Berkeley &middot; '
      'life-size on your floor or on a tabletop</p>\n'

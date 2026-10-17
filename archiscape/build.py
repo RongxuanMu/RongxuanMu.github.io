@@ -40,7 +40,7 @@ swap('<h1>VibeXR</h1>', '<h1>Archiscape</h1>')
 # the shared landing page: card on the left, the scene framed beside it, the latest update on the card
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='16 Oct 2026', notes='nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate')
+s = landing.apply(s, updated='17 Oct 2026', notes='the panel moved to your right, clear of this card; nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate')
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; '
      'Stonehenge to Zaha Hadid</p>\n'
@@ -53,8 +53,8 @@ swap(re.search(r'"WebXR not available - desktop preview \([^"]*\)"', s).group(0)
      '"Desktop preview: click to build, hold to remove, arrow keys change era, right-drag orbits"')
 swap('document.getElementById("ver").textContent = `v${VERSION}`;',
      'document.getElementById("ver").textContent = `Archiscape \\u00b7 VibeXR v${VERSION}`;')
-swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0, 1.86, 0.12);')
-swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(-0.05, 1.47, -0.56);')
+swap('this.camera.position.set(0, 1.95, 0.7);', 'this.camera.position.set(0.2, 1.95, 0.45);')
+swap('this.controls.target.set(0, 1.6, -0.5);', 'this.controls.target.set(0.2, 1.47, -0.5);')
 
 # single-module sanity: no binding imported twice
 names = re.findall(r'^import (?:\* as (\w+)|\{([^}]*)\}|(\w+)) from', s, re.M)

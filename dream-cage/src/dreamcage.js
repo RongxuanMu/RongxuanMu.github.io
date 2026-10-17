@@ -535,7 +535,7 @@ var DreamCage = {
     });
     // - the panel -
     const panel = ctx.panel("Dream Cage", { w: 0.22, h: 0.15 });
-    panel.root.position.set(-0.4, 0.08, 0.14);
+    panel.root.position.set(0.4, 0.08, 0.14);
     rig.add(panel.root);
     panel.root.lookAt(0, TABLE + 0.32, 0.3);
     const hintB = ctx.button("Hint", { toggle: true, onClick: (v) => this.hint.visible = v && this.active < 6 });

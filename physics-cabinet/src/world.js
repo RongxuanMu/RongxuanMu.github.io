@@ -44,7 +44,7 @@ var PhysicsCabinet = {
     });
     // - panel: exhibits on top, the current exhibit's own buttons below -
     const panel = this.panel = ctx.panel("Physics Cabinet · ten experiments", { w: 0.32, h: 0.19 });
-    panel.root.position.set(-0.5, TABLE + 0.09, -0.36);
+    panel.root.position.set(0.5, TABLE + 0.09, -0.36);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
     this.exBtns = PC_EXHIBITS.map((e, i) => ctx.button(e.label, { onClick: () => this.load(i) }));

@@ -243,9 +243,10 @@ var RoadsterNight = {
     st.rotation.set(0, 0, 0);
     this.stageY = st.position.y;
     const y = tabletop ? top + 0.02 : top + 0.05;
-    this.panel.root.position.set(-0.45, y, -0.38);
+    // the show panel on your right, the drive joystick on your left
+    this.panel.root.position.set(0.45, y, -0.38);
     this.panel.root.lookAt(0, y + 0.45, 0.35);
-    this.joyPanel.root.position.set(0.43, y - 0.02, -0.38);
+    this.joyPanel.root.position.set(-0.43, y - 0.02, -0.38);
     this.joyPanel.root.lookAt(0, y + 0.45, 0.35);
     // the console rides with the stage: poses stored relative to its position and heading (not its scale)
     const F = this._stageFrame(new THREE6.Matrix4()).invert();

@@ -74,7 +74,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Archiscape</h1>
     <p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; Stonehenge to Zaha Hadid</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 16 Oct 2026</b> &middot; nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate</p>
+    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; the panel moved to your right, clear of this card; nineteen eras, now with Kyoto and Thai temples; the tour reforms each town twice per era; white Greek temples; draggable panels; a smaller plate</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4773,7 +4773,7 @@ var Archiscape = {
     // - the panel: one button per style, then the tools -
     const PW = 0.39, PH = 0.284;
     const panel = ctx.panel("Archiscape · one town, every era", { w: PW, h: PH });
-    panel.root.position.set(-0.5, TABLE + 0.1, -0.34);
+    panel.root.position.set(0.5, TABLE + 0.1, -0.34);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
     // nineteen eras in five columns, the tools in two rows under them
@@ -5183,9 +5183,9 @@ var App = class {
     this.bg = new THREE7.Color(0);
     this.scene.background = this.bg;
     this.camera = new THREE7.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 100);
-    this.camera.position.set(0, 1.86, 0.12);
+    this.camera.position.set(0.2, 1.95, 0.45);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(-0.05, 1.47, -0.56);
+    this.controls.target.set(0.2, 1.47, -0.5);
     this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE7.MOUSE.DOLLY, RIGHT: THREE7.MOUSE.ROTATE };
     this.controls.update();
     this.input = new InputSystem();

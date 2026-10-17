@@ -2555,7 +2555,7 @@ var Playground = {
       this.spinners.push(m);
     });
     const orb = new T.Mesh(new T.IcosahedronGeometry(0.045, 2), new T.MeshStandardMaterial({ color: 13215999, roughness: 0.3, emissive: 0, flatShading: true }));
-    orb.position.set(0.36, TABLE_TOP + 0.24, -0.42);
+    orb.position.set(-0.36, TABLE_TOP + 0.24, -0.42);
     orb.name = "orb";
     root.add(orb);
     const oit = ctx.add(orb, { precise: true });
@@ -2567,11 +2567,11 @@ var Playground = {
       orb.material.color.setHSL(Math.random(), 0.7, 0.7);
     });
     const ol = ctx.label("tap: bounce \u00b7 hold: burst", { height: 0.016 });
-    ol.position.set(0.36, TABLE_TOP + 0.32, -0.42);
+    ol.position.set(-0.36, TABLE_TOP + 0.32, -0.42);
     root.add(ol);
     this.orb = orb;
     const bell = new T.Mesh(new T.SphereGeometry(0.028, 24, 16), new T.MeshStandardMaterial({ color: 16114298, roughness: 0.3, emissive: 0 }));
-    bell.position.set(0.36, TABLE_TOP + 0.12, -0.36);
+    bell.position.set(-0.36, TABLE_TOP + 0.12, -0.36);
     bell.name = "bell";
     root.add(bell);
     const bit = ctx.add(bell, { poke: "volume", near: false });
@@ -2579,7 +2579,7 @@ var Playground = {
       bell.userData.ring = 1;
     });
     const bl = ctx.label("poke me (fingertip / controller nose)", { height: 0.013 });
-    bl.position.set(0.36, TABLE_TOP + 0.07, -0.33);
+    bl.position.set(-0.36, TABLE_TOP + 0.07, -0.33);
     bl.rotation.x = -0.5;
     root.add(bl);
     this.bell = bell;
@@ -2605,7 +2605,9 @@ var Playground = {
     fl.position.set(0, 2.35, -3.4);
     root.add(fl);
     const panel = ctx.panel("UI \u00b7 poke, pinch or ray", { w: 0.22, h: 0.15 });
-    panel.root.position.set(-0.5, TABLE_TOP + 0.06, -0.36);
+    // the panel and the sketch board on your right, the orb, bell and log on your left (the left of a desktop
+    // window holds the entry card)
+    panel.root.position.set(0.5, TABLE_TOP + 0.06, -0.36);
     panel.root.lookAt(0, TABLE_TOP + 0.3, 0.3);
     root.add(panel.root);
     let count = 0;
@@ -2621,12 +2623,12 @@ var Playground = {
     slider.root.position.set(0, -0.05, 4e-3);
     panel.root.add(slider.root);
     const board = new SketchBoard(ctx, { w: 0.48, h: 0.36 });
-    board.root.position.set(-0.78, TABLE_TOP + 0.196, -0.5);
+    board.root.position.set(0.78, TABLE_TOP + 0.196, -0.5);
     board.root.lookAt(0, TABLE_TOP + 0.3, 0.3);
     root.add(board.root);
     this.board = board;
     const log = ctx.app.logPanel.root;
-    log.position.set(0.72, TABLE_TOP + 0.38, -0.78);
+    log.position.set(-0.72, TABLE_TOP + 0.38, -0.78);
     log.lookAt(0, TABLE_TOP + 0.46, 0.1);
     root.add(log);
     this.onTable = [tableRims, tl, ...this.spinners, orb, ol, bell, bl, panel.root, board.root, log];

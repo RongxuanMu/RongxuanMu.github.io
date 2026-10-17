@@ -321,7 +321,7 @@ var Archiscape = {
     // - the panel: one button per style, then the tools -
     const PW = 0.39, PH = 0.284;
     const panel = ctx.panel("Archiscape · one town, every era", { w: PW, h: PH });
-    panel.root.position.set(-0.5, TABLE + 0.1, -0.34);
+    panel.root.position.set(0.5, TABLE + 0.1, -0.34);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
     // nineteen eras in five columns, the tools in two rows under them

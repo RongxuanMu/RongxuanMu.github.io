@@ -91,7 +91,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Roadster Night</h1>
     <p class="sub">The Roadster reveal as a diorama on your floor &middot; it plays the show by itself &middot; grab the joystick to drive, pinch the pad to send it, thrusters to hop</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework &middot; fan-made, not affiliated with Tesla or SpaceX</p>
-    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; first version: the reveal as a floor diorama that plays itself - 0-60, the curl ramp, the jump over the line-up, the finale - and a joystick to drive</p>
+    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; the show panel moved to your right, the joystick to your left; the car drives around things; a Fast option; first version: the reveal as a floor diorama that plays itself - 0-60, the curl ramp, the jump over the line-up, the finale - and a joystick to drive</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -3788,9 +3788,10 @@ var RoadsterNight = {
     st.rotation.set(0, 0, 0);
     this.stageY = st.position.y;
     const y = tabletop ? top + 0.02 : top + 0.05;
-    this.panel.root.position.set(-0.45, y, -0.38);
+    // the show panel on your right, the drive joystick on your left
+    this.panel.root.position.set(0.45, y, -0.38);
     this.panel.root.lookAt(0, y + 0.45, 0.35);
-    this.joyPanel.root.position.set(0.43, y - 0.02, -0.38);
+    this.joyPanel.root.position.set(-0.43, y - 0.02, -0.38);
     this.joyPanel.root.lookAt(0, y + 0.45, 0.35);
     // the console rides with the stage: poses stored relative to its position and heading (not its scale)
     const F = this._stageFrame(new THREE6.Matrix4()).invert();
@@ -4098,9 +4099,9 @@ var App = class {
     this.bg = new THREE7.Color(0);
     this.scene.background = this.bg;
     this.camera = new THREE7.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 100);
-    this.camera.position.set(0, 1.3, 0.35);
+    this.camera.position.set(0, 1.75, 0.95);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(0, 0.1, -1.5);
+    this.controls.target.set(0, 0.45, -1.15);
     this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE7.MOUSE.DOLLY, RIGHT: THREE7.MOUSE.ROTATE };
     this.controls.update();
     this.input = new InputSystem();

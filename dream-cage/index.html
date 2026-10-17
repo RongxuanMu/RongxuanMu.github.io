@@ -90,7 +90,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Dream Cage</h1>
     <p class="sub">A portal cube the size of a diorama: each of its six faces opens onto its own little world. <strong>Goal:</strong> turn the cube until half a shape on one face meets its other half on the next face, across the glowing edge, and makes one whole shape. Each whole shape joins two worlds.</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 15 Oct 2026</b> &middot; the plinth carries the whole diorama</p>
+    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; the panel moved to your right, clear of this card; the plinth carries the whole diorama</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -2965,7 +2965,7 @@ var DreamCage = {
     });
     // - the panel -
     const panel = ctx.panel("Dream Cage", { w: 0.22, h: 0.15 });
-    panel.root.position.set(-0.4, 0.08, 0.14);
+    panel.root.position.set(0.4, 0.08, 0.14);
     rig.add(panel.root);
     panel.root.lookAt(0, TABLE + 0.32, 0.3);
     const hintB = ctx.button("Hint", { toggle: true, onClick: (v) => this.hint.visible = v && this.active < 6 });

@@ -73,7 +73,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Physics Cabinet</h1>
     <p class="sub">Ten physics experiments on your table &middot; water ball, Newton&rsquo;s cradle, chaos, cloth, jelly, orbits and more &middot; grab, shake and throw</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 16 Oct 2026</b> &middot; the water ball is Water Ball XR&#x27;s water; a real Newton&#x27;s cradle; two-hand jelly; a fair Galton board; draggable panels</p>
+    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; the panel moved to your right, clear of this card; the pendulum wave&#x27;s frame fits its longest pendulum; the water ball is Water Ball XR&#x27;s water; a real Newton&#x27;s cradle; two-hand jelly; a fair Galton board; draggable panels</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4498,7 +4498,7 @@ var PhysicsCabinet = {
     });
     // - panel: exhibits on top, the current exhibit's own buttons below -
     const panel = this.panel = ctx.panel("Physics Cabinet · ten experiments", { w: 0.32, h: 0.19 });
-    panel.root.position.set(-0.5, TABLE + 0.09, -0.36);
+    panel.root.position.set(0.5, TABLE + 0.09, -0.36);
     panel.root.lookAt(0, TABLE + 0.34, 0.3);
     root.add(panel.root);
     this.exBtns = PC_EXHIBITS.map((e, i) => ctx.button(e.label, { onClick: () => this.load(i) }));
@@ -4675,9 +4675,9 @@ var App = class {
     this.bg = new THREE7.Color(0);
     this.scene.background = this.bg;
     this.camera = new THREE7.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 100);
-    this.camera.position.set(0, 1.8, 0.2);
+    this.camera.position.set(0.2, 1.9, 0.5);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.target.set(-0.06, 1.58, -0.52);
+    this.controls.target.set(0.2, 1.55, -0.45);
     this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE7.MOUSE.DOLLY, RIGHT: THREE7.MOUSE.ROTATE };
     this.controls.update();
     this.input = new InputSystem();

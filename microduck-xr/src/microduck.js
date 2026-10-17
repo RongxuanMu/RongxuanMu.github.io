@@ -956,7 +956,7 @@ var Microduck = {
   // - console: action buttons + speed (left), drive joystick (right) -
   _buildConsole(ctx) {
     const T = THREE6;
-    // The command panel floats at the left of the stage bar and rides with the stage. In XR the same commands
+    // The command panel floats at the right of the stage bar and rides with the stage. In XR the same commands
     // are also the hand menu's home page (palm up / controller B), with the framework's menu as its Settings
     // page. Both copies are built from one list and stay in sync (toggles, speed, colour).
     const app = ctx.app, inMenu = this.inMenu = !!app.sessionMode;
@@ -1102,9 +1102,10 @@ var Microduck = {
     // console at the sides of your reach, out of the line of sight to the stage
     const y = tabletop ? top + 0.02 : T6clamp(top + 0.05);
     const rel = [this.joyPanel.root, this.panel.root, ...this._placeConsole?.(y) ?? []];
-    this.joyPanel.root.position.set(0.4, y - 0.02, -0.36);
+    // commands on your right, the drive joystick on your left (the left of a desktop window holds the entry card)
+    this.joyPanel.root.position.set(-0.4, y - 0.02, -0.36);
     this.joyPanel.root.lookAt(0, y + 0.45, 0.35);
-    this.panel.root.position.set(-0.42, y, -0.36);
+    this.panel.root.position.set(0.42, y, -0.36);
     this.panel.root.lookAt(0, y + 0.45, 0.35);
     // the console rides with the stage: its pose is stored relative to the stage's position + heading (not its
     // scale, so the buttons stay hand-sized when the stage is shrunk or grown)

@@ -79,7 +79,7 @@ swap('<h1>VibeXR</h1>', '<h1>Dream Cage</h1>')
 # the shared landing page: card on the left, the scene framed beside it, the latest update on the card
 sys.path.insert(0, str(P.parent / 'vibexr'))
 import landing  # noqa: E402
-s = landing.apply(s, updated='15 Oct 2026', notes='the plinth carries the whole diorama')
+s = landing.apply(s, updated='17 Oct 2026', notes='the panel moved to your right, clear of this card; the plinth carries the whole diorama')
 swap('<p class="sub">Interaction framework &middot; see-through by default &middot; hands, controllers &amp; gaze pointers</p>',
      '<p class="sub">A portal cube the size of a diorama: each of its six faces opens onto its own little world. '
      '<strong>Goal:</strong> turn the cube until half a shape on one face meets its other half on the next face, '
