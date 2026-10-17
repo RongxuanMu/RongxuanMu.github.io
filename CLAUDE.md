@@ -14,3 +14,8 @@
 - The framework source is `vibexr/codepen.html`, in CodePen paste format with CRLF line endings; keep them CRLF.
   Run `python3 vibexr/build.py` after editing. `vibexr/README.md` covers the dev page, promotion and CodePen sync.
 - Pushing to `main` deploys the site to GitHub Pages. Rongxuan tests in a headset at `/vibexr/dev/` first.
+
+## Voice input
+
+Rongxuan often dictates by voice. The transcription regularly turns "Micro Duck" (Microduck XR) into "Micro" or
+"Microsoft": read those as Microduck, e.g. "像 Microsoft 那个交互" means Microduck XR's interaction model.
