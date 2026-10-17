@@ -2616,13 +2616,17 @@ var MD_CREASE = Math.PI / 5;
 // Render copy of a part: simplified to ~30 % of its triangles (meshopt, 1 % error bound; the full meshes stay for
 // physics), creased normals, then re-indexed so shared corners shade once. The whole duck goes from ~200 k to
 // ~60 k rendered triangles, which is what keeps a headset at full frame rate.
-function mdDisplayGeometry(welded, MS) {
+// drawn but never seen: boards, speaker, battery and brackets sealed inside the shells (physics keeps them)
+var MD_HIDDEN = new Set(["pcb__raspberry_pi_zero_2_w.stl", "elec_rpi_robot_hat_pcb.stl", "banana_pcb_locker.stl", "speaker.stl", "power_support.stl", "motor_support.stl", "np_f970.stl"]);
+function mdDisplayGeometry(welded, MS, name = "") {
+  // the mechanical parts (servos, brackets) only need their silhouette: simplified much harder than the shells
+  const mech = /^mech/.test(MD_SLOT[name] ?? "mechGray"), keep = mech ? 0.1 : 0.3, err = mech ? 0.03 : 0.01;
   let g = new THREE6.BufferGeometry();
   g.setAttribute("position", welded.attributes.position);
   const pos = welded.attributes.position.array, n = welded.attributes.position.count;
   let idx = welded.index ? new Uint32Array(welded.index.array) : Uint32Array.from({ length: n }, (_, i) => i);
   if (MS && idx.length > 600) {
-    const [out] = MS.simplify(idx, pos instanceof Float32Array ? pos : new Float32Array(pos), 3, Math.floor(idx.length * 0.3 / 3) * 3, 0.01, []);
+    const [out] = MS.simplify(idx, pos instanceof Float32Array ? pos : new Float32Array(pos), 3, Math.floor(idx.length * keep / 3) * 3, err, []);
     if (out.length >= 36) idx = out;
   }
   g.setIndex(new THREE6.BufferAttribute(idx, 1));
@@ -2717,7 +2721,7 @@ function mdLoadAssets(status) {
       if (!o.isMesh || !o.geometry) return;
       const name = o.userData.meshFile || o.name || o.geometry.name;
       if (!name || geoms.has(name)) return;
-      const entry = { welded: o.geometry, display: mdDisplayGeometry(o.geometry, MS) };
+      const entry = { welded: o.geometry, display: mdDisplayGeometry(o.geometry, MS, name) };
       geoms.set(name, entry);
       if (o.name && o.name !== name) geoms.set(o.name, entry);
     });
@@ -2728,7 +2732,7 @@ function mdLoadAssets(status) {
       const raw = await stl.loadAsync(`${MD_URL.space}/robot/mjlab/meshes/${name}`);
       raw.deleteAttribute("normal");
       const welded = mdMergeVertices(raw, 1e-4);
-      const entry = { welded, display: mdDisplayGeometry(welded, MS) };
+      const entry = { welded, display: mdDisplayGeometry(welded, MS, name) };
       geoms.set(name, entry);
       return entry;
     };
@@ -2796,7 +2800,7 @@ async function mdBuildRig(A, parent) {
   const pending = [];
   for (const b of A.kin.bodies) {
     for (const geom of b.geoms) {
-      if (geom.type && geom.type !== "mesh" || !geom.mesh) continue;
+      if (geom.type && geom.type !== "mesh" || !geom.mesh || MD_HIDDEN.has(geom.mesh)) continue;
       // the MJCF repeats a few geoms as visual + collision copies: drawing both would only z-fight
       const key = `${b.name}|${geom.mesh}|${geom.pos}|${geom.quat}`;
       if (seen.has(key)) continue;
