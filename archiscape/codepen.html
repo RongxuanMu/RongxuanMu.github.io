@@ -5555,7 +5555,7 @@ var AsLife = class {
       _lifeP.set(cx + Math.sin(a) * r, y, cz + Math.cos(a) * r);
       // heading along the circle (counter-clockwise from above), banked into the turn
       _lifeQ.setFromEuler(_lifeE.set(0, a + Math.PI / 2, -0.35, "YXZ"));
-      this.birds.setMatrixAt(i, _lifeM.compose(_lifeP, _lifeQ, _lifeS.setScalar(1.7)));
+      this.birds.setMatrixAt(i, _lifeM.compose(_lifeP, _lifeQ, _lifeS.setScalar(0.85)));
     });
     this.birds.instanceMatrix.needsUpdate = true;
     // leaves let go from open ground (where the trees are), drift downwind and settle, then fade
