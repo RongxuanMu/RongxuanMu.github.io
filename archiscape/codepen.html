@@ -4536,6 +4536,21 @@ function asCellChunk(grid, h, style, cell) {
   }
   return out;
 }
+// a cell's creases and outlines, for the line looks: ground and lights left out (the ground would draw the grid)
+function asChunkEdges(chunk) {
+  const parts = Object.entries(chunk).filter(([k]) => k !== "ground" && k !== "glow").map(([, c]) => c.p);
+  const n = parts.reduce((a, p) => a + p.length, 0);
+  if (!n) return new Float32Array(0);
+  // EdgesGeometry welds at 1e-4; the town's details are millimetres, so work at 100x and scale back
+  const P = new Float32Array(n);
+  let o = 0;
+  for (const p of parts) P.set(p, o), o += p.length;
+  for (let i = 0; i < n; i++) P[i] *= 100;
+  const g = new THREE6.BufferGeometry().setAttribute("position", new THREE6.BufferAttribute(P, 3));
+  const E = new THREE6.EdgesGeometry(g, 28).attributes.position.array;
+  for (let i = 0; i < E.length; i++) E[i] *= 0.01;
+  return E;
+}
 // The town is cut into AS_TILES x AS_TILES tiles, each with one mesh per surface kind. An edit (or a step of a
 // reform) rebuilds only the tiles whose cells changed, instead of re-merging and re-uploading the whole town.
 var AS_TILES = 4;
@@ -4560,6 +4575,23 @@ function asTileMeshes(grid, h, style, mats, cache, tile) {
     for (const [kind, c] of Object.entries(e.chunk)) (parts[kind] ||= []).push(c);
   }
   const meshes = [];
+  // ink and watercolour draw the edges too: worked out per cell (and cached with it) only once a look asks for them
+  if (mats.lines()) {
+    const segs = [];
+    for (const cell of grid.cells) if (tileOf[cell.i] === tile) {
+      const e = cache.get(cell.i);
+      if ((e.edges ||= asChunkEdges(e.chunk)).length) segs.push(e.edges);
+    }
+    if (segs.length) {
+      const n = segs.reduce((a, e) => a + e.length, 0), P = new Float32Array(n);
+      let o = 0;
+      for (const e of segs) P.set(e, o), o += e.length;
+      const l = new THREE6.LineSegments(new THREE6.BufferGeometry().setAttribute("position", new THREE6.BufferAttribute(P, 3)), mats.lineMat);
+      l.geometry.computeBoundingSphere();
+      l.userData.noCollider = l.userData.noHighlight = true;
+      meshes.push(l);
+    }
+  }
   for (const [kind, list] of Object.entries(parts)) {
     const cat = (k) => {
       const n = list.reduce((s2, c) => s2 + c[k].length, 0), out = new Float32Array(n);
@@ -4581,7 +4613,7 @@ function asTileMeshes(grid, h, style, mats, cache, tile) {
     m.userData.noCollider = m.userData.noHighlight = true;
     meshes.push(m);
   }
-  return { key: keys.join("|"), meshes };
+  return { key: keys.join("|") + (mats.lines() ? "|L" : ""), meshes };
 }
 function asBuild(grid, h, style, mats, cache) {
   const group = new THREE6.Group();
@@ -4615,7 +4647,7 @@ function asUpdate(town, grid, h, style, mats, cache) {
   const tileOf = asTileOf(grid), keys = Array.from({ length: AS_TILES * AS_TILES }, () => []);
   for (const cell of grid.cells) keys[tileOf[cell.i]].push(asCellKey(cell, h));
   town.userData.tiles.forEach((tl, t) => {
-    if (tl.key === keys[t].join("|")) return;
+    if (tl.key === keys[t].join("|") + (mats.lines() ? "|L" : "")) return;
     for (const m of tl.meshes) {
       m.removeFromParent();
       m.geometry.dispose();
@@ -4806,6 +4838,9 @@ var Archiscape = {
       this.tourTowns = v;
       tour();
     } });
+    // the render look: vivid colour, white clay, black-and-white ink, watercolour
+    this.lookIdx = 0;
+    this.lookB = tool("Look: Vivid", { onClick: () => this.setLook((this.lookIdx + 1) % AS_LOOKS.length) });
     asMusic ||= new AsMusic(app2.sfx);
     this.music = asMusic;
     const music = tool("Music", { w: 0.0885, toggle: true, value: asMusic.on, onClick: (v) => {
@@ -4814,7 +4849,7 @@ var Archiscape = {
     } });
     panel.layout(this.styleBtns, { cols: 5, top: 0.03 });
     const rows = Math.ceil(AS_STYLES.length / 5);
-    panel.layout([gen, this.eraseB, undo, clear, this.tourErasB, this.tourTownsB, music], { cols: 4, top: 0.03 + rows * 0.032 + 8e-3 });
+    panel.layout([gen, this.eraseB, undo, clear, this.tourErasB, this.tourTownsB, music, this.lookB], { cols: 4, top: 0.03 + rows * 0.032 + 8e-3 });
     this.infoTex = textTexture("", { w: 1024, h: 56, size: 24, color: "#ffffff" });
     const info = new T.Mesh(new T.PlaneGeometry(PW - 0.016, (PW - 0.016) * 56 / 1024), new T.MeshBasicMaterial({ map: this.infoTex, transparent: true, depthWrite: false }));
     info.position.set(0, -PH / 2 + 0.02, 2e-3);
@@ -4848,6 +4883,15 @@ var Archiscape = {
     this.tourEras = this.tourTowns = false;
     this.time = 0;
     this.setStyle(this.styleIdx, true);
+  },
+  setLook(i) {
+    const had = this.mats.lines();
+    this.lookIdx = i;
+    this.mats.setLook(i);
+    this.lookB.setLabel(`Look: ${AS_LOOKS[i].label}`);
+    // a look with lines (or one without, after one with) patches every tile of the town
+    if (this.mats.lines() !== had) this._rebuild(null);
+    this.app.log(`look → ${AS_LOOKS[i].label}`);
   },
   setStyle(i, instant = false) {
     this.styleIdx = i;
@@ -5183,8 +5227,65 @@ var AS_ATTRACT_S = 3.6;
 var AS_ISLAND_SCALE = 0.88;
 // how many times each era reforms its town on the tour before the next era; s: how long a reform takes to sweep
 var AS_TOUR_REFORMS = 1, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;
+// render looks. Every town material reads one shared uniform, so a switch is instant and costs no recompile
+var AS_LOOKS = [
+  { id: "vivid", label: "Vivid" },
+  { id: "clay", label: "Clay" },
+  { id: "ink", label: "Ink", lines: { hex: 1710618, opacity: 0.9 } },
+  { id: "watercolor", label: "Watercolor", lines: { hex: 5913144, opacity: 0.32 } }
+];
+var AS_LOOK_GLSL = `uniform int asLook;
+varying vec3 vAsP;
+float asHashN(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+float asNoise(vec3 p) {
+  vec3 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(asHashN(i), asHashN(i + vec3(1, 0, 0)), f.x), mix(asHashN(i + vec3(0, 1, 0)), asHashN(i + vec3(1, 1, 0)), f.x), f.y),
+    mix(mix(asHashN(i + vec3(0, 0, 1)), asHashN(i + vec3(1, 0, 1)), f.x), mix(asHashN(i + vec3(0, 1, 1)), asHashN(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+`;
+function asLookify(m, look) {
+  const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey.bind(m), lit = !m.isMeshBasicMaterial;
+  m.onBeforeCompile = (sh, r) => {
+    prev.call(m, sh, r);
+    sh.uniforms.asLook = look;
+    sh.vertexShader = "varying vec3 vAsP;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vAsP = transformed;");
+    let f = AS_LOOK_GLSL + sh.fragmentShader;
+    // clay and ink: every surface one white; watercolour: colours a little paler, as if thinned with water
+    f = f.replace("#include <color_fragment>", `#include <color_fragment>
+  if (asLook == 1 || asLook == 2) diffuseColor.rgb = vec3(asLook == 1 ? 0.82 : 0.95);
+  else if (asLook == 3) diffuseColor.rgb = mix(mix(diffuseColor.rgb, vec3(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114))), 0.12), vec3(0.97, 0.95, 0.9), 0.16);`);
+    if (lit) {
+      f = f.replace("#include <metalnessmap_fragment>", `#include <metalnessmap_fragment>
+  if (asLook != 0) { metalnessFactor = 0.0; roughnessFactor = max(roughnessFactor, 0.8); }`);
+      // ink: two flat tones and dark contours where a surface turns away; watercolour: soft-edged washes, cool
+      // blue shade instead of grey, pigment that granulates and pools at the edges, paper showing through
+      f = f.replace("#include <opaque_fragment>", `if (asLook >= 2) {
+    float ndv = abs(dot(normalize(normal), normalize(vViewPosition)));
+    float base = max(dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114)), 0.02);
+    float s = clamp(dot(outgoingLight, vec3(0.299, 0.587, 0.114)) / base, 0.0, 3.0);
+    if (asLook == 2) {
+      float tone = mix(0.74, 1.0, smoothstep(0.75, 0.95, s));
+      outgoingLight = vec3(tone) * (1.0 - 0.8 * smoothstep(0.3, 0.06, ndv));
+    } else {
+      float n = asNoise(vAsP * 700.0) * 0.55 + asNoise(vAsP * 160.0) * 0.45;
+      float sh = smoothstep(0.3, 0.8, s + (n - 0.5) * 0.25);
+      vec3 col = diffuseColor.rgb * mix(vec3(0.68, 0.7, 0.84), vec3(1.1, 1.08, 1.04), sh);
+      col *= 0.95 + 0.09 * n;
+      col = mix(col, col * col * 1.2, 0.35 * smoothstep(0.35, 0.05, ndv));
+      outgoingLight = mix(col, vec3(0.97, 0.95, 0.9), 0.14 * smoothstep(0.55, 0.8, n));
+    }
+  }
+  #include <opaque_fragment>`);
+    }
+    sh.fragmentShader = f;
+  };
+  m.customProgramCacheKey = () => prevKey() + "|look";
+  return m;
+}
 function asMaterials() {
-  const cache = {};
+  const cache = {}, look = { value: 0 };
+  const lineMat = new THREE6.LineBasicMaterial({ color: 0, transparent: true, opacity: 0.9 });
   const kind = (k) => {
     if (cache[k]) return cache[k];
     const o = AS_KINDS[k];
@@ -5196,12 +5297,19 @@ function asMaterials() {
       };
       m.customProgramCacheKey = () => `wash${o.wash}`;
     }
-    return cache[k] = m;
+    m.polygonOffset = true;
+    m.polygonOffsetFactor = m.polygonOffsetUnits = 1;
+    return cache[k] = asLookify(m, look);
   };
-  const own = (m) => (m.userData.own = true, m);
+  const own = (m) => (m.userData.own = true, asLookify(m, look));
   const make = (name, hex) => own(new THREE6.MeshStandardMaterial({ color: hex, roughness: 0.95 }));
   const water = (hex) => own(new THREE6.MeshStandardMaterial({ color: hex, roughness: 0.3, metalness: 0.05, envMap: asEnv, envMapIntensity: 0.22 }));
-  return { kind, make, water };
+  const setLook = (i) => {
+    look.value = i;
+    const L = AS_LOOKS[i].lines;
+    if (L) lineMat.color.setHex(L.hex), lineMat.opacity = L.opacity;
+  };
+  return { kind, make, water, look, lineMat, setLook, lines: () => !!AS_LOOKS[look.value].lines };
 }
 function asRims(geo, opacity, px) {
   const eg = new THREE6.EdgesGeometry(geo, 30);
