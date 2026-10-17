@@ -186,7 +186,9 @@ var AS_KINDS = {
   glow: { glow: true },
   // matte, but light colours glow a little from within, so every white wall reads as one even plane whichever
   // way it faces (ink-wash painting); dark tiles and ink lines stay as they are
-  wash: { roughness: 0.95, metalness: 0, wash: 0.6 }
+  wash: { roughness: 0.95, metalness: 0, wash: 0.6 },
+  // tufts on open ground: like matte, but left out of the line looks' edges
+  grass: { roughness: 0.9, metalness: 0 }
 };
 var _asV = new THREE6.Vector3(), _asN = new THREE6.Vector3(), _asM = new THREE6.Matrix4(), _asNM = new THREE6.Matrix3();
 var _asC = new THREE6.Color(), _asA = new THREE6.Vector3(), _asB = new THREE6.Vector3();
@@ -210,7 +212,7 @@ function asKit(tess = null, remap = null) {
   const B = {};
   const batch = (k0) => {
     const k = remap?.[k0] ?? k0;
-    return B[k] || (B[k] = { p: [], n: [], c: [] });
+    return B[k] || (B[k] = { p: [], n: [], c: [], s: [] });
   };
   const col = (hex, vary = 0, r = 0.5) => {
     _asC.setHex(hex);
@@ -220,6 +222,8 @@ function asKit(tess = null, remap = null) {
   const K = {
     B,
     tess,
+    // 1 while furnishing the ground: those vertices bend in the wind (trees, grass)
+    sway: 0,
     // append a cached unit geometry under a matrix
     geo(kind, hex, g, m, vary = 0, r = 0.5) {
       const b = batch(kind), c = col(hex, vary, r), P = g.attributes.position, N = g.attributes.normal;
@@ -234,6 +238,7 @@ function asKit(tess = null, remap = null) {
         b.p.push(_asV.x, _asV.y, _asV.z);
         b.n.push(_asN.x, _asN.y, _asN.z);
         b.c.push(c.r, c.g, c.b);
+        b.s.push(K.sway);
       }
     },
     tri(kind, hex, a, b2, c2, vary = 0, r = 0.5) {
@@ -245,6 +250,7 @@ function asKit(tess = null, remap = null) {
         b.p.push(p.x, p.y, p.z);
         b.n.push(_asN.x, _asN.y, _asN.z);
         b.c.push(c.r, c.g, c.b);
+        b.s.push(K.sway);
       }
     },
     poly(kind, hex, pts, vary = 0, r = 0.5) {

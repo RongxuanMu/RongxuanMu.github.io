@@ -8,7 +8,11 @@ function asCellChunk(grid, h, style, cell) {
   if (!hc) {
     if (!water) K.poly("ground", style.ground.hex, cell.v.map((vi) => v3(grid.verts[vi], 0)), 0.07, r);
     // trees keep clear of walls: only cells whose neighbours are open too
+    K.sway = 1;
     if (style.prop && (cell.nb.every((n) => n < 0 || !h[n]) || r < 0.06)) style.prop(K, cell.c.x, cell.c.y, asHash(cell.i, 13), cell);
+    const gh = asGrassHex(style);
+    if (gh !== null) asGrass(K, grid, cell, gh);
+    K.sway = 0;
   } else {
     const bh = asPick(style.palette, asHash(cell.i, 1));
     const tower = hc >= 2 && cell.nb.every((n) => n < 0 || h[n] <= hc - 2);
@@ -50,7 +54,7 @@ function asCellChunk(grid, h, style, cell) {
   const out = {};
   for (const [kind, b] of Object.entries(K.B)) {
     if (!b.p.length) continue;
-    const P = new Float32Array(b.p), C = new Float32Array(b.c);
+    const P = new Float32Array(b.p), C = new Float32Array(b.c), S = new Float32Array(b.s);
     let N = new Float32Array(b.n);
     if (style.warp && kind !== "ground") {
       const p = new THREE6.Vector3();
@@ -61,25 +65,50 @@ function asCellChunk(grid, h, style, cell) {
         P[i + 2] = p.z;
       }
       // bent surfaces: smooth normals within the cell (or recomputed flat ones)
-      let g = new THREE6.BufferGeometry().setAttribute("position", new THREE6.BufferAttribute(P, 3)).setAttribute("color", new THREE6.BufferAttribute(C, 3));
+      let g = new THREE6.BufferGeometry().setAttribute("position", new THREE6.BufferAttribute(P, 3)).setAttribute("color", new THREE6.BufferAttribute(C, 3)).setAttribute("sway", new THREE6.BufferAttribute(S, 1));
       // smooth: true, or the list of surface kinds to smooth (the rest keep flat normals; merging is costly)
       if (style.smooth === true || style.smooth?.includes?.(kind)) {
         g = mergeVertices(g, 1e-5);
         g.computeVertexNormals();
         g = g.toNonIndexed();
-        out[kind] = { p: g.attributes.position.array, n: g.attributes.normal.array, c: g.attributes.color.array };
+        out[kind] = { p: g.attributes.position.array, n: g.attributes.normal.array, c: g.attributes.color.array, s: g.attributes.sway.array };
         continue;
       }
       g.computeVertexNormals();
       N = g.attributes.normal.array;
     }
-    out[kind] = { p: P, n: N, c: C };
+    out[kind] = { p: P, n: N, c: C, s: S };
   }
   return out;
 }
+// grass for grounds that are green enough to be lawns or meadows (not sand, paving or water): the ground's
+// own hue, a shade deeper
+function asGrassHex(style) {
+  if (style._grass !== void 0) return style._grass;
+  const c = new THREE6.Color(style.ground.hex), hsl = c.getHSL({});
+  const green = !style.ground.water && hsl.h > 0.15 && hsl.h < 0.45 && hsl.s > 0.12;
+  return style._grass = green ? c.offsetHSL(0.01, 0.08, -0.07).getHex() : null;
+}
+// a few tufts of three blades each, scattered over an open cell
+function asGrass(K, grid, cell, hex) {
+  const n = cell.v.length, cx = cell.c.x, cz = cell.c.y;
+  for (let t = 0; t < 9; t++) {
+    const q = (k) => asHash(cell.i, t, k);
+    const k = Math.floor(q(1) * n), a = grid.verts[cell.v[k]], b = grid.verts[cell.v[(k + 1) % n]];
+    let u = q(2) * 0.85, v = q(3) * 0.85;
+    if (u + v > 0.85) u = 0.85 - u, v = 0.85 - v;
+    const x = cx + (a.x - cx) * u + (b.x - cx) * v, z = cz + (a.y - cz) * u + (b.y - cz) * v;
+    for (let j = 0; j < 3; j++) {
+      const r = (m) => asHash(cell.i, t, j, m), ang = r(1) * 6.283, w = 4e-4;
+      const ox = Math.cos(ang) * w, oz = Math.sin(ang) * w, lean = 9e-4 * (r(2) - 0.5);
+      const hh = 2.4e-3 + r(3) * 2.2e-3;
+      K.tri("grass", hex, new THREE6.Vector3(x - ox, 0, z - oz), new THREE6.Vector3(x + ox, 0, z + oz), new THREE6.Vector3(x + lean * Math.sin(ang), hh, z - lean * Math.cos(ang)), 0.25, r(4));
+    }
+  }
+}
 // a cell's creases and outlines, for the line looks: ground and lights left out (the ground would draw the grid)
 function asChunkEdges(chunk) {
-  const parts = Object.entries(chunk).filter(([k]) => k !== "ground" && k !== "glow").map(([, c]) => c.p);
+  const parts = Object.entries(chunk).filter(([k]) => k !== "ground" && k !== "glow" && k !== "grass").map(([, c]) => c.p);
   const n = parts.reduce((a, p) => a + p.length, 0);
   if (!n) return new Float32Array(0);
   // EdgesGeometry welds at 1e-4; the town's details are millimetres, so work at 100x and scale back
@@ -171,6 +200,7 @@ function asTileMeshes(grid, h, style, mats, cache, tile) {
     g.setAttribute("position", new THREE6.BufferAttribute(cat("p"), 3));
     g.setAttribute("normal", new THREE6.BufferAttribute(cat("n"), 3));
     g.setAttribute("color", new THREE6.BufferAttribute(cat("c"), 3));
+    g.setAttribute("sway", new THREE6.BufferAttribute(cat("s"), 1));
     g.computeBoundingSphere();
     const m = new THREE6.Mesh(g, mats.kind(kind));
     m.castShadow = kind !== "ground" && kind !== "glow";
@@ -453,6 +483,7 @@ var Archiscape = {
     this.tour = null;
     this.tourEras = this.tourTowns = false;
     this.time = 0;
+    this.life = new AsLife(this);
     this.setStyle(this.styleIdx, true);
   },
   setLook(i) {
@@ -477,6 +508,7 @@ var Archiscape = {
     this.infoTex.userData.draw(s.blurb);
     // the era's own music, crossfading from the last one
     asMusic?.play(s.id);
+    this.life?.setStyle(s);
     this._rebuild(instant ? null : "era");
     this.app.log(`era → ${s.title}`);
   },
@@ -691,6 +723,8 @@ var Archiscape = {
   },
   update(dt, t) {
     this.time += dt;
+    this.mats.time.value = this.time;
+    this.life?.update(dt);
     asMusic?.tick();
     // era change: the old town sinks, the new one springs up
     for (const l of this.leaving) {
@@ -873,7 +907,7 @@ function asLookify(m, look) {
   return m;
 }
 function asMaterials() {
-  const cache = {}, look = { value: 0 };
+  const cache = {}, look = { value: 0 }, time = { value: 0 };
   const lineMat = new THREE6.LineBasicMaterial({ color: 0, transparent: true, opacity: 0.9 });
   const kind = (k) => {
     if (cache[k]) return cache[k];
@@ -888,6 +922,21 @@ function asMaterials() {
     }
     m.polygonOffset = true;
     m.polygonOffsetFactor = m.polygonOffsetUnits = 1;
+    // wind: furnishings bend with their height above the ground, a ripple plus slow gusts sweeping across
+    const prev = m.onBeforeCompile, prevKey = m.customProgramCacheKey.bind(m);
+    m.onBeforeCompile = (sh, r) => {
+      prev.call(m, sh, r);
+      sh.uniforms.asTime = time;
+      sh.vertexShader = "attribute float sway;\nuniform float asTime;\n" + sh.vertexShader.replace("#include <begin_vertex>", `#include <begin_vertex>
+  if (sway > 0.0) {
+    float hh = max(transformed.y, 0.0);
+    float gust = 0.5 + 0.5 * sin(asTime * 0.45 - transformed.x * 9.0 - transformed.z * 4.0);
+    float w = sin(asTime * 2.3 + transformed.x * 90.0 + transformed.z * 70.0) * 0.55 + sin(asTime * 3.9 + transformed.z * 140.0) * 0.25;
+    transformed.x += (w + gust * 1.1) * hh * 0.055;
+    transformed.z += (w * 0.6 + gust * 0.4) * hh * 0.04;
+  }`);
+    };
+    m.customProgramCacheKey = () => prevKey() + "|wind";
     return cache[k] = asLookify(m, look);
   };
   const own = (m) => (m.userData.own = true, asLookify(m, look));
@@ -903,7 +952,7 @@ function asMaterials() {
     const L = AS_LOOKS[look.value].lines;
     return L ? L.sketch ? "S" : "L" : "";
   };
-  return { kind, make, water, look, lineMat, setLook, lines };
+  return { kind, make, water, look, time, lineMat, setLook, lines };
 }
 function asRims(geo, opacity, px) {
   const eg = new THREE6.EdgesGeometry(geo, 30);
@@ -918,3 +967,170 @@ function asRims(geo, opacity, px) {
   eg.dispose();
   return l;
 }
+// - life: birds over the town, leaves drifting down from the trees, koi in the water eras. Each is one
+// instanced mesh moved on the CPU (a few dozen matrices a frame); wings and tails move in the vertex shader -
+var AS_LEAVES = {
+  kyoto: [16233167, 16242398, 16769511],
+  jiangnan: [9418581, 11192933, 13221233],
+  default: [13141050, 14263361, 10903854, 12298280]
+};
+var AS_KOI = [15233066, 15921128, 14240555, 15315516, 15921128];
+var _lifeM = new THREE6.Matrix4(), _lifeQ = new THREE6.Quaternion(), _lifeE = new THREE6.Euler(), _lifeS = new THREE6.Vector3(), _lifeP = new THREE6.Vector3();
+function asLifeMat(m, time, shaderLine) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.asTime = time;
+    sh.vertexShader = "attribute float aPhase;\nuniform float asTime;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n" + shaderLine);
+  };
+  m.customProgramCacheKey = () => shaderLine;
+  return m;
+}
+var AsLife = class {
+  constructor(world) {
+    this.w = world;
+    const time = world.mats.time, island = world.island;
+    const inst = (geo, mat, n) => {
+      const ph = new Float32Array(n);
+      for (let i = 0; i < n; i++) ph[i] = i * 2.399;
+      geo.setAttribute("aPhase", new THREE6.InstancedBufferAttribute(ph, 1));
+      const m = new THREE6.InstancedMesh(geo, mat, n);
+      m.frustumCulled = false;
+      m.userData.noCollider = m.userData.noHighlight = true;
+      island.add(m);
+      return m;
+    };
+    const geo = (pts) => {
+      const g = new THREE6.BufferGeometry().setAttribute("position", new THREE6.Float32BufferAttribute(pts, 3));
+      g.computeVertexNormals();
+      return g;
+    };
+    // birds: body, tail and two wings; the wing tips beat (|x| is the distance out along the wing), with
+    // glides between bursts of flapping
+    const bird = geo([
+      0, 3e-4, 4.5e-3, 1e-3, 0, -1e-3, -1e-3, 0, -1e-3,
+      0, 0, -1e-3, 1.4e-3, 0, -4.6e-3, -1.4e-3, 0, -4.6e-3,
+      0, 0, 2e-3, -7.5e-3, 0, -6e-4, 0, 0, -1.5e-3,
+      0, 0, 2e-3, 0, 0, -1.5e-3, 7.5e-3, 0, -6e-4
+    ]);
+    this.birds = inst(bird, asLifeMat(new THREE6.MeshBasicMaterial({ color: 2829104, side: THREE6.DoubleSide }), time,
+      "float fl = smoothstep(-0.3, 0.3, sin(asTime * 0.8 + aPhase * 1.7));\n  transformed.y += abs(transformed.x) * (sin(asTime * 13.0 + aPhase) * 0.75 * fl + 0.12);"), 9);
+    this.flock = Array.from({ length: 9 }, (_, i) => ({ da: (asHash(i, 1) - 0.5) * 0.7, dr: (asHash(i, 2) - 0.5) * 0.05, dy: (asHash(i, 3) - 0.5) * 0.04, ph: asHash(i, 4) * 6.28 }));
+    // leaves: a small bent quad that spins as it flutters down
+    const leaf = geo([-1.1e-3, 0, -7e-4, 1.1e-3, 0, -7e-4, 1.1e-3, 3e-4, 7e-4, -1.1e-3, 0, -7e-4, 1.1e-3, 3e-4, 7e-4, -1.1e-3, 0, 7e-4]);
+    this.leafMesh = inst(leaf, new THREE6.MeshStandardMaterial({ side: THREE6.DoubleSide, roughness: 0.8 }), 30);
+    this.leaves = Array.from({ length: 30 }, (_, i) => ({ life: -asHash(i, 9) * 8, p: new THREE6.Vector3(), rot: new THREE6.Euler(), spin: new THREE6.Vector3(), ph: asHash(i, 5) * 6.28 }));
+    // koi: a slim body and a tail fin that sweeps more the further back it is
+    const fish = geo([
+      0, 0, 3.2e-3, 1e-3, 0, 1e-3, -1e-3, 0, 1e-3,
+      1e-3, 0, 1e-3, 7e-4, 0, -2e-3, -1e-3, 0, 1e-3,
+      -1e-3, 0, 1e-3, 7e-4, 0, -2e-3, -7e-4, 0, -2e-3,
+      7e-4, 0, -2e-3, 0, 0, -2.8e-3, -7e-4, 0, -2e-3,
+      0, 0, -2.6e-3, 1.3e-3, 0, -4.4e-3, -1.3e-3, 0, -4.4e-3
+    ]);
+    this.fishMesh = inst(fish, asLifeMat(new THREE6.MeshStandardMaterial({ roughness: 0.45, side: THREE6.DoubleSide }), time,
+      "transformed.x += sin(asTime * 7.0 + aPhase - transformed.z * 700.0) * max(0.0, 1.5e-3 - transformed.z) * 0.35;"), 7);
+    this.fish = Array.from({ length: 7 }, (_, i) => ({ cell: -1, to: -1, x: 0, z: 0, yaw: 0, sp: 0.009 + asHash(i, 7) * 0.006 }));
+    const c = new THREE6.Color();
+    for (let i = 0; i < 7; i++) this.fishMesh.setColorAt(i, c.setHex(AS_KOI[i % AS_KOI.length]));
+    this.t = 0;
+  }
+  setStyle(style) {
+    this.water = !!style.ground.water;
+    this.fishMesh.visible = this.water;
+    for (const f of this.fish) f.cell = -1;
+    const pal = AS_LEAVES[style.id] || AS_LEAVES.default, c = new THREE6.Color();
+    for (let i = 0; i < this.leaves.length; i++) this.leafMesh.setColorAt(i, c.setHex(pal[i % pal.length]));
+    this.leafMesh.instanceColor.needsUpdate = true;
+  }
+  _open(i) {
+    const h = this.w.h;
+    return h[i] === 0;
+  }
+  update(dt) {
+    const t = this.t += dt, W = this.w, grid = W.grid, h = W.h;
+    // the flock wheels around a centre that wanders over the island, rising and falling together
+    const cx = Math.sin(t * 0.07) * 0.05, cz = Math.cos(t * 0.05) * 0.05, A = t * 0.32;
+    this.flock.forEach((b, i) => {
+      const a = A + b.da, r = 0.2 + b.dr + Math.sin(t * 0.2 + b.ph) * 0.02;
+      const y = 0.2 + b.dy + Math.sin(t * 0.5 + b.ph) * 0.012;
+      _lifeP.set(cx + Math.sin(a) * r, y, cz + Math.cos(a) * r);
+      // heading along the circle (counter-clockwise from above), banked into the turn
+      _lifeQ.setFromEuler(_lifeE.set(0, a + Math.PI / 2, -0.35, "YXZ"));
+      this.birds.setMatrixAt(i, _lifeM.compose(_lifeP, _lifeQ, _lifeS.setScalar(1.7)));
+    });
+    this.birds.instanceMatrix.needsUpdate = true;
+    // leaves let go from open ground (where the trees are), drift downwind and settle, then fade
+    const trees = this._trees ||= [];
+    if (!(t < this._treesT + 2)) {
+      this._treesT = t;
+      trees.length = 0;
+      for (const cell of grid.cells) if (!h[cell.i] && cell.nb.every((n) => n < 0 || !h[n])) trees.push(cell);
+    }
+    const floor = this.water ? -3.5e-3 : 3e-4, gust = 0.5 + 0.5 * Math.sin(t * 0.45);
+    this.leaves.forEach((L, i) => {
+      L.life += dt;
+      if (L.life > 0 && L.p.y === 0 && L.state !== "fall") {
+        if (!trees.length) return this.leafMesh.setMatrixAt(i, _lifeM.makeScale(0, 0, 0));
+        const cell = trees[Math.floor(asHash(i, Math.floor(t * 10)) * trees.length)];
+        L.p.set(cell.c.x + (Math.random() - 0.5) * 0.01, 0.022 + Math.random() * 0.016, cell.c.y + (Math.random() - 0.5) * 0.01);
+        L.spin.set(Math.random() * 3, Math.random() * 4, Math.random() * 3);
+        L.state = "fall";
+      }
+      let s = 0;
+      if (L.state === "fall") {
+        L.p.x += (0.004 + gust * 0.006 + Math.sin(t * 2.6 + L.ph) * 0.004) * dt;
+        L.p.z += (0.002 + Math.cos(t * 2.1 + L.ph) * 0.004) * dt;
+        L.p.y -= (0.0045 + Math.sin(t * 3.3 + L.ph) * 0.002) * dt;
+        L.rot.x += L.spin.x * dt;
+        L.rot.y += L.spin.y * dt;
+        L.rot.z += L.spin.z * dt;
+        s = 1;
+        if (L.p.y <= floor || L.p.length() > AS_R) {
+          L.p.y = Math.max(L.p.y, floor);
+          L.state = "rest";
+          L.rest = 0;
+          L.rot.x = L.rot.z = 0;
+        }
+      } else if (L.state === "rest") {
+        L.rest += dt;
+        // a leaf on the water drifts on a little
+        if (this.water) L.p.x += 0.002 * dt;
+        s = Math.max(0, 1 - Math.max(0, L.rest - 2.5) / 1.5);
+        if (L.rest > 4) {
+          L.state = null;
+          L.p.y = 0;
+          L.life = -1 - asHash(i, Math.floor(t)) * 5;
+        }
+      }
+      this.leafMesh.setMatrixAt(i, _lifeM.compose(L.p, _lifeQ.setFromEuler(L.rot), _lifeS.setScalar(s * 1.4)));
+    });
+    this.leafMesh.instanceMatrix.needsUpdate = true;
+    if (!this.water) return;
+    // koi wander from open cell to open cell, steering smoothly, so they keep to the water between buildings
+    const cells = grid.cells;
+    this.fish.forEach((f, i) => {
+      if (f.cell < 0 || h[f.cell] || h[f.to]) {
+        const open = cells.filter((c) => !h[c.i]);
+        if (!open.length) return this.fishMesh.setMatrixAt(i, _lifeM.makeScale(0, 0, 0));
+        const c = open[Math.floor(Math.random() * open.length)];
+        f.cell = f.to = c.i;
+        f.x = c.c.x;
+        f.z = c.c.y;
+        f.yaw = Math.random() * 6.28;
+      }
+      const tc = cells[f.to].c, dx = tc.x - f.x, dz = tc.y - f.z;
+      if (dx * dx + dz * dz < 2e-5) {
+        f.cell = f.to;
+        const nb = cells[f.cell].nb.filter((n) => n >= 0 && !h[n]);
+        f.to = nb.length ? nb[Math.floor(Math.random() * nb.length)] : f.cell;
+      }
+      let d = Math.atan2(dx, dz) - f.yaw;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      f.yaw += THREE6.MathUtils.clamp(d, -2.4 * dt, 2.4 * dt);
+      const sp = f.sp * (0.75 + 0.25 * Math.sin(t * 1.3 + i));
+      f.x += Math.sin(f.yaw) * sp * dt;
+      f.z += Math.cos(f.yaw) * sp * dt;
+      this.fishMesh.setMatrixAt(i, _lifeM.compose(_lifeP.set(f.x, -3.4e-3, f.z), _lifeQ.setFromEuler(_lifeE.set(0, f.yaw, 0)), _lifeS.setScalar(1.6)));
+    });
+    this.fishMesh.instanceMatrix.needsUpdate = true;
+  }
+};
