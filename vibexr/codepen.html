@@ -1,6 +1,11 @@
-<!-- VibeXR Interaction Framework v0.8.25 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+<!-- VibeXR Interaction Framework v0.9.0 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.0   keyboard + mouse. Desktop, Unity style: right-drag look, right + WASD / QE fly (Shift faster, wheel =
+          speed), middle-drag pan, Alt + left orbit, Alt + right / wheel zoom, F frames the pointed object; left
+          stays the ray pinch. In XR (if the headset passes keyboard / mouse to the page): WASD / QE move you,
+          Home resets, the mouse aims a ray from the head (left = pinch), right-drag turns. world.claimKeys claims keys
+          for the world; app.keys holds the keys down. Keyboard / mouse events seen in a session are logged.
   0.8.25  one Enter button, no second VR button: AR with VST on; headsets without AR enter VR through the same button
   0.8.24  hover outline: welded by position only and centred on each part (no gaps or shards on CAD
           meshes); opts.outlinePush draws a silhouette-only outline pushed along the surface normals
@@ -368,7 +373,7 @@ var MouseSource = class extends Source {
       this.down = false;
     });
     dom.addEventListener("pointerdown", (e) => {
-      if (e.button === 0) this.down = true;
+      if (e.button === 0 && !e.altKey) this.down = true;
     });
     window.addEventListener("pointerup", (e) => {
       if (e.button === 0) this.down = false;
@@ -382,6 +387,30 @@ var MouseSource = class extends Source {
       e.stopImmediatePropagation();
       this.wheelAcc += -Math.sign(e.deltaY) * (Math.abs(e.deltaY) >= 40 ? 1 : 0.25);
     }, { passive: false, capture: true });
+  }
+  // XR: a ray from the head whose world yaw / pitch the mouse moves; it never strays more than 70 deg from
+  // where you look
+  aimFrom(q) {
+    const d = _v.set(0, 0, -1).applyQuaternion(q);
+    this.yaw = Math.atan2(-d.x, -d.z);
+    this.pitch = Math.asin(THREE.MathUtils.clamp(d.y, -1, 1));
+  }
+  aim(dx, dy) {
+    this.yaw -= dx * 2.5e-3;
+    this.pitch = THREE.MathUtils.clamp(this.pitch - dy * 2.5e-3, -1.4, 1.4);
+  }
+  updateXR(head, hq) {
+    this.wheelStep = this.wheelAcc;
+    this.wheelAcc = 0;
+    const hf = _v.set(0, 0, -1).applyQuaternion(hq), hy = Math.atan2(-hf.x, -hf.z), lim = 1.22;
+    const dy = Math.atan2(Math.sin(this.yaw - hy), Math.cos(this.yaw - hy));
+    this.yaw = hy + THREE.MathUtils.clamp(dy, -lim, lim);
+    const cp = Math.cos(this.pitch), d = this.ray.dir.set(-Math.sin(this.yaw) * cp, Math.sin(this.pitch), -Math.cos(this.yaw) * cp);
+    this.ray.origin.copy(head).y -= 0.08;
+    this.ray.quat.setFromUnitVectors(_v.set(0, 0, -1), d);
+    this.ray.valid = this.tracked = true;
+    this._setSelect(this.down);
+    this.selectValue = this.select ? 1 : 0;
   }
   update(now) {
     this.wheelStep = this.wheelAcc;
@@ -1586,7 +1615,7 @@ var InteractorVisual = class {
     const rate = Math.min(1, dt * ICFG.cursorStateSmoothing);
     this.hk += ((hasTarget ? 1 : 0) - this.hk) * rate;
     this.sk += ((sel ? 1 : 0) - this.sk) * rate;
-    this.ray.visible = farOn && s.kind !== "mouse" && F > 0.01;
+    this.ray.visible = farOn && (s.kind !== "mouse" || s.xr) && F > 0.01;
     this.reticle.visible = farOn && F > 0.01;
     if (!farOn) this._cursorSnap = true;
     if (farOn) {
@@ -2466,7 +2495,21 @@ var Playground = {
     const tableRims = rims(table.geometry, 0.9, 4);
     tableRims.position.copy(table.position);
     root.add(tableRims);
-    const tl = ctx.label("Pinch / ray-grab \u00b7 two hands: rotate + scale \u00b7 tap: color \u00b7 hold: spin \u00b7 stays on the table", { height: 0.018 });
+    // the table's own height can be set by hand: grab its rim (pinch or ray) and lift or lower it to your real
+    // desk; everything placed on the table rides along (see update)
+    this.table = table;
+    this.plateH = PLATE_H;
+    ctx.add(table, {
+      draggable: true,
+      translateOnly: true,
+      highlight: false,
+      constrain: ({ position }) => {
+        position.x = 0;
+        position.z = -0.5;
+        position.y = THREE6.MathUtils.clamp(position.y, 0.3 - PLATE_H / 2, 2 - PLATE_H / 2);
+      }
+    });
+    const tl = ctx.label("Pinch / ray-grab \u00b7 two hands: rotate + scale \u00b7 tap: color \u00b7 hold: spin \u00b7 grab the table rim to set its height", { height: 0.018 });
     tl.position.set(0, TABLE_TOP + 0.02, -0.19);
     tl.rotation.x = -Math.PI / 2.6;
     root.add(tl);
@@ -2495,7 +2538,7 @@ var Playground = {
       this.spinners.push(m);
     });
     const orb = new T.Mesh(new T.IcosahedronGeometry(0.045, 2), new T.MeshStandardMaterial({ color: 13215999, roughness: 0.3, emissive: 0, flatShading: true }));
-    orb.position.set(0.36, TABLE_TOP + 0.24, -0.42);
+    orb.position.set(-0.36, TABLE_TOP + 0.24, -0.42);
     orb.name = "orb";
     root.add(orb);
     const oit = ctx.add(orb, { precise: true });
@@ -2507,11 +2550,11 @@ var Playground = {
       orb.material.color.setHSL(Math.random(), 0.7, 0.7);
     });
     const ol = ctx.label("tap: bounce \u00b7 hold: burst", { height: 0.016 });
-    ol.position.set(0.36, TABLE_TOP + 0.32, -0.42);
+    ol.position.set(-0.36, TABLE_TOP + 0.32, -0.42);
     root.add(ol);
     this.orb = orb;
     const bell = new T.Mesh(new T.SphereGeometry(0.028, 24, 16), new T.MeshStandardMaterial({ color: 16114298, roughness: 0.3, emissive: 0 }));
-    bell.position.set(0.36, TABLE_TOP + 0.12, -0.36);
+    bell.position.set(-0.36, TABLE_TOP + 0.12, -0.36);
     bell.name = "bell";
     root.add(bell);
     const bit = ctx.add(bell, { poke: "volume", near: false });
@@ -2519,7 +2562,7 @@ var Playground = {
       bell.userData.ring = 1;
     });
     const bl = ctx.label("poke me (fingertip / controller nose)", { height: 0.013 });
-    bl.position.set(0.36, TABLE_TOP + 0.07, -0.33);
+    bl.position.set(-0.36, TABLE_TOP + 0.07, -0.33);
     bl.rotation.x = -0.5;
     root.add(bl);
     this.bell = bell;
@@ -2545,7 +2588,9 @@ var Playground = {
     fl.position.set(0, 2.35, -3.4);
     root.add(fl);
     const panel = ctx.panel("UI \u00b7 poke, pinch or ray", { w: 0.22, h: 0.15 });
-    panel.root.position.set(-0.5, TABLE_TOP + 0.06, -0.36);
+    // the panel and the sketch board on your right, the orb, bell and log on your left (the left of a desktop
+    // window holds the entry card)
+    panel.root.position.set(0.5, TABLE_TOP + 0.06, -0.36);
     panel.root.lookAt(0, TABLE_TOP + 0.3, 0.3);
     root.add(panel.root);
     let count = 0;
@@ -2561,14 +2606,15 @@ var Playground = {
     slider.root.position.set(0, -0.05, 4e-3);
     panel.root.add(slider.root);
     const board = new SketchBoard(ctx, { w: 0.48, h: 0.36 });
-    board.root.position.set(-0.78, TABLE_TOP + 0.196, -0.5);
+    board.root.position.set(0.78, TABLE_TOP + 0.196, -0.5);
     board.root.lookAt(0, TABLE_TOP + 0.3, 0.3);
     root.add(board.root);
     this.board = board;
     const log = ctx.app.logPanel.root;
-    log.position.set(0.72, TABLE_TOP + 0.38, -0.78);
+    log.position.set(-0.72, TABLE_TOP + 0.38, -0.78);
     log.lookAt(0, TABLE_TOP + 0.46, 0.1);
     root.add(log);
+    this.onTable = [tableRims, tl, ...this.spinners, orb, ol, bell, bl, panel.root, board.root, log];
   },
   update(dt, t) {
     const a = this.app.sessionMode === "ar" ? this.app.vst.opacity : 1;
@@ -2581,6 +2627,13 @@ var Playground = {
     //  - distance scaling: fixed inside BOARD_SCALE_NEAR, beyond it linear in distance with slope BOARD_SCALE_K
     //    (K = 0.8: slightly smaller with distance as a depth cue, still legible; no upper clamp), relative to
     //    the designed size at the initial placement distance. A two-hand scale edits the user factor instead.
+    // the table was lifted or lowered: TABLE_TOP follows it, and so does everything on it
+    const top = this.table.position.y + this.plateH / 2;
+    if (Math.abs(top - TABLE_TOP) > 1e-5) {
+      const d = top - TABLE_TOP;
+      TABLE_TOP = top;
+      for (const o of this.onTable) o.position.y += d;
+    }
     const head = this.app.input.head, bd = this.board;
     const dist = Math.max(BOARD_SCALE_NEAR, bd.root.position.distanceTo(head));
     if (!bd.refDist) bd.refDist = dist;
@@ -2622,7 +2675,227 @@ var Playground = {
 };
 
 // src/main.js
-var VERSION = "0.8.25";
+var VERSION = "0.9.0";
+// - keyboard + mouse navigation -
+// Desktop (no session), Unity Scene view style:
+//   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan
+//   Alt + left-drag orbit · Alt + right-drag or wheel zoom · F frames what the mouse points at
+//   Left button stays the ray pinch. WASD / QE also fly without the right button unless the world claims
+//   those keys (world.claimKeys = "wasd..."): a world that drives something with WASD keeps them.
+// In XR (when the browser hands keyboard / mouse events to the page during a session; headsets differ):
+//   WASD / QE move you through the world (Shift faster), Home puts you back; the mouse aims a ray from your
+//   head (left = pinch, wheel = push / pull while held) and right-drag turns you. Claimed keys go to the world.
+var NAV_KEYS = "wasdqe";
+var DesktopNav = class {
+  constructor(app2) {
+    this.app = app2;
+    const dom = app2.renderer.domElement;
+    this.speed = 1.5;
+    this.drag = null;
+    this.frame = null;
+    app2.controls.enabled = false;
+    dom.addEventListener("contextmenu", (e) => e.preventDefault());
+    dom.addEventListener("pointerdown", (e) => {
+      if (app2.renderer.xr.isPresenting) return;
+      const mode = e.button === 2 ? e.altKey ? "zoom" : "look" : e.button === 1 ? "pan" : e.button === 0 && e.altKey ? "orbit" : null;
+      if (!mode) return;
+      e.preventDefault();
+      this.drag = { mode, x: e.clientX, y: e.clientY, button: e.button };
+      this.frame = null;
+      app2.controls.dispatchEvent({ type: "start" });
+    });
+    addEventListener("pointermove", (e) => {
+      const d = this.drag;
+      if (!d) return;
+      const dx = e.clientX - d.x, dy = e.clientY - d.y;
+      d.x = e.clientX;
+      d.y = e.clientY;
+      this[`_${d.mode}`](dx, dy);
+    });
+    addEventListener("pointerup", (e) => {
+      if (this.drag && e.button === this.drag.button) this.drag = null;
+    });
+    // wheel: speed while flying, zoom otherwise (a wheel with the left button held is the ray's push / pull,
+    // taken by the mouse source before it gets here)
+    dom.addEventListener("wheel", (e) => {
+      if (app2.renderer.xr.isPresenting) return;
+      e.preventDefault();
+      if (this.drag?.mode === "look") this.speed = THREE7.MathUtils.clamp(this.speed * (e.deltaY < 0 ? 1.25 : 0.8), 0.1, 20);
+      else this._zoom(0, e.deltaY * 0.5);
+      app2.controls.dispatchEvent({ type: "start" });
+    }, { passive: false });
+    addEventListener("keydown", (e) => {
+      if (app2.renderer.xr.isPresenting || app2.keyIgnored(e)) return;
+      if (e.key === "f" || e.key === "F") {
+        if (app2.worldClaims("f")) return;
+        this._frameHover();
+      }
+    });
+  }
+  get _dir() {
+    return _navV.subVectors(this.app.controls.target, this.app.camera.position);
+  }
+  _look(dx, dy) {
+    const c = this.app.camera, t = this.app.controls.target, off = this._dir, s = new THREE7.Spherical().setFromVector3(off);
+    s.theta -= dx * 4e-3;
+    s.phi = THREE7.MathUtils.clamp(s.phi + dy * 4e-3, 0.05, Math.PI - 0.05);
+    t.copy(c.position).add(off.setFromSpherical(s));
+  }
+  _orbit(dx, dy) {
+    const c = this.app.camera, t = this.app.controls.target, off = _navV.subVectors(c.position, t), s = new THREE7.Spherical().setFromVector3(off);
+    s.theta -= dx * 6e-3;
+    s.phi = THREE7.MathUtils.clamp(s.phi - dy * 6e-3, 0.05, Math.PI - 0.05);
+    c.position.copy(t).add(off.setFromSpherical(s));
+  }
+  _pan(dx, dy) {
+    const c = this.app.camera, t = this.app.controls.target, dist = this._dir.length();
+    const k = 2 * Math.tan(THREE7.MathUtils.degToRad(c.fov / 2)) * dist / innerHeight;
+    c.updateMatrixWorld();
+    const r = _navV2.setFromMatrixColumn(c.matrixWorld, 0).multiplyScalar(-dx * k), u = _navV3.setFromMatrixColumn(c.matrixWorld, 1).multiplyScalar(dy * k);
+    c.position.add(r).add(u);
+    t.add(r).add(u);
+  }
+  _zoom(dx, dy) {
+    const c = this.app.camera, t = this.app.controls.target, off = _navV.subVectors(c.position, t);
+    const len = THREE7.MathUtils.clamp(off.length() * Math.exp((dy - dx) * 4e-3), 0.05, 50);
+    c.position.copy(t).add(off.setLength(len));
+  }
+  _frameHover() {
+    const g = this.app.im.group(this.app.mouse), it = g?.far.hover;
+    if (!it) return;
+    const center = it.worldCenter(new THREE7.Vector3()), dist = Math.max(0.25, it.worldRadius() * 3);
+    const dir = this._dir.normalize();
+    this.frame = { target: center, pos: center.clone().addScaledVector(dir, -dist) };
+    this.app.controls.dispatchEvent({ type: "start" });
+  }
+  update(dt) {
+    const a = this.app, c = a.camera, t = a.controls.target;
+    if (this.frame) {
+      const k = Math.min(1, dt * 10);
+      t.lerp(this.frame.target, k);
+      c.position.lerp(this.frame.pos, k);
+      if (c.position.distanceTo(this.frame.pos) < 1e-3) this.frame = null;
+    }
+    // fly: with the right button held, or keys the world leaves free
+    const flying = this.drag?.mode === "look";
+    const on = (k) => a.keys.has(k) && (flying || !a.worldClaims(k));
+    const f = (on("w") ? 1 : 0) - (on("s") ? 1 : 0), r = (on("d") ? 1 : 0) - (on("a") ? 1 : 0), u = (on("e") ? 1 : 0) - (on("q") ? 1 : 0);
+    if (!f && !r && !u) return;
+    this.frame = null;
+    const v = (a.keys.has("shift") ? 3 : 1) * this.speed * dt, dir = this._dir.normalize();
+    c.updateMatrixWorld();
+    const right = _navV2.setFromMatrixColumn(c.matrixWorld, 0);
+    const m = _navV3.set(0, 0, 0).addScaledVector(dir, f).addScaledVector(right, r).addScaledVector(_navUp, u).multiplyScalar(v);
+    c.position.add(m);
+    t.add(m);
+    if (!this._started) a.controls.dispatchEvent({ type: "start" });
+    this._started = true;
+  }
+};
+var _navV = new THREE7.Vector3(), _navV2 = new THREE7.Vector3(), _navV3 = new THREE7.Vector3(), _navUp = new THREE7.Vector3(0, 1, 0);
+// In a session: you move through the world with the keyboard and turn with the mouse; the mouse aims a ray
+var XRKeyMouse = class {
+  constructor(app2) {
+    this.app = app2;
+    this.rig = { pos: new THREE7.Vector3(), yaw: 0 };
+    this.seen = /* @__PURE__ */ new Set();
+    this.speed = 1.2;
+    const xr = () => app2.renderer.xr.isPresenting;
+    const note = (what) => {
+      if (!xr() || this.seen.has(what)) return;
+      this.seen.add(what);
+      app2.log(`${what} ✓ (in XR)`);
+    };
+    addEventListener("keydown", (e) => {
+      note(`keyboard "${e.key}"`.replace(/"(.).+"/, (m, c) => `"${c}…"`));
+      if (!xr() || app2.keyIgnored(e)) return;
+      if (e.key === "Home") this.reset();
+    });
+    const M = app2.mouse;
+    addEventListener("mousemove", (e) => {
+      if (!xr()) return;
+      note("mouse move");
+      this._mouseOn();
+      const dx = e.movementX || 0, dy = e.movementY || 0;
+      if (M.xrRight) this.turn(-dx * 3e-3);
+      else M.aim(dx, dy);
+    });
+    addEventListener("mousedown", (e) => {
+      if (!xr()) return;
+      note("mouse button");
+      this._mouseOn();
+      if (e.button === 0) M.down = true;
+      if (e.button === 2) M.xrRight = true;
+    });
+    addEventListener("mouseup", (e) => {
+      if (e.button === 0) M.down = false;
+      if (e.button === 2) M.xrRight = false;
+    });
+    addEventListener("wheel", (e) => {
+      if (!xr()) return;
+      note("mouse wheel");
+      if (M.down) M.wheelAcc += -Math.sign(e.deltaY) * (Math.abs(e.deltaY) >= 40 ? 1 : 0.25);
+    }, { passive: true });
+    addEventListener("pointerdown", (e) => xr() && note(`pointer "${e.pointerType}"`));
+  }
+  _mouseOn() {
+    const M = this.app.mouse;
+    if (M.xr) return;
+    M.xr = true;
+    M.aimFrom(this.app.input.headQuat);
+    this.app.im.group(M).blocked = false;
+  }
+  // session start: the reference space everything moves relative to
+  begin() {
+    this.base = this.app.renderer.xr.getReferenceSpace();
+    this.rig.pos.set(0, 0, 0);
+    this.rig.yaw = 0;
+  }
+  rebase(space) {
+    this.base = space;
+    this._apply();
+  }
+  end() {
+    this.base = null;
+    const M = this.app.mouse;
+    M.xr = M.xrRight = M.down = false;
+  }
+  reset() {
+    this.rig.pos.set(0, 0, 0);
+    this.rig.yaw = 0;
+    this._apply();
+  }
+  // turn about your head, so it stays where it is
+  turn(a) {
+    const h = this.app.input.head, r = this.rig;
+    const base = _navV.copy(h).sub(r.pos).applyAxisAngle(_navUp, -r.yaw);
+    r.yaw += a;
+    r.pos.copy(h).sub(base.applyAxisAngle(_navUp, r.yaw));
+    this._apply();
+  }
+  _apply() {
+    if (!this.base) return;
+    const r = this.rig, m = new THREE7.Matrix4().compose(r.pos, new THREE7.Quaternion().setFromAxisAngle(_navUp, r.yaw), new THREE7.Vector3(1, 1, 1)).invert();
+    const p = new THREE7.Vector3(), q = new THREE7.Quaternion();
+    m.decompose(p, q, new THREE7.Vector3());
+    this.app.renderer.xr.setReferenceSpace(this.base.getOffsetReferenceSpace(new XRRigidTransform({ x: p.x, y: p.y, z: p.z }, { x: q.x, y: q.y, z: q.z, w: q.w })));
+  }
+  update(dt) {
+    const a = this.app, on = (k) => a.keys.has(k) && !a.worldClaims(k);
+    const f = (on("w") ? 1 : 0) - (on("s") ? 1 : 0), r = (on("d") ? 1 : 0) - (on("a") ? 1 : 0), u = (on("e") ? 1 : 0) - (on("q") ? 1 : 0);
+    if (f || r || u) {
+      const fwd = _navV2.set(0, 0, -1).applyQuaternion(a.input.headQuat);
+      fwd.y = 0;
+      if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1);
+      fwd.normalize();
+      const right = _navV3.set(-fwd.z, 0, fwd.x), v = (a.keys.has("shift") ? 3 : 1) * this.speed * dt;
+      this.rig.pos.addScaledVector(fwd, f * v).addScaledVector(right, r * v);
+      this.rig.pos.y += u * v;
+      this._apply();
+    }
+    if (a.mouse.xr) a.mouse.updateXR(a.input.head, a.input.headQuat);
+  }
+};
 var App = class {
   constructor() {
     if (window.__HAND_L) setHandAssetsBase64(window.__HAND_L, window.__HAND_R);
@@ -2642,6 +2915,14 @@ var App = class {
     this.controls.target.set(0, 1.6, -0.5);
     this.controls.mouseButtons = { LEFT: null, MIDDLE: THREE7.MOUSE.DOLLY, RIGHT: THREE7.MOUSE.ROTATE };
     this.controls.update();
+    // keys held (lower case), for the navigation and for worlds; typing in a text field doesn't count
+    this.keys = /* @__PURE__ */ new Set();
+    addEventListener("keydown", (e) => !this.keyIgnored(e) && this.keys.add(e.key.toLowerCase()));
+    addEventListener("keyup", (e) => {
+      this.keys.delete(e.key.toLowerCase());
+      if (e.key === "Shift") this.keys.delete("shift");
+    });
+    addEventListener("blur", () => this.keys.clear());
     this.input = new InputSystem();
     this.im = new InteractionManager();
     this.visuals = /* @__PURE__ */ new Map();
@@ -2667,6 +2948,8 @@ var App = class {
     this.input.onRemove = (s) => this._removeSource(s);
     this.mouse = new MouseSource(this.camera, this.renderer.domElement);
     this._addSource(this.mouse);
+    this.nav = new DesktopNav(this);
+    this.xrNav = new XRKeyMouse(this);
     Interactable.onAny = (e) => this._onEvent(e);
     this._buildMenu();
     this.worlds.register(Playground);
@@ -2696,6 +2979,15 @@ var App = class {
     this.visuals.delete(s);
     if (this.menu.owner === s) this.menu._close();
     this.log(`- ${s.kind} ${s.handedness}`);
+  }
+  keyIgnored(e) {
+    const t = e.target;
+    return e.ctrlKey || e.metaKey || !!t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable);
+  }
+  // a world that uses keys itself declares them (world.claimKeys = "wasdqe..."); the navigation leaves those alone
+  worldClaims(k) {
+    const ks = this.worlds.current?.claimKeys;
+    return typeof ks === "string" && ks.toLowerCase().includes(k);
   }
   // - menu -
   _buildMenu() {
@@ -2789,6 +3081,7 @@ var App = class {
       } catch (_) {
       }
       this.sfx.ensure();
+      this.xrNav.begin();
       this.mouse.tracked = false;
       this.im.group(this.mouse).blocked = true;
       if (mode === "ar") this.setOpacity(0, false);
@@ -2803,6 +3096,7 @@ var App = class {
     }
   }
   _onSessionEnd() {
+    this.xrNav.end();
     this.input.clear();
     this.sessionMode = null;
     this.vst.supported = false;
@@ -2821,6 +3115,7 @@ var App = class {
     this.last = now;
     if (frame) {
       this.input.update(frame, this.renderer.xr.getReferenceSpace(), now);
+      this.xrNav.update(dt);
       if (this._calibrate && frame.getViewerPose(this.renderer.xr.getReferenceSpace()) && --this._calibrate <= 0) {
         this._calibrate = 0;
         this.worlds.reload(); // playground re-reads the head height -> table = head - TABLE_BELOW_HEAD
@@ -2830,10 +3125,12 @@ var App = class {
         if (this.input.head.y < 0.5) {
           const base = this.renderer.xr.getReferenceSpace();
           this.renderer.xr.setReferenceSpace(base.getOffsetReferenceSpace(new XRRigidTransform({ x: 0, y: 3.2, z: 0 })));
+          this.xrNav.rebase(this.renderer.xr.getReferenceSpace());
         }
       }
     } else {
       this.mouse.update(now);
+      this.nav.update(dt);
       this.input.head.copy(this.camera.position);
       this.controls.update();
     }
@@ -2967,7 +3264,7 @@ arBtn.onclick = () => app.enterXR("ar");
 (async () => {
   if (!navigator.xr) {
     arBtn.disabled = true;
-    overlay.status("WebXR not available - desktop preview (left-click = ray pinch, wheel while dragging = push / pull, right-drag = orbit)");
+    overlay.status("WebXR not available - desktop preview (left = ray pinch, right-drag look, right + WASD / QE fly, middle pan, Alt + left orbit, wheel zoom, F frame)");
     return;
   }
   const [vr, ar] = await Promise.all(["immersive-vr", "immersive-ar"].map((m) => navigator.xr.isSessionSupported(m).catch(() => false)));
