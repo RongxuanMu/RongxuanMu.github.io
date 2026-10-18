@@ -5005,6 +5005,10 @@ var Archiscape = {
     this.time = 0;
     this.life = new AsLife(this);
     this.setStyle(this.styleIdx, true);
+    // both tours start on (their buttons say so); either button stops them
+    this.tourErasB._click();
+    this.tourTownsB._click();
+    this.autoTour = true;
   },
   setLook(i) {
     const had = this.mats.lines();
@@ -5272,9 +5276,12 @@ var Archiscape = {
     if (this.morph) this._morphStep(dt);
     // on the era tour, the quiet seconds before the next era are spent building its town a few cells at a time,
     // so the switch itself costs almost nothing
-    else if (this.tour !== null && this.tourEras && ((this.tourK ?? 0) + 1) % (AS_TOUR_REFORMS + 1) === 0) this._warm(AS_STYLES[(this.styleIdx + 1) % AS_STYLES.length], 3);
+    else if (this.tour !== null && this.tourEras && ((this.tourK ?? 0) + 1) % (AS_TOUR_REFORMS + 1) === 0) this._warm(AS_STYLES[(this.styleIdx + 1) % AS_STYLES.length], 5);
     if (this.tour !== null) {
-      this.tour += dt;
+      // the pause starts once the town has finished changing (a reform's wave, a new era's rise): the tour keeps
+      // moving, with only a breath on each finished town
+      if (this.morph || this.town.userData.rise !== void 0) this.tour = 0;
+      else this.tour += dt;
       if (this.tour > (this.attract ? AS_ATTRACT_S : AS_TOUR_S)) {
         this.tour = 0;
         this._tourStep();
@@ -5344,10 +5351,11 @@ function asPanelHandle(ctx, root, { w = 0.12, y = -0.16 } = {}) {
   return it;
 }
 var asEnv = null, asMusic = null;
-// s: how long the tour stays on each era / town
-var AS_TOUR_S = 6.4;
+// s: how long the tour rests on each finished town before the next change (19 eras, each reformed once, in about
+// a minute and a half)
+var AS_TOUR_S = 0.9;
 // s: the same on the landing page's self-playing tour
-var AS_ATTRACT_S = 4.5;
+var AS_ATTRACT_S = 1.6;
 var AS_ISLAND_SCALE = 0.88;
 // how many times each era reforms its town on the tour before the next era; s: how long a reform takes to sweep
 var AS_TOUR_REFORMS = 1, AS_MORPH_S = 1.4, AS_MORPH_CELLS = 6;

@@ -3879,7 +3879,9 @@ var RoadsterNight = {
     this.cheerT = 0;
     this.fw = false;
     this.fwAt = 0;
-    this._placeStage(this.tabletop ?? false);
+    // in a headset the diorama starts on a tabletop in front of you; the desktop preview keeps the floor view its
+    // camera frames. Once you press Tabletop yourself, your choice stands
+    this._placeStage(this.tableChosen ? this.tabletop : !!this.app.sessionMode);
     this.car.place(RN_LAUNCH.x0, RN_LAUNCH.z, 0);
     this.setMode("show", 0);
   },
@@ -3893,6 +3895,7 @@ var RoadsterNight = {
       fast: b("Fast", { toggle: true, onClick: (v) => this.pace = v ? RN_FAST : 1 }),
       drive: b("Drive", { toggle: true, onClick: (v) => v ? this.setMode("drive") : this.setMode("show", 0) }),
       table: b("Tabletop", { toggle: true, value: !!this.tabletop, onClick: (v) => {
+        this.tableChosen = true;
         this._placeStage(v);
       } }),
       sound: b("Sound", { toggle: true, value: true, onClick: (v) => this.sound.on = v }),

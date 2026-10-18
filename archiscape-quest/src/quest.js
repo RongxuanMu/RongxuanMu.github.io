@@ -133,6 +133,7 @@ var ArchiscapeQuest = {
     this.panelRoot.visible = false;
     this.hintLabel.visible = false;
     if (this.tourEras) this.tourErasB._click();
+    if (this.tourTowns) this.tourTownsB._click();
     this.autoTour = true;
     // - the figures -
     const soldier = questMesh([
