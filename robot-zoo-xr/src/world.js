@@ -355,10 +355,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
       // two hands carry and turn it, but never scale it: the scale would land on the one body grabbed
       it = this._grabbable(this.ctx, rootG, "duck", { twoHand: true, highlight: false, box, constrain: ({ scale }) => rootG.getWorldScale(scale) });
       it.on("transformstart", () => this._grab2Start()).on("transformend", () => this.S?.grab?.two && this._grabEnd());
-      it.on("tap", () => this.sound.hup()).on("statechange", ({ level }) => {
-        this._tint(level);
-        this._outline(level);
-      });
+      // hover and hold show in the outline alone; the robot keeps its own colours
+      it.on("tap", () => this.sound.hup()).on("statechange", ({ level }) => this._outline(level));
       this.hIts.set(R.id, it);
     }
     this.duckIt = it;
@@ -459,9 +457,6 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     V.olMat.userData.px.value = level === 2 ? ICFG.outlinePxSelect : ICFG.outlinePx;
     V.olMat.opacity = level === 2 ? 1 : 0.85;
     V.olMat.userData.push.value = 0.5 * this.R.height * this.stage.scale.x;
-  },
-  _tint(level) {
-    for (const m of this.hvis?.root.userData.mats ?? []) m.emissive.setScalar(level ? 0.08 * level : 0);
   },
   // twist for the walking policies: joystick / sticks / keys > follow me > goal, as Microduck's, with each
   // robot's own speed range; near the boundary the walk outward fades to a stop
