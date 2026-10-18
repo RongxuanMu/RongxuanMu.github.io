@@ -74,30 +74,18 @@ PC_EXHIBITS.push({
       }
       if (!list.length && bi >= 0) list.push([bi, 0, 0, 0]);
       grips.set(e.interactor, { list, target: p.clone() });
-      X.sfx.squish(0.32, 0.9 + Math.random() * 0.25);
     });
     it.on("drag", (e) => grips.get(e.interactor)?.target.copy(X.local(e.point)));
     it.on("release", (e) => {
       const g = grips.get(e.interactor);
       if (g) for (const [i] of g.list) w[i] = 1;
       grips.delete(e.interactor);
-      // let go of a stretched jelly and it springs back: the more it was pulled, the bigger the duang
-      const st = stretch();
-      if (st > 0.08) X.sfx.boing(Math.min(0.38, 0.12 + st * 0.6), 190 - Math.min(80, st * 140));
-      else X.sfx.squish(0.18, 1.2);
     });
     X.action("Drop", () => reset(0.22));
     X.action("Jump", () => {
       for (let i = 0; i < N; i++) v[i * 3 + 1] += 1.6 + (x[i * 3] > 0 ? 0.3 : 0);
-      X.sfx.boing(0.22, 230, 0.45);
     });
-    // how far the block is from its rest size: the spread of its corners against the rest diagonal
-    const corners = [id(0, 0, 0), id(n - 1, n - 1, n - 1), id(n - 1, 0, 0), id(0, n - 1, n - 1)];
-    const stretch = () => {
-      const d = (a, b) => Math.hypot(x[a * 3] - x[b * 3], x[a * 3 + 1] - x[b * 3 + 1], x[a * 3 + 2] - x[b * 3 + 2]);
-      return Math.abs((d(corners[0], corners[1]) + d(corners[2], corners[3])) / (2 * S * Math.sqrt(3)) - 1);
-    };
-    let wasUp = false, vyMin = 0, lastSt = 0;
+    let wasUp = false, vyMin = 0;
     X.action("Firm", (on) => comp = on ? 8e-6 : 1.2e-4, { toggle: true });
     X.action("Reset", () => reset());
     const SUB = 16, tmp = new T.Vector3();
@@ -204,13 +192,11 @@ PC_EXHIBITS.push({
         geo.computeBoundingSphere();
         geo.computeBoundingBox();
         for (const f of face) at(f.c0, f.f, f.e.position);
-        // sounds: a duang when it lands (as hard as it fell), squelches while hands knead or stretch it or a
-        // fingertip pokes in
-        let minY = 1, vy = 0, poked = 0;
+        // the sound of a landing: a duang as hard as it fell
+        let minY = 1, vy = 0;
         for (let i = 0; i < N; i++) {
           minY = Math.min(minY, x[i * 3 + 1]);
           vy += v[i * 3 + 1];
-          for (const tp of tips) if (Math.hypot(x[i * 3] - tp.x, x[i * 3 + 1] - tp.y, x[i * 3 + 2] - tp.z) < 0.024) poked++;
         }
         vy /= N;
         if (minY > 4e-3) wasUp = true, vyMin = Math.min(vyMin, vy);
@@ -222,10 +208,6 @@ PC_EXHIBITS.push({
           wasUp = false;
           vyMin = 0;
         }
-        const st = stretch();
-        if (grips.size && Math.abs(st - lastSt) > 0.012 && X.sfx.ok("knead", 0.13)) X.sfx.squish(Math.min(0.3, 0.1 + Math.abs(st - lastSt) * 4), 0.75 + st);
-        lastSt = st;
-        if (poked && X.sfx.ok("poke", 0.22)) X.sfx.squish(0.16, 1.3);
       }
     };
   }
