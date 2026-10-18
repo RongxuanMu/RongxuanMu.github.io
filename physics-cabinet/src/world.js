@@ -34,6 +34,8 @@ var PhysicsCabinet = {
     stage.add(ring);
     ctx.add(stage, {
       draggable: true,
+      // one hand carries the plate and keeps its front to you; two hands turn it
+      faceViewer: true,
       twoHand: true,
       box: new T.Box3(new T.Vector3(-PC_PLATE_R, -PH, -PC_PLATE_R), new T.Vector3(PC_PLATE_R, 0, PC_PLATE_R)),
       constrain: ({ quaternion, scale }) => {

@@ -283,7 +283,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     if (this.duckMovesB) this.duckMovesB.root.visible = duck;
     this._drawInfo();
     this._sizeFor(R);
-    if (this.tabletop) this.stage.scale.setScalar(this._tableScale());
+    // a robot's own tabletop size is not a two-hand scale: the console stays where it is
+    if (this.tabletop) this.stage.scale.setScalar(this._tableScale()), this.consoleS0 = this.stage.scale.x;
     this.panel.root.visible = duck;
     this.walkPanel.root.visible = !duck && R.kind !== "track";
     this.trackPanel.root.visible = R.kind === "track";

@@ -1114,6 +1114,7 @@ var Microduck = {
     // the console rides with the stage: its pose is stored relative to the stage's position + heading (not its
     // scale, so the buttons stay hand-sized when the stage is shrunk or grown)
     const F = this._stageFrame(new THREE6.Matrix4()).invert();
+    this.consoleS0 = this.stage.scale.x;
     this.consoleRel = rel.map((o) => {
       o.updateMatrix();
       return { o, m: F.clone().multiply(o.matrix) };
@@ -1835,10 +1836,15 @@ var Microduck = {
     this.statusMesh.scale.setScalar(this.tabletop ? 0.45 : 1);
     this._faceWhileDragged(dt);
     const F = this._stageFrame(_mdM);
+    // grown or shrunk with two hands, the stage takes its console out (or in) with its edge: the panels' distance
+    // from the centre scales with it (their size does not)
+    const k = T6clamp(st.scale.x / (this.consoleS0 || st.scale.x), 0.6, 3);
     for (const { o, m } of this.consoleRel) {
       // (a panel being dragged by its bar follows the hand, not the stage)
       if (this.panelIts?.get(o)?.selections.length) continue;
       _mdM2.multiplyMatrices(F, m).decompose(o.position, o.quaternion, o.scale);
+      o.position.x = st.position.x + (o.position.x - st.position.x) * k;
+      o.position.z = st.position.z + (o.position.z - st.position.z) * k;
     }
     const desktop = !this.app.renderer.xr.isPresenting;
     this.attract = desktop && !document.getElementById("overlay")?.classList.contains("hidden");

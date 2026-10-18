@@ -18,11 +18,13 @@
 <!-- Roadster Night - a fan-made 1:60 diorama of the Roadster reveal (15 Oct 2026, McGregor, Texas): 0-60 in
   0.81 s, the curl ramp with its mid-air roll, the thruster hop over five cars, then a finale; take the
   joystick to drive it yourself. Not affiliated with Tesla or SpaceX. Built on the VibeXR Interaction
-  Framework v0.9.1.
+  Framework v0.9.2.
 
-  VibeXR Interaction Framework v0.9.1 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.9.2 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.2   opts.faceViewer: a one-hand drag carries the object without the wrist's turn and swings it about the
+          vertical through the grab point until its front faces you (stages, plates); two hands turn it freely
   0.9.1   hover outline stops at nested interactables: hovering a stage no longer outlines the panels riding on it
           (their buttons' invisible collider boxes showed as grey slabs)
   0.9.0   keyboard + mouse. Desktop, Unity style: right-drag look, right + WASD / QE fly (Shift faster, wheel =
@@ -550,6 +552,7 @@ var _q1 = new THREE2.Quaternion();
 var _ray = new THREE2.Ray();
 var _box = new THREE2.Box3();
 var _rc = new THREE2.Raycaster();
+var _fvQ = new THREE2.Quaternion(), _fvF = new THREE2.Vector3(), _fvZ = new THREE2.Vector3(0, 0, 1), _fvR = new THREE2.Matrix4(), _fvT = new THREE2.Matrix4(), _fvT2 = new THREE2.Matrix4();
 var _cp = new THREE2.Vector3();
 var _cq = new THREE2.Quaternion();
 var _cs = new THREE2.Vector3();
@@ -629,6 +632,9 @@ var Interactable = class _Interactable {
    *  constrain(t, it) : t = {position, quaternion, scale} in world space, mutate to constrain any transform
    *  multi            : accept any number of simultaneous selections as independent presses (no two-hand transform)
    *  translateOnly    : a drag moves the object with the selector but never rotates it (default false)
+   *  faceViewer       : true or a local front vector (default +Z) - a one-hand drag moves the object without the
+   *                     wrist's turn and swings it about the vertical, pivoting on the grab point, until that front
+   *                     faces you (stages, plates, dioramas); two hands still turn it freely
    *  outlinePush      : m or () => m - draw the hover outline that far behind the object, so only its outer
    *                     silhouette shows (multi-part models); the outline then follows the surface normals
    */
@@ -1249,7 +1255,7 @@ var InteractionManager = class {
     const o = sel.target.object;
     o.updateMatrixWorld();
     this._selectorPose(sel.interactor, _m1);
-    if (sel.target.opts.translateOnly) {
+    if (sel.target.opts.translateOnly || sel.target.opts.faceViewer) {
       // world-space offset from the attach point (pinch point / point on the ray) to the object; rotation is left alone
       sel.offsetPos = (sel.offsetPos || new THREE2.Vector3()).setFromMatrixPosition(o.matrixWorld).sub(sel.interactor.attach);
     } else sel.offset.copy(_m1).invert().multiply(o.matrixWorld);
@@ -1257,13 +1263,31 @@ var InteractionManager = class {
   _applyDrag(sel) {
     const o = sel.target.object;
     this._selectorPose(sel.interactor, _m1);
-    if (sel.target.opts.translateOnly) {
+    if (sel.target.opts.translateOnly || sel.target.opts.faceViewer) {
       _v1.copy(sel.interactor.attach).add(sel.offsetPos);
       o.updateMatrixWorld();
       _m1.copy(o.matrixWorld).setPosition(_v1);
+      if (sel.target.opts.faceViewer && !this.twoHand.has(sel.target)) this._faceViewer(sel, _m1);
     } else _m1.multiply(sel.offset);
     this._constrain(sel.target, _m1);
     setWorldMatrix(o, _m1);
+  }
+  // opts.faceViewer: turn the dragged object about the vertical through the grab point, a little each frame, until
+  // its front (horizontal part) points at the head; the grab offset turns with it so the hand keeps its hold
+  _faceViewer(sel, m) {
+    const it = sel.target, f = it.opts.faceViewer, P = sel.interactor.attach, head = this.head;
+    if (!head) return;
+    _fvQ.setFromRotationMatrix(m);
+    const fr = _fvF.copy(f && f.isVector3 ? f : _fvZ).applyQuaternion(_fvQ);
+    const want = Math.atan2(head.x - P.x, head.z - P.z), cur = Math.atan2(fr.x, fr.z);
+    if (Math.hypot(head.x - P.x, head.z - P.z) < 0.05 || Math.hypot(fr.x, fr.z) < 0.2) return;
+    let d = want - cur;
+    d = Math.atan2(Math.sin(d), Math.cos(d)) * 0.12;
+    if (Math.abs(d) < 1e-5) return;
+    _fvR.makeRotationY(d);
+    sel.offsetPos.applyMatrix4(_fvR);
+    _fvT.makeTranslation(P.x, P.y, P.z).multiply(_fvR).multiply(_fvT2.makeTranslation(-P.x, -P.y, -P.z));
+    m.premultiply(_fvT);
   }
   _endSelection(sel, cancelled) {
     const i = sel.interactor, it = sel.target;
@@ -3796,7 +3820,8 @@ var RoadsterNight = {
     stage.add(barLine);
     this.stageIt = ctx.add(stage, {
       draggable: true,
-      translateOnly: true,
+      // one hand carries it and swings the bar (its front) round to face you; two hands turn and scale it
+      faceViewer: true,
       twoHand: true,
       highlight: false,
       box: new T.Box3(new T.Vector3(-0.21, 0, R - 0.035), new T.Vector3(0.21, 0.07, R + 0.035)),
@@ -3958,6 +3983,7 @@ var RoadsterNight = {
     this.joyPanel.root.lookAt(0, y + 0.45, 0.35);
     // the console rides with the stage: poses stored relative to its position and heading (not its scale)
     const F = this._stageFrame(new THREE6.Matrix4()).invert();
+    this.consoleS0 = st.scale.x;
     this.consoleRel = [this.panel.root, this.joyPanel.root].map((o) => {
       o.updateMatrix();
       return { o, m: F.clone().multiply(o.matrix) };
@@ -4248,9 +4274,13 @@ var RoadsterNight = {
     const st = this.stage, head = this.app.input.head;
     st.updateMatrixWorld();
     const F = this._stageFrame(_rnM);
+    // grown or shrunk with two hands, the stage takes the console out (or in) with its edge
+    const k = THREE6.MathUtils.clamp(st.scale.x / (this.consoleS0 || st.scale.x), 0.6, 3);
     for (const { o, m } of this.consoleRel) {
       if (this.panelIts?.get(o)?.selections.length) continue;
       new THREE6.Matrix4().multiplyMatrices(F, m).decompose(o.position, o.quaternion, o.scale);
+      o.position.x = st.position.x + (o.position.x - st.position.x) * k;
+      o.position.z = st.position.z + (o.position.z - st.position.z) * k;
     }
     const s = st.scale.x;
     this.capMesh.position.copy(st.position).add(_rnV.set(0, 0, -RN_STAGE_R * 0.55 * s).applyQuaternion(st.quaternion)).add(_rnV2.set(0, (this.tabletop ? 0.62 : 0.78) * Math.max(s, 0.42), 0));
@@ -4266,7 +4296,7 @@ var RoadsterNight = {
 };
 
 // src/main.js
-var VERSION = "0.9.1";
+var VERSION = "0.9.2";
 // - keyboard + mouse navigation -
 // Desktop (no session), Unity Scene view style:
 //   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan

@@ -362,6 +362,8 @@ var Archiscape = {
     this.leaving = [];
     this.islandIt = ctx.add(island, {
       draggable: true,
+      // one hand carries the plate and keeps its front (the hint, the panel on its right) to you; two hands turn it
+      faceViewer: true,
       twoHand: true,
       box: new T.Box3(new T.Vector3(-AS_R - 0.03, -0.022 - PLATE_H, -AS_R - 0.03), new T.Vector3(AS_R + 0.03, -0.022, AS_R + 0.03)),
       // stays upright: only position, yaw and scale

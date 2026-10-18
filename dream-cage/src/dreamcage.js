@@ -524,6 +524,8 @@ var DreamCage = {
     // the plinth: carry it anywhere, turn it about the vertical, two hands scale the whole diorama
     this.plateIt = ctx.add(plate, {
       draggable: true,
+      // one hand carries the plinth and keeps its front to you; two hands turn and scale it
+      faceViewer: true,
       twoHand: true,
       scaleDeadzone: 0.12,
       minScale: 0.5,

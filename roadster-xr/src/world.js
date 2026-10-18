@@ -106,7 +106,8 @@ var RoadsterNight = {
     stage.add(barLine);
     this.stageIt = ctx.add(stage, {
       draggable: true,
-      translateOnly: true,
+      // one hand carries it and swings the bar (its front) round to face you; two hands turn and scale it
+      faceViewer: true,
       twoHand: true,
       highlight: false,
       box: new T.Box3(new T.Vector3(-0.21, 0, R - 0.035), new T.Vector3(0.21, 0.07, R + 0.035)),
@@ -268,6 +269,7 @@ var RoadsterNight = {
     this.joyPanel.root.lookAt(0, y + 0.45, 0.35);
     // the console rides with the stage: poses stored relative to its position and heading (not its scale)
     const F = this._stageFrame(new THREE6.Matrix4()).invert();
+    this.consoleS0 = st.scale.x;
     this.consoleRel = [this.panel.root, this.joyPanel.root].map((o) => {
       o.updateMatrix();
       return { o, m: F.clone().multiply(o.matrix) };
@@ -558,9 +560,13 @@ var RoadsterNight = {
     const st = this.stage, head = this.app.input.head;
     st.updateMatrixWorld();
     const F = this._stageFrame(_rnM);
+    // grown or shrunk with two hands, the stage takes the console out (or in) with its edge
+    const k = THREE6.MathUtils.clamp(st.scale.x / (this.consoleS0 || st.scale.x), 0.6, 3);
     for (const { o, m } of this.consoleRel) {
       if (this.panelIts?.get(o)?.selections.length) continue;
       new THREE6.Matrix4().multiplyMatrices(F, m).decompose(o.position, o.quaternion, o.scale);
+      o.position.x = st.position.x + (o.position.x - st.position.x) * k;
+      o.position.z = st.position.z + (o.position.z - st.position.z) * k;
     }
     const s = st.scale.x;
     this.capMesh.position.copy(st.position).add(_rnV.set(0, 0, -RN_STAGE_R * 0.55 * s).applyQuaternion(st.quaternion)).add(_rnV2.set(0, (this.tabletop ? 0.62 : 0.78) * Math.max(s, 0.42), 0));

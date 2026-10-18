@@ -1,11 +1,13 @@
 <!-- Robot Zoo XR - open-source humanoid and quadruped robots running their published policies in MuJoCo WASM + ONNX Runtime
   Web: Pollen Microduck (Microduck XR itself), Unitree G1 (whole-body motion tracking and walking), H1, H1-2, Booster T1,
-  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.9.1.
+  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.9.2.
   Robots, models and policies keep their own licences (see assets/*/SOURCE.txt and the licence files beside them).
 
-  VibeXR Interaction Framework v0.9.1 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.9.2 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.2   opts.faceViewer: a one-hand drag carries the object without the wrist's turn and swings it about the
+          vertical through the grab point until its front faces you (stages, plates); two hands turn it freely
   0.9.1   hover outline stops at nested interactables: hovering a stage no longer outlines the panels riding on it
           (their buttons' invisible collider boxes showed as grey slabs)
   0.9.0   keyboard + mouse. Desktop, Unity style: right-drag look, right + WASD / QE fly (Shift faster, wheel =
@@ -533,6 +535,7 @@ var _q1 = new THREE2.Quaternion();
 var _ray = new THREE2.Ray();
 var _box = new THREE2.Box3();
 var _rc = new THREE2.Raycaster();
+var _fvQ = new THREE2.Quaternion(), _fvF = new THREE2.Vector3(), _fvZ = new THREE2.Vector3(0, 0, 1), _fvR = new THREE2.Matrix4(), _fvT = new THREE2.Matrix4(), _fvT2 = new THREE2.Matrix4();
 var _cp = new THREE2.Vector3();
 var _cq = new THREE2.Quaternion();
 var _cs = new THREE2.Vector3();
@@ -612,6 +615,9 @@ var Interactable = class _Interactable {
    *  constrain(t, it) : t = {position, quaternion, scale} in world space, mutate to constrain any transform
    *  multi            : accept any number of simultaneous selections as independent presses (no two-hand transform)
    *  translateOnly    : a drag moves the object with the selector but never rotates it (default false)
+   *  faceViewer       : true or a local front vector (default +Z) - a one-hand drag moves the object without the
+   *                     wrist's turn and swings it about the vertical, pivoting on the grab point, until that front
+   *                     faces you (stages, plates, dioramas); two hands still turn it freely
    *  outlinePush      : m or () => m - draw the hover outline that far behind the object, so only its outer
    *                     silhouette shows (multi-part models); the outline then follows the surface normals
    */
@@ -1233,7 +1239,7 @@ var InteractionManager = class {
     const o = sel.target.object;
     o.updateMatrixWorld();
     this._selectorPose(sel.interactor, _m1);
-    if (sel.target.opts.translateOnly) {
+    if (sel.target.opts.translateOnly || sel.target.opts.faceViewer) {
       // world-space offset from the attach point (pinch point / point on the ray) to the object; rotation is left alone
       sel.offsetPos = (sel.offsetPos || new THREE2.Vector3()).setFromMatrixPosition(o.matrixWorld).sub(sel.interactor.attach);
     } else sel.offset.copy(_m1).invert().multiply(o.matrixWorld);
@@ -1241,13 +1247,31 @@ var InteractionManager = class {
   _applyDrag(sel) {
     const o = sel.target.object;
     this._selectorPose(sel.interactor, _m1);
-    if (sel.target.opts.translateOnly) {
+    if (sel.target.opts.translateOnly || sel.target.opts.faceViewer) {
       _v1.copy(sel.interactor.attach).add(sel.offsetPos);
       o.updateMatrixWorld();
       _m1.copy(o.matrixWorld).setPosition(_v1);
+      if (sel.target.opts.faceViewer && !this.twoHand.has(sel.target)) this._faceViewer(sel, _m1);
     } else _m1.multiply(sel.offset);
     this._constrain(sel.target, _m1);
     setWorldMatrix(o, _m1);
+  }
+  // opts.faceViewer: turn the dragged object about the vertical through the grab point, a little each frame, until
+  // its front (horizontal part) points at the head; the grab offset turns with it so the hand keeps its hold
+  _faceViewer(sel, m) {
+    const it = sel.target, f = it.opts.faceViewer, P = sel.interactor.attach, head = this.head;
+    if (!head) return;
+    _fvQ.setFromRotationMatrix(m);
+    const fr = _fvF.copy(f && f.isVector3 ? f : _fvZ).applyQuaternion(_fvQ);
+    const want = Math.atan2(head.x - P.x, head.z - P.z), cur = Math.atan2(fr.x, fr.z);
+    if (Math.hypot(head.x - P.x, head.z - P.z) < 0.05 || Math.hypot(fr.x, fr.z) < 0.2) return;
+    let d = want - cur;
+    d = Math.atan2(Math.sin(d), Math.cos(d)) * 0.12;
+    if (Math.abs(d) < 1e-5) return;
+    _fvR.makeRotationY(d);
+    sel.offsetPos.applyMatrix4(_fvR);
+    _fvT.makeTranslation(P.x, P.y, P.z).multiply(_fvR).multiply(_fvT2.makeTranslation(-P.x, -P.y, -P.z));
+    m.premultiply(_fvT);
   }
   _endSelection(sel, cancelled) {
     const i = sel.interactor, it = sel.target;
@@ -3562,6 +3586,7 @@ var Microduck = {
     // the console rides with the stage: its pose is stored relative to the stage's position + heading (not its
     // scale, so the buttons stay hand-sized when the stage is shrunk or grown)
     const F = this._stageFrame(new THREE6.Matrix4()).invert();
+    this.consoleS0 = this.stage.scale.x;
     this.consoleRel = rel.map((o) => {
       o.updateMatrix();
       return { o, m: F.clone().multiply(o.matrix) };
@@ -4283,10 +4308,15 @@ var Microduck = {
     this.statusMesh.scale.setScalar(this.tabletop ? 0.45 : 1);
     this._faceWhileDragged(dt);
     const F = this._stageFrame(_mdM);
+    // grown or shrunk with two hands, the stage takes its console out (or in) with its edge: the panels' distance
+    // from the centre scales with it (their size does not)
+    const k = T6clamp(st.scale.x / (this.consoleS0 || st.scale.x), 0.6, 3);
     for (const { o, m } of this.consoleRel) {
       // (a panel being dragged by its bar follows the hand, not the stage)
       if (this.panelIts?.get(o)?.selections.length) continue;
       _mdM2.multiplyMatrices(F, m).decompose(o.position, o.quaternion, o.scale);
+      o.position.x = st.position.x + (o.position.x - st.position.x) * k;
+      o.position.z = st.position.z + (o.position.z - st.position.z) * k;
     }
     const desktop = !this.app.renderer.xr.isPresenting;
     this.attract = desktop && !document.getElementById("overlay")?.classList.contains("hidden");
@@ -5120,7 +5150,8 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     if (this.duckMovesB) this.duckMovesB.root.visible = duck;
     this._drawInfo();
     this._sizeFor(R);
-    if (this.tabletop) this.stage.scale.setScalar(this._tableScale());
+    // a robot's own tabletop size is not a two-hand scale: the console stays where it is
+    if (this.tabletop) this.stage.scale.setScalar(this._tableScale()), this.consoleS0 = this.stage.scale.x;
     this.panel.root.visible = duck;
     this.walkPanel.root.visible = !duck && R.kind !== "track";
     this.trackPanel.root.visible = R.kind === "track";
@@ -5441,7 +5472,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
 var RZ_TRACK_CLIPS = ["Dance", "Dance 2", "Tai chi", "Kung fu", "Jumps", "Run", "Walk", "Get up", "Cartwheel", "Jump kick", "Backflip", "Handspring", "Dive roll"];
 
 // src/main.js
-var VERSION = "0.9.1";
+var VERSION = "0.9.2";
 // - keyboard + mouse navigation -
 // Desktop (no session), Unity Scene view style:
 //   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan
