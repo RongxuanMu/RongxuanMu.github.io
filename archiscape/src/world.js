@@ -516,6 +516,7 @@ var Archiscape = {
     // the era's own music, crossfading from the last one
     asMusic?.play(s.id);
     this.life?.setStyle(s);
+    this.app.setBackdrop?.(AS_SKY[s.id] ?? null);
     this._rebuild(instant ? null : "era");
     this.app.log(`era → ${s.title}`);
   },
@@ -983,6 +984,30 @@ var AS_LEAVES = {
   kyoto: [16233167, 16242398, 16769511],
   jiangnan: [9418581, 11192933, 13221233],
   default: [13141050, 14263361, 10903854, 12298280]
+};
+// each era's sky, the framework's background in a headset ([top, horizon, bottom]): the room shows through it as
+// far as the Background slider says (in AR), or it is the whole world around you (in VR)
+var AS_SKY = {
+  stonehenge: [4872824, 14200970, 2764586],
+  greek: [3108789, 12575733, 5926778],
+  roman: [3829416, 15848096, 6969928],
+  hagia: [2829662, 14721146, 3813178],
+  islamic: [2056090, 15979418, 9071168],
+  forbidden: [7311280, 15260864, 5917242],
+  jiangnan: [12107968, 15658730, 9080720],
+  kyoto: [4865898, 15906976, 3816008],
+  kremlin: [5926032, 14673646, 10110644],
+  thai: [2787008, 16113832, 4880986],
+  prussian: [6976640, 13159632, 5260634],
+  gaudi: [2064336, 16773320, 8022608],
+  wright: [5933744, 15784096, 4872762],
+  corbusier: [5214160, 15265016, 7370880],
+  meier: [8368352, 16777215, 10528944],
+  ando: [2042426, 8358552, 2763824],
+  pei: [4161472, 14675967, 6318708],
+  gehry: [2768746, 14196848, 3817288],
+  hadid: [659232, 3820154, 1053720],
+  troy: [3816026, 14721120, 3813416]
 };
 // each era's birds: colour, size, wing length (x stretch), wingbeat speed, how much they glide (0 flap all the
 // time .. 1 mostly soar), flock size, circle radius and height, angular speed
