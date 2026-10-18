@@ -5191,7 +5191,10 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
       // two hands carry and turn it, but never scale it: the scale would land on the one body grabbed
       it = this._grabbable(this.ctx, rootG, "duck", { twoHand: true, highlight: false, box, constrain: ({ scale }) => rootG.getWorldScale(scale) });
       it.on("transformstart", () => this._grab2Start()).on("transformend", () => this.S?.grab?.two && this._grabEnd());
-      it.on("tap", () => this.sound.hup()).on("statechange", ({ level }) => this._tint(level));
+      it.on("tap", () => this.sound.hup()).on("statechange", ({ level }) => {
+        this._tint(level);
+        this._outline(level);
+      });
       this.hIts.set(R.id, it);
     }
     this.duckIt = it;
@@ -5271,6 +5274,27 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
     const a = Math.random() * Math.PI * 2;
     S.shove = { t: 0.12, f: [Math.cos(a) * S.trunk.mass * 9, Math.sin(a) * S.trunk.mass * 9] };
     this.sound.whoa();
+  },
+  // Microduck's hover outline for every robot: the framework's outline hulls on all of the robot's parts (its
+  // bodies are siblings, not children of the one grabbed), pushed back so only the silhouette shows
+  _outline(level) {
+    const V = this.hvis;
+    if (!V) return;
+    if (!V.hulls) {
+      V.olMat = hoverOutlineMaterial();
+      V.hulls = [];
+      const parts = [];
+      V.root.traverse((o) => o.isMesh && o.geometry && !o.userData.isOutline && parts.push(o));
+      for (const o of parts) {
+        const h = outlineHull(o, V.olMat);
+        o.add(h);
+        V.hulls.push(h);
+      }
+    }
+    for (const h of V.hulls) h.visible = level > 0;
+    V.olMat.userData.px.value = level === 2 ? ICFG.outlinePxSelect : ICFG.outlinePx;
+    V.olMat.opacity = level === 2 ? 1 : 0.85;
+    V.olMat.userData.push.value = 0.5 * this.R.height * this.stage.scale.x;
   },
   _tint(level) {
     for (const m of this.hvis?.root.userData.mats ?? []) m.emissive.setScalar(level ? 0.08 * level : 0);
