@@ -63,9 +63,17 @@ var RoadsterNight = {
     mini.add(this.puffs.points, this.smoke.points, this.sparks.points);
     const carG = rnBuildRoadster();
     mini.add(carG);
+    // the body shell is what the hover / hold outline traces (the rest of the car stays out of it)
+    carG.children[0].userData.noHighlight = carG.children[0].userData.noCollider = false;
     this.car = new RnCar(carG, this.puffs, this.smoke);
+    // a game-style marker: an arrow hovering over the car, pointing down at it, bobbing gently (hidden while you
+    // hold the car - the outline says it then)
+    const mk = this.marker = new T.Group(), mkMat = new T.MeshBasicMaterial({ color: 16766794, transparent: true, opacity: 0.9, depthWrite: false });
+    mk.add(new T.Mesh(new T.ConeGeometry(0.75, 1.5, 4).rotateX(Math.PI), mkMat), new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 1.2, 8).translate(0, 1.3, 0), mkMat));
+    mk.traverse((o) => o.userData.noCollider = o.userData.noHighlight = true);
+    mini.add(mk);
     // headlight beams for the finale flash
-    const beam = new T.Mesh(new T.ConeGeometry(3.5, 16, 16, 1, true).translate(0, -8, 0).rotateZ(Math.PI / 2), new T.MeshBasicMaterial({ color: 15661055, transparent: true, opacity: 0.16, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+    const beam = new T.Mesh(new T.ConeGeometry(3.5, 16, 16, 1, true).translate(0, -8, 0).rotateZ(Math.PI / 2), rnLight(new T.MeshBasicMaterial({ color: 15661055, transparent: true, opacity: 0.16, depthWrite: false, side: T.DoubleSide })));
     beam.position.set(2.3, 0.4, 0);
     beam.visible = false;
     beam.userData.noCollider = beam.userData.noHighlight = true;
@@ -123,7 +131,8 @@ var RoadsterNight = {
     // the car: grab it, lift it, turn it in your hand, let go - it rights itself as it falls and lands on its
     // thrusters (only its size is held)
     this.carIt = ctx.add(carG, {
-      draggable: true, highlight: false,
+      // hover and hold outline the car's body shell (heavier while held)
+      draggable: true, highlight: true,
       box: new T.Box3(new T.Vector3(-3.2, -0.4, -1.8), new T.Vector3(3.2, 2.2, 1.8)),
       constrain: ({ scale }) => {
         if (this._grabS) scale.copy(this._grabS);
@@ -140,7 +149,12 @@ var RoadsterNight = {
       this.car.held = false;
       this._grabS = null;
       const up = new T.Vector3(0, 1, 0).applyQuaternion(this.car.q).y;
-      if (this.car.pos.y > 0.05 || up < 0.999) this._run(rnFly(this.car, { vx: 0, sound: this.sound, level: 0.7 }));
+      const W = this, high = this.car.pos.y > 3;
+      // a drop from high up that it rights and lands gets a cheer from the stands
+      if (this.car.pos.y > 0.05 || up < 0.999) this._run((function* () {
+        yield* rnFly(W.car, { vx: 0, sound: W.sound, level: 0.7 });
+        if (high) W.cheer(0.5);
+      })());
     });
     this._buildConsole(ctx);
     // status line over the far side of the stage, and a hint along its near edge
@@ -277,6 +291,8 @@ var RoadsterNight = {
     this.lamps(3342336);
     this.car.suction = 0;
     this.car.steer = 0;
+    // the stands are livelier during the show than while you drive
+    this.sound.crowd = mode === "show" ? 1 : 0.6;
     if (mode === "show") {
       // an act starts from the car on the ground wherever it is
       if (this.car.air || this.car.pos.y > 0) this.car.pos.y = 0, this.car.air = false, this.car.setYaw(this.car.yaw);
@@ -326,7 +342,12 @@ var RoadsterNight = {
     if (this.mode !== "drive") this.setMode("drive");
     if (this.car.air || this.car.held || this.manualGen && !this.manualGen.route) return;
     this.goal.visible = false;
-    this._run(rnHop(this, {}));
+    // your own hop gets a cheer as it lands
+    const W = this;
+    this._run((function* () {
+      yield* rnHop(W, {});
+      W.cheer(0.6);
+    })());
   },
   launch() {
     if (this.mode !== "drive") this.setMode("drive");
@@ -334,11 +355,15 @@ var RoadsterNight = {
     this.goal.visible = false;
     const car = this.car, t0 = this.clock;
     this.sound.whoosh();
-    this._run(rnStraight(car, () => 33.1, (c) => c.v >= 26.82 || this._carHits(), (dt) => {
-      car.thrust(-2.35, 0.48, 0, -1, 0, 0, 140, dt, 18);
-      this.sound.hiss(1);
-      this.screen({ title: `${(this.clock - t0).toFixed(2)} s`, sub: `${Math.round(car.v * 2.237)} MPH`, big: true });
-    }));
+    const W = this;
+    this._run((function* () {
+      yield* rnStraight(car, () => 33.1, (c) => c.v >= 26.82 || W._carHits(), (dt) => {
+        car.thrust(-2.35, 0.48, 0, -1, 0, 0, 140, dt, 18);
+        W.sound.hiss(1);
+        W.screen({ title: `${(W.clock - t0).toFixed(2)} s`, sub: `${Math.round(car.v * 2.237)} MPH`, big: true });
+      });
+      if (car.v >= 26.82) W.cheer(0.7);
+    })());
   },
   reset() {
     this.car.held = false;
@@ -377,7 +402,7 @@ var RoadsterNight = {
   },
   cheer(level) {
     this.cheerT = Math.max(this.cheerT, 2.5 * level);
-    this.sound.cheer(2.5 + level, 0.12 * level);
+    this.sound.cheer(level);
   },
   fireworks(on) {
     this.fw = on;
@@ -489,6 +514,13 @@ var RoadsterNight = {
     this.shadow.material.opacity = Math.max(0.15, 1 - lift / 20);
     this._animate(sd, t);
     this.sound.update(car.v, dt);
+    // the car's outline in the marker's yellow (a white outline would vanish against the white car)
+    this.carIt._outlineMat?.color.setHex(16766794);
+    const mk = this.marker, bob = Math.sin(this.clock * 2.6);
+    mk.visible = !car.held;
+    mk.position.set(car.pos.x, car.pos.y + 4.4 + bob * 0.45, car.pos.z);
+    mk.rotation.y += dt * 1.2;
+    mk.children[0].material.opacity = 0.65 + 0.3 * (0.5 + 0.5 * Math.sin(this.clock * 3.2));
     this._frame(dt);
   },
   // venue life: search beams sway, the tower light blinks, the crowd jumps when it cheers, fireworks

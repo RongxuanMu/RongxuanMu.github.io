@@ -496,6 +496,9 @@ var RnSound = class {
     this.on = true;
     this.c = null;
     this.hissLevel = 0;
+    // the crowd: crowd (0..1) is how lively the stands are; swell rises with a cheer and ebbs over a few seconds
+    this.crowd = 1;
+    this.swell = 0;
   }
   _ctx() {
     if (!this.on) return null;
@@ -539,6 +542,71 @@ var RnSound = class {
     this.hg.gain.value = 0;
     src.connect(bp).connect(this.hg).connect(this.out);
     src.start();
+    this._crowdGraph(c);
+  }
+  // a murmur of many voices: noise through vowel formants, each band drifting in and out on its own, so it never
+  // settles into a steady hiss; and a bank of claps for applause
+  _crowdGraph(c) {
+    this.cg = c.createGain();
+    this.cg.gain.value = 0;
+    this.cg.connect(this.out);
+    this.bands = [[380, 3], [700, 3.5], [1100, 4], [1700, 4.5], [2600, 5], [3400, 6]].map(([f, q]) => {
+      const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = this.noise;
+      s.loop = true;
+      s.playbackRate.value = 0.85 + Math.random() * 0.3;
+      bp.type = "bandpass";
+      bp.frequency.value = f;
+      bp.Q.value = q;
+      g.gain.value = 0.4;
+      s.connect(bp).connect(g).connect(this.cg);
+      s.start(0, Math.random() * 1.5);
+      return { g, bp, f, ph: Math.random() * 6.28, w: 0.3 + Math.random() * 0.9 };
+    });
+    const len = c.sampleRate * 4, ab = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ab.getChannelData(ch);
+      for (let n = 0; n < 1400; n++) {
+        const at = Math.floor(Math.random() * (len - 900)), amp = 0.25 + Math.random() * 0.75, L = 150 + Math.random() * 300;
+        for (let i = 0; i < L; i++) d[at + i] += (Math.random() * 2 - 1) * amp * Math.exp(-i / (L * 0.22));
+      }
+    }
+    this.claps = ab;
+  }
+  // applause: the clap bank, brightened, swelling in and dying away
+  _applause(k) {
+    const c = this._ctx();
+    if (!c) return;
+    const t = c.currentTime, s = c.createBufferSource(), hp = c.createBiquadFilter(), g = c.createGain(), dur = 2.2 + k * 1.6;
+    s.buffer = this.claps;
+    s.playbackRate.value = 0.95 + Math.random() * 0.1;
+    hp.type = "highpass";
+    hp.frequency.value = 650;
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(0.09 * k, t + 0.35);
+    g.gain.setValueAtTime(0.09 * k, t + dur * 0.45);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    s.connect(hp).connect(g).connect(this.out);
+    s.start(t, Math.random() * 0.5);
+    s.stop(t + dur + 0.05);
+  }
+  // a "woo!" from somewhere in the stands: a rising, wavering whistle-voice
+  _whoop(delay, gain = 0.025) {
+    const c = this._ctx();
+    if (!c) return;
+    const t = c.currentTime + delay, o = c.createOscillator(), lfo = c.createOscillator(), ld = c.createGain(), g = c.createGain(), f = 650 + Math.random() * 500, dur = 0.45 + Math.random() * 0.4;
+    o.type = Math.random() < 0.5 ? "sine" : "triangle";
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * (1.5 + Math.random() * 0.4), t + dur * 0.4);
+    o.frequency.exponentialRampToValueAtTime(f * 1.2, t + dur);
+    lfo.frequency.value = 6 + Math.random() * 3;
+    ld.gain.value = f * 0.03;
+    lfo.connect(ld).connect(o.frequency);
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    o.connect(g).connect(this.out);
+    for (const x of [o, lfo]) x.start(t), x.stop(t + dur + 0.05);
   }
   update(speed, dt) {
     const c = this._ctx();
@@ -549,6 +617,16 @@ var RnSound = class {
     this.mg.gain.setTargetAtTime(s > 0.3 ? Math.min(0.09, 0.02 + s * 3e-3) : 0, t, 0.08);
     this.hg.gain.setTargetAtTime(this.hissLevel * 0.22, t, 0.04);
     this.hissLevel = Math.max(0, this.hissLevel - dt * 6);
+    // the stands: a low murmur that breathes; a cheer lifts it into a roar, the voices climbing as it does
+    this.swell = Math.max(0, this.swell - dt * 0.35);
+    const sw = Math.min(1.4, this.swell), now = performance.now() / 1e3;
+    this.cg.gain.setTargetAtTime(this.crowd * (0.05 + sw * 0.22), t, sw > 0.05 ? 0.12 : 0.6);
+    for (const b of this.bands) {
+      b.g.gain.setTargetAtTime(0.25 + 0.3 * Math.sin(now * b.w + b.ph) ** 2 + 0.1 * Math.random(), t, 0.15);
+      b.bp.frequency.setTargetAtTime(b.f * (1 + sw * 0.22), t, 0.2);
+    }
+    // between the stunts the odd whistle or a few claps, now and then
+    if (this.crowd > 0 && Math.random() < dt * 0.12 * this.crowd) this._whoop(0, 0.012);
   }
   hiss(level) {
     this.hissLevel = Math.max(this.hissLevel, level);
@@ -580,8 +658,12 @@ var RnSound = class {
   thud() {
     this._tone(90, 0.25, 0.25, "sine", 0.5);
   }
-  cheer(len = 3, gain = 0.18) {
-    this._noise(len, 900, 1400, gain, 0.6);
+  // the crowd erupts: the murmur swells to a roar, applause, and whoops scattered over the first seconds
+  cheer(k = 1) {
+    if (!this._ctx()) return;
+    this.swell = Math.max(this.swell, k);
+    this._applause(Math.min(1.3, k));
+    for (let i = 0; i < Math.round(2 + k * 4); i++) this._whoop(Math.random() * 1.6, 0.02 + Math.random() * 0.015);
   }
   _noise(dur, f0, f1, gain, attack = 0.02) {
     const c = this._ctx();

@@ -2473,6 +2473,17 @@ var rnEnv = null;
 var RN_WRAP = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 var _rnV = new THREE6.Vector3(), _rnV2 = new THREE6.Vector3(), _rnQ = new THREE6.Quaternion(), _rnM = new THREE6.Matrix4();
 var RN_UP = new THREE6.Vector3(0, 1, 0);
+// light that only adds: colour is added, but the framebuffer's alpha is left alone. Plain additive blending also
+// adds alpha, and in see-through AR a faded (dark) puff with alpha left over shows as a black blot over the room
+function rnLight(m) {
+  m.blending = THREE6.CustomBlending;
+  m.blendEquation = THREE6.AddEquation;
+  m.blendSrc = THREE6.SrcAlphaFactor;
+  m.blendDst = THREE6.OneFactor;
+  m.blendSrcAlpha = THREE6.ZeroFactor;
+  m.blendDstAlpha = THREE6.OneFactor;
+  return m;
+}
 function rnStd(color, o = {}) {
   return new THREE6.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.1, ...o });
 }
@@ -2602,7 +2613,7 @@ function rnBuildRoadster() {
     wheels.push({ steer, spin: w, front: front2 });
   }
   // suction-fan glow under the floor (on while it clings to the ramp)
-  const glow = new THREE6.Mesh(new THREE6.PlaneGeometry(3.6, 1.6).rotateX(Math.PI / 2), new THREE6.MeshBasicMaterial({ color: 7387903, transparent: true, opacity: 0, blending: THREE6.AdditiveBlending, depthWrite: false }));
+  const glow = new THREE6.Mesh(new THREE6.PlaneGeometry(3.6, 1.6).rotateX(Math.PI / 2), rnLight(new THREE6.MeshBasicMaterial({ color: 7387903, transparent: true, opacity: 0, depthWrite: false })));
   glow.position.y = 0.1;
   car.add(glow);
   car.userData = { wheels, glow, front, rear };
@@ -2844,7 +2855,7 @@ function rnBuildVenue() {
   }
   // light masts with floodlight heads and soft beams down onto the pad
   const beams = [];
-  const beamMat = new THREE6.MeshBasicMaterial({ color: 16772829, transparent: true, opacity: 0.045, blending: THREE6.AdditiveBlending, depthWrite: false, side: THREE6.DoubleSide });
+  const beamMat = rnLight(new THREE6.MeshBasicMaterial({ color: 16772829, transparent: true, opacity: 0.045, depthWrite: false, side: THREE6.DoubleSide }));
   for (const deg of [200, 232, 312, 340]) {
     const a = deg * Math.PI / 180, x = Math.cos(a) * 49, z = Math.sin(a) * 49, H = 26;
     const mast = new THREE6.Mesh(new THREE6.CylinderGeometry(0.35, 0.5, H, 6), steel);
@@ -2861,7 +2872,7 @@ function rnBuildVenue() {
   }
   // search beams into the sky behind the stands
   const sky = [];
-  const skyMat = new THREE6.MeshBasicMaterial({ color: 13426687, transparent: true, opacity: 0.12, blending: THREE6.AdditiveBlending, depthWrite: false, side: THREE6.DoubleSide });
+  const skyMat = rnLight(new THREE6.MeshBasicMaterial({ color: 13426687, transparent: true, opacity: 0.12, depthWrite: false, side: THREE6.DoubleSide }));
   for (let i = 0; i < 6; i++) {
     const a = (240 + i * 12) * Math.PI / 180, b = new THREE6.Mesh(new THREE6.CylinderGeometry(1.6, 0.5, 46, 10, 1, true).translate(0, 23, 0), skyMat);
     b.position.set(Math.cos(a) * 52, 1, Math.sin(a) * 52);
@@ -2921,7 +2932,7 @@ var RnParticles = class {
     this.base = size;
     this.p = new Float32Array(n * 3);
     this.v = new Float32Array(n * 3);
-    this.c = new Float32Array(n * 3);
+    this.c = new Float32Array(n * 4);
     this.c0 = new Float32Array(n * 3);
     this.life = new Float32Array(n);
     this.age = new Float32Array(n);
@@ -2930,8 +2941,9 @@ var RnParticles = class {
     this.next = 0;
     const g = new THREE6.BufferGeometry();
     g.setAttribute("position", new THREE6.BufferAttribute(this.p, 3));
-    g.setAttribute("color", new THREE6.BufferAttribute(this.c, 3));
-    this.mat = new THREE6.PointsMaterial({ size, map: tex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE6.AdditiveBlending, sizeAttenuation: true });
+    // rgba: a puff fades out in alpha too, so nothing is left behind when it is spent
+    g.setAttribute("color", new THREE6.BufferAttribute(this.c, 4));
+    this.mat = rnLight(new THREE6.PointsMaterial({ size, map: tex, vertexColors: true, transparent: true, depthWrite: false, sizeAttenuation: true }));
     this.points = rnQuiet(new THREE6.Points(g, this.mat));
     this.points.frustumCulled = false;
     this.p.fill(0);
@@ -2952,8 +2964,10 @@ var RnParticles = class {
     const { p, v, c, c0 } = this;
     for (let i = 0; i < this.n; i++) {
       const k = i * 3;
+      const k4 = i * 4;
       if (this.age[i] >= this.life[i]) {
-        c[k] = c[k + 1] = c[k + 2] = 0;
+        // spent: no colour, no alpha, parked out of sight
+        if (c[k4 + 3] || p[k + 1] > -999) c[k4] = c[k4 + 1] = c[k4 + 2] = c[k4 + 3] = 0, p[k + 1] = -1e3;
         continue;
       }
       this.age[i] += dt;
@@ -2961,7 +2975,7 @@ var RnParticles = class {
       v[k] *= f, v[k + 1] = v[k + 1] * f - this.grav[i] * dt, v[k + 2] *= f;
       p[k] += v[k] * dt, p[k + 1] += v[k + 1] * dt, p[k + 2] += v[k + 2] * dt;
       const t = this.age[i] / this.life[i], a = t < 0.1 ? t / 0.1 : (1 - t) * (1 - t) / 0.81;
-      c[k] = c0[k] * a, c[k + 1] = c0[k + 1] * a, c[k + 2] = c0[k + 2] * a;
+      c[k4] = c0[k] * a, c[k4 + 1] = c0[k + 1] * a, c[k4 + 2] = c0[k + 2] * a, c[k4 + 3] = a;
     }
     this.points.geometry.attributes.position.needsUpdate = true;
     this.points.geometry.attributes.color.needsUpdate = true;
@@ -3479,6 +3493,9 @@ var RnSound = class {
     this.on = true;
     this.c = null;
     this.hissLevel = 0;
+    // the crowd: crowd (0..1) is how lively the stands are; swell rises with a cheer and ebbs over a few seconds
+    this.crowd = 1;
+    this.swell = 0;
   }
   _ctx() {
     if (!this.on) return null;
@@ -3522,6 +3539,71 @@ var RnSound = class {
     this.hg.gain.value = 0;
     src.connect(bp).connect(this.hg).connect(this.out);
     src.start();
+    this._crowdGraph(c);
+  }
+  // a murmur of many voices: noise through vowel formants, each band drifting in and out on its own, so it never
+  // settles into a steady hiss; and a bank of claps for applause
+  _crowdGraph(c) {
+    this.cg = c.createGain();
+    this.cg.gain.value = 0;
+    this.cg.connect(this.out);
+    this.bands = [[380, 3], [700, 3.5], [1100, 4], [1700, 4.5], [2600, 5], [3400, 6]].map(([f, q]) => {
+      const s = c.createBufferSource(), bp = c.createBiquadFilter(), g = c.createGain();
+      s.buffer = this.noise;
+      s.loop = true;
+      s.playbackRate.value = 0.85 + Math.random() * 0.3;
+      bp.type = "bandpass";
+      bp.frequency.value = f;
+      bp.Q.value = q;
+      g.gain.value = 0.4;
+      s.connect(bp).connect(g).connect(this.cg);
+      s.start(0, Math.random() * 1.5);
+      return { g, bp, f, ph: Math.random() * 6.28, w: 0.3 + Math.random() * 0.9 };
+    });
+    const len = c.sampleRate * 4, ab = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ab.getChannelData(ch);
+      for (let n = 0; n < 1400; n++) {
+        const at = Math.floor(Math.random() * (len - 900)), amp = 0.25 + Math.random() * 0.75, L = 150 + Math.random() * 300;
+        for (let i = 0; i < L; i++) d[at + i] += (Math.random() * 2 - 1) * amp * Math.exp(-i / (L * 0.22));
+      }
+    }
+    this.claps = ab;
+  }
+  // applause: the clap bank, brightened, swelling in and dying away
+  _applause(k) {
+    const c = this._ctx();
+    if (!c) return;
+    const t = c.currentTime, s = c.createBufferSource(), hp = c.createBiquadFilter(), g = c.createGain(), dur = 2.2 + k * 1.6;
+    s.buffer = this.claps;
+    s.playbackRate.value = 0.95 + Math.random() * 0.1;
+    hp.type = "highpass";
+    hp.frequency.value = 650;
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(0.09 * k, t + 0.35);
+    g.gain.setValueAtTime(0.09 * k, t + dur * 0.45);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    s.connect(hp).connect(g).connect(this.out);
+    s.start(t, Math.random() * 0.5);
+    s.stop(t + dur + 0.05);
+  }
+  // a "woo!" from somewhere in the stands: a rising, wavering whistle-voice
+  _whoop(delay, gain = 0.025) {
+    const c = this._ctx();
+    if (!c) return;
+    const t = c.currentTime + delay, o = c.createOscillator(), lfo = c.createOscillator(), ld = c.createGain(), g = c.createGain(), f = 650 + Math.random() * 500, dur = 0.45 + Math.random() * 0.4;
+    o.type = Math.random() < 0.5 ? "sine" : "triangle";
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * (1.5 + Math.random() * 0.4), t + dur * 0.4);
+    o.frequency.exponentialRampToValueAtTime(f * 1.2, t + dur);
+    lfo.frequency.value = 6 + Math.random() * 3;
+    ld.gain.value = f * 0.03;
+    lfo.connect(ld).connect(o.frequency);
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+    o.connect(g).connect(this.out);
+    for (const x of [o, lfo]) x.start(t), x.stop(t + dur + 0.05);
   }
   update(speed, dt) {
     const c = this._ctx();
@@ -3532,6 +3614,16 @@ var RnSound = class {
     this.mg.gain.setTargetAtTime(s > 0.3 ? Math.min(0.09, 0.02 + s * 3e-3) : 0, t, 0.08);
     this.hg.gain.setTargetAtTime(this.hissLevel * 0.22, t, 0.04);
     this.hissLevel = Math.max(0, this.hissLevel - dt * 6);
+    // the stands: a low murmur that breathes; a cheer lifts it into a roar, the voices climbing as it does
+    this.swell = Math.max(0, this.swell - dt * 0.35);
+    const sw = Math.min(1.4, this.swell), now = performance.now() / 1e3;
+    this.cg.gain.setTargetAtTime(this.crowd * (0.05 + sw * 0.22), t, sw > 0.05 ? 0.12 : 0.6);
+    for (const b of this.bands) {
+      b.g.gain.setTargetAtTime(0.25 + 0.3 * Math.sin(now * b.w + b.ph) ** 2 + 0.1 * Math.random(), t, 0.15);
+      b.bp.frequency.setTargetAtTime(b.f * (1 + sw * 0.22), t, 0.2);
+    }
+    // between the stunts the odd whistle or a few claps, now and then
+    if (this.crowd > 0 && Math.random() < dt * 0.12 * this.crowd) this._whoop(0, 0.012);
   }
   hiss(level) {
     this.hissLevel = Math.max(this.hissLevel, level);
@@ -3563,8 +3655,12 @@ var RnSound = class {
   thud() {
     this._tone(90, 0.25, 0.25, "sine", 0.5);
   }
-  cheer(len = 3, gain = 0.18) {
-    this._noise(len, 900, 1400, gain, 0.6);
+  // the crowd erupts: the murmur swells to a roar, applause, and whoops scattered over the first seconds
+  cheer(k = 1) {
+    if (!this._ctx()) return;
+    this.swell = Math.max(this.swell, k);
+    this._applause(Math.min(1.3, k));
+    for (let i = 0; i < Math.round(2 + k * 4); i++) this._whoop(Math.random() * 1.6, 0.02 + Math.random() * 0.015);
   }
   _noise(dur, f0, f1, gain, attack = 0.02) {
     const c = this._ctx();
@@ -3657,9 +3753,17 @@ var RoadsterNight = {
     mini.add(this.puffs.points, this.smoke.points, this.sparks.points);
     const carG = rnBuildRoadster();
     mini.add(carG);
+    // the body shell is what the hover / hold outline traces (the rest of the car stays out of it)
+    carG.children[0].userData.noHighlight = carG.children[0].userData.noCollider = false;
     this.car = new RnCar(carG, this.puffs, this.smoke);
+    // a game-style marker: an arrow hovering over the car, pointing down at it, bobbing gently (hidden while you
+    // hold the car - the outline says it then)
+    const mk = this.marker = new T.Group(), mkMat = new T.MeshBasicMaterial({ color: 16766794, transparent: true, opacity: 0.9, depthWrite: false });
+    mk.add(new T.Mesh(new T.ConeGeometry(0.75, 1.5, 4).rotateX(Math.PI), mkMat), new T.Mesh(new T.CylinderGeometry(0.22, 0.22, 1.2, 8).translate(0, 1.3, 0), mkMat));
+    mk.traverse((o) => o.userData.noCollider = o.userData.noHighlight = true);
+    mini.add(mk);
     // headlight beams for the finale flash
-    const beam = new T.Mesh(new T.ConeGeometry(3.5, 16, 16, 1, true).translate(0, -8, 0).rotateZ(Math.PI / 2), new T.MeshBasicMaterial({ color: 15661055, transparent: true, opacity: 0.16, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide }));
+    const beam = new T.Mesh(new T.ConeGeometry(3.5, 16, 16, 1, true).translate(0, -8, 0).rotateZ(Math.PI / 2), rnLight(new T.MeshBasicMaterial({ color: 15661055, transparent: true, opacity: 0.16, depthWrite: false, side: T.DoubleSide })));
     beam.position.set(2.3, 0.4, 0);
     beam.visible = false;
     beam.userData.noCollider = beam.userData.noHighlight = true;
@@ -3717,7 +3821,8 @@ var RoadsterNight = {
     // the car: grab it, lift it, turn it in your hand, let go - it rights itself as it falls and lands on its
     // thrusters (only its size is held)
     this.carIt = ctx.add(carG, {
-      draggable: true, highlight: false,
+      // hover and hold outline the car's body shell (heavier while held)
+      draggable: true, highlight: true,
       box: new T.Box3(new T.Vector3(-3.2, -0.4, -1.8), new T.Vector3(3.2, 2.2, 1.8)),
       constrain: ({ scale }) => {
         if (this._grabS) scale.copy(this._grabS);
@@ -3734,7 +3839,12 @@ var RoadsterNight = {
       this.car.held = false;
       this._grabS = null;
       const up = new T.Vector3(0, 1, 0).applyQuaternion(this.car.q).y;
-      if (this.car.pos.y > 0.05 || up < 0.999) this._run(rnFly(this.car, { vx: 0, sound: this.sound, level: 0.7 }));
+      const W = this, high = this.car.pos.y > 3;
+      // a drop from high up that it rights and lands gets a cheer from the stands
+      if (this.car.pos.y > 0.05 || up < 0.999) this._run((function* () {
+        yield* rnFly(W.car, { vx: 0, sound: W.sound, level: 0.7 });
+        if (high) W.cheer(0.5);
+      })());
     });
     this._buildConsole(ctx);
     // status line over the far side of the stage, and a hint along its near edge
@@ -3871,6 +3981,8 @@ var RoadsterNight = {
     this.lamps(3342336);
     this.car.suction = 0;
     this.car.steer = 0;
+    // the stands are livelier during the show than while you drive
+    this.sound.crowd = mode === "show" ? 1 : 0.6;
     if (mode === "show") {
       // an act starts from the car on the ground wherever it is
       if (this.car.air || this.car.pos.y > 0) this.car.pos.y = 0, this.car.air = false, this.car.setYaw(this.car.yaw);
@@ -3920,7 +4032,12 @@ var RoadsterNight = {
     if (this.mode !== "drive") this.setMode("drive");
     if (this.car.air || this.car.held || this.manualGen && !this.manualGen.route) return;
     this.goal.visible = false;
-    this._run(rnHop(this, {}));
+    // your own hop gets a cheer as it lands
+    const W = this;
+    this._run((function* () {
+      yield* rnHop(W, {});
+      W.cheer(0.6);
+    })());
   },
   launch() {
     if (this.mode !== "drive") this.setMode("drive");
@@ -3928,11 +4045,15 @@ var RoadsterNight = {
     this.goal.visible = false;
     const car = this.car, t0 = this.clock;
     this.sound.whoosh();
-    this._run(rnStraight(car, () => 33.1, (c) => c.v >= 26.82 || this._carHits(), (dt) => {
-      car.thrust(-2.35, 0.48, 0, -1, 0, 0, 140, dt, 18);
-      this.sound.hiss(1);
-      this.screen({ title: `${(this.clock - t0).toFixed(2)} s`, sub: `${Math.round(car.v * 2.237)} MPH`, big: true });
-    }));
+    const W = this;
+    this._run((function* () {
+      yield* rnStraight(car, () => 33.1, (c) => c.v >= 26.82 || W._carHits(), (dt) => {
+        car.thrust(-2.35, 0.48, 0, -1, 0, 0, 140, dt, 18);
+        W.sound.hiss(1);
+        W.screen({ title: `${(W.clock - t0).toFixed(2)} s`, sub: `${Math.round(car.v * 2.237)} MPH`, big: true });
+      });
+      if (car.v >= 26.82) W.cheer(0.7);
+    })());
   },
   reset() {
     this.car.held = false;
@@ -3971,7 +4092,7 @@ var RoadsterNight = {
   },
   cheer(level) {
     this.cheerT = Math.max(this.cheerT, 2.5 * level);
-    this.sound.cheer(2.5 + level, 0.12 * level);
+    this.sound.cheer(level);
   },
   fireworks(on) {
     this.fw = on;
@@ -4083,6 +4204,13 @@ var RoadsterNight = {
     this.shadow.material.opacity = Math.max(0.15, 1 - lift / 20);
     this._animate(sd, t);
     this.sound.update(car.v, dt);
+    // the car's outline in the marker's yellow (a white outline would vanish against the white car)
+    this.carIt._outlineMat?.color.setHex(16766794);
+    const mk = this.marker, bob = Math.sin(this.clock * 2.6);
+    mk.visible = !car.held;
+    mk.position.set(car.pos.x, car.pos.y + 4.4 + bob * 0.45, car.pos.z);
+    mk.rotation.y += dt * 1.2;
+    mk.children[0].material.opacity = 0.65 + 0.3 * (0.5 + 0.5 * Math.sin(this.clock * 3.2));
     this._frame(dt);
   },
   // venue life: search beams sway, the tower light blinks, the crowd jumps when it cheers, fireworks

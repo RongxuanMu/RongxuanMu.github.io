@@ -31,6 +31,17 @@ var rnEnv = null;
 var RN_WRAP = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 var _rnV = new THREE6.Vector3(), _rnV2 = new THREE6.Vector3(), _rnQ = new THREE6.Quaternion(), _rnM = new THREE6.Matrix4();
 var RN_UP = new THREE6.Vector3(0, 1, 0);
+// light that only adds: colour is added, but the framebuffer's alpha is left alone. Plain additive blending also
+// adds alpha, and in see-through AR a faded (dark) puff with alpha left over shows as a black blot over the room
+function rnLight(m) {
+  m.blending = THREE6.CustomBlending;
+  m.blendEquation = THREE6.AddEquation;
+  m.blendSrc = THREE6.SrcAlphaFactor;
+  m.blendDst = THREE6.OneFactor;
+  m.blendSrcAlpha = THREE6.ZeroFactor;
+  m.blendDstAlpha = THREE6.OneFactor;
+  return m;
+}
 function rnStd(color, o = {}) {
   return new THREE6.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.1, ...o });
 }
@@ -160,7 +171,7 @@ function rnBuildRoadster() {
     wheels.push({ steer, spin: w, front: front2 });
   }
   // suction-fan glow under the floor (on while it clings to the ramp)
-  const glow = new THREE6.Mesh(new THREE6.PlaneGeometry(3.6, 1.6).rotateX(Math.PI / 2), new THREE6.MeshBasicMaterial({ color: 7387903, transparent: true, opacity: 0, blending: THREE6.AdditiveBlending, depthWrite: false }));
+  const glow = new THREE6.Mesh(new THREE6.PlaneGeometry(3.6, 1.6).rotateX(Math.PI / 2), rnLight(new THREE6.MeshBasicMaterial({ color: 7387903, transparent: true, opacity: 0, depthWrite: false })));
   glow.position.y = 0.1;
   car.add(glow);
   car.userData = { wheels, glow, front, rear };
@@ -402,7 +413,7 @@ function rnBuildVenue() {
   }
   // light masts with floodlight heads and soft beams down onto the pad
   const beams = [];
-  const beamMat = new THREE6.MeshBasicMaterial({ color: 16772829, transparent: true, opacity: 0.045, blending: THREE6.AdditiveBlending, depthWrite: false, side: THREE6.DoubleSide });
+  const beamMat = rnLight(new THREE6.MeshBasicMaterial({ color: 16772829, transparent: true, opacity: 0.045, depthWrite: false, side: THREE6.DoubleSide }));
   for (const deg of [200, 232, 312, 340]) {
     const a = deg * Math.PI / 180, x = Math.cos(a) * 49, z = Math.sin(a) * 49, H = 26;
     const mast = new THREE6.Mesh(new THREE6.CylinderGeometry(0.35, 0.5, H, 6), steel);
@@ -419,7 +430,7 @@ function rnBuildVenue() {
   }
   // search beams into the sky behind the stands
   const sky = [];
-  const skyMat = new THREE6.MeshBasicMaterial({ color: 13426687, transparent: true, opacity: 0.12, blending: THREE6.AdditiveBlending, depthWrite: false, side: THREE6.DoubleSide });
+  const skyMat = rnLight(new THREE6.MeshBasicMaterial({ color: 13426687, transparent: true, opacity: 0.12, depthWrite: false, side: THREE6.DoubleSide }));
   for (let i = 0; i < 6; i++) {
     const a = (240 + i * 12) * Math.PI / 180, b = new THREE6.Mesh(new THREE6.CylinderGeometry(1.6, 0.5, 46, 10, 1, true).translate(0, 23, 0), skyMat);
     b.position.set(Math.cos(a) * 52, 1, Math.sin(a) * 52);
@@ -479,7 +490,7 @@ var RnParticles = class {
     this.base = size;
     this.p = new Float32Array(n * 3);
     this.v = new Float32Array(n * 3);
-    this.c = new Float32Array(n * 3);
+    this.c = new Float32Array(n * 4);
     this.c0 = new Float32Array(n * 3);
     this.life = new Float32Array(n);
     this.age = new Float32Array(n);
@@ -488,8 +499,9 @@ var RnParticles = class {
     this.next = 0;
     const g = new THREE6.BufferGeometry();
     g.setAttribute("position", new THREE6.BufferAttribute(this.p, 3));
-    g.setAttribute("color", new THREE6.BufferAttribute(this.c, 3));
-    this.mat = new THREE6.PointsMaterial({ size, map: tex, vertexColors: true, transparent: true, depthWrite: false, blending: THREE6.AdditiveBlending, sizeAttenuation: true });
+    // rgba: a puff fades out in alpha too, so nothing is left behind when it is spent
+    g.setAttribute("color", new THREE6.BufferAttribute(this.c, 4));
+    this.mat = rnLight(new THREE6.PointsMaterial({ size, map: tex, vertexColors: true, transparent: true, depthWrite: false, sizeAttenuation: true }));
     this.points = rnQuiet(new THREE6.Points(g, this.mat));
     this.points.frustumCulled = false;
     this.p.fill(0);
@@ -510,8 +522,10 @@ var RnParticles = class {
     const { p, v, c, c0 } = this;
     for (let i = 0; i < this.n; i++) {
       const k = i * 3;
+      const k4 = i * 4;
       if (this.age[i] >= this.life[i]) {
-        c[k] = c[k + 1] = c[k + 2] = 0;
+        // spent: no colour, no alpha, parked out of sight
+        if (c[k4 + 3] || p[k + 1] > -999) c[k4] = c[k4 + 1] = c[k4 + 2] = c[k4 + 3] = 0, p[k + 1] = -1e3;
         continue;
       }
       this.age[i] += dt;
@@ -519,7 +533,7 @@ var RnParticles = class {
       v[k] *= f, v[k + 1] = v[k + 1] * f - this.grav[i] * dt, v[k + 2] *= f;
       p[k] += v[k] * dt, p[k + 1] += v[k + 1] * dt, p[k + 2] += v[k + 2] * dt;
       const t = this.age[i] / this.life[i], a = t < 0.1 ? t / 0.1 : (1 - t) * (1 - t) / 0.81;
-      c[k] = c0[k] * a, c[k + 1] = c0[k + 1] * a, c[k + 2] = c0[k + 2] * a;
+      c[k4] = c0[k] * a, c[k4 + 1] = c0[k + 1] * a, c[k4 + 2] = c0[k + 2] * a, c[k4 + 3] = a;
     }
     this.points.geometry.attributes.position.needsUpdate = true;
     this.points.geometry.attributes.color.needsUpdate = true;
