@@ -1,11 +1,12 @@
 <!-- Robot Zoo XR - open-source humanoid and quadruped robots running their published policies in MuJoCo WASM + ONNX Runtime
   Web: Pollen Microduck (Microduck XR itself), Unitree G1 (whole-body motion tracking and walking), H1, H1-2, Booster T1,
-  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.9.3.
+  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.9.4.
   Robots, models and policies keep their own licences (see assets/*/SOURCE.txt and the licence files beside them).
 
-  VibeXR Interaction Framework v0.9.3 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.9.4 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.4   a world's sky (setBackdrop) also fills the desktop page's background
   0.9.3   hands turn solid dark (no passthrough window) when the Background is above 90 %, in VR, or with
           Settings > Dark hands; app.setBackdrop([top, horizon, bottom]) gives a world its own sky gradient
   0.9.2   opts.faceViewer: a one-hand drag carries the object without the wrist's turn and swings it about the
@@ -5474,7 +5475,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
 var RZ_TRACK_CLIPS = ["Dance", "Dance 2", "Tai chi", "Kung fu", "Jumps", "Run", "Walk", "Get up", "Cartwheel", "Jump kick", "Backflip", "Handspring", "Dive roll"];
 
 // src/main.js
-var VERSION = "0.9.3";
+var VERSION = "0.9.4";
 // - keyboard + mouse navigation -
 // Desktop (no session), Unity Scene view style:
 //   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan
@@ -5872,8 +5873,9 @@ var App = class {
       this._paintSky();
       if (done) S.want = null;
     }
-    const op = inVR ? 1 : v.opacity;
-    this.backdrop.visible = (inAR && v.opacity > 1e-3) || (inVR && S.custom);
+    // a world's own sky is the whole background in VR and on the desktop page; in AR the slider decides
+    const desk = !this.sessionMode, op = inVR || desk ? 1 : v.opacity;
+    this.backdrop.visible = (inAR && v.opacity > 1e-3) || ((inVR || desk) && S.custom);
     this.backdrop.material.opacity = op;
     this.backdrop.position.copy(this.input.head);
     // hands: a window of passthrough while the room shows; solid dark once the background (nearly) hides it,

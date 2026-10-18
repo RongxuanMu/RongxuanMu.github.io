@@ -47,7 +47,11 @@ FRAME = '''  // landing (desktop, before / outside XR): the entry card sits on t
 
 
 def apply(s, updated, notes, css=True):
-    """css=False when the page already lays the card out itself (Microduck XR)."""
+    """css=False when the page already lays the card out itself (Microduck XR). updated=None stamps the build's own
+    date and time (UTC), so the card always shows when the page last changed."""
+    if updated is None:
+        import datetime
+        updated = datetime.datetime.now(datetime.timezone.utc).strftime('%-d %b %Y, %H:%M UTC')
     if css:
         s = _swap(s, '  @media (max-width: 600px) { #overlay { align-items: flex-end; padding-bottom: 16px; } }\n',
                   '  @media (max-width: 600px) { #overlay { align-items: flex-end; padding-bottom: 16px; } }\n' + CSS)

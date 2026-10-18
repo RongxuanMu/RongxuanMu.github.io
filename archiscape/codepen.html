@@ -1,11 +1,12 @@
 <!-- Archiscape - a Townscaper-style town builder for your table: tap to build, hold to remove, and rebuild the
   same town in any of nineteen eras, from Stonehenge, Athens, Rome and Hagia Sophia through the Forbidden City,
   Jiangnan after Wu Guanzhong, Kyoto, the Kremlin and the Thai temples to Gaudi, Wright, Le Corbusier, Meier, Ando, I. M. Pei,
-  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v0.9.3.
+  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v0.9.4.
 
-  VibeXR Interaction Framework v0.9.3 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.9.4 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.4   a world's sky (setBackdrop) also fills the desktop page's background
   0.9.3   hands turn solid dark (no passthrough window) when the Background is above 90 %, in VR, or with
           Settings > Dark hands; app.setBackdrop([top, horizon, bottom]) gives a world its own sky gradient
   0.9.2   opts.faceViewer: a one-hand drag carries the object without the wrist's turn and swings it about the
@@ -85,7 +86,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Archiscape</h1>
     <p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; Stonehenge to Zaha Hadid</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 17 Oct 2026</b> &middot; this page plays the eras by itself while you read, opening on Stonehenge and walking forward in time; Jiangnan walls in one even white; the tour reforms each town once per era; panels on your right, clear of this card; nineteen eras with Kyoto and Thai temples</p>
+    <p class="upd"><b>Updated 18 Oct 2026, 01:35 UTC</b> &middot; this page tours all nineteen eras by itself in about a minute and a half, each under its own sky (both tours on from the start); leaner towns for a smoother headset; birds, falling leaves and koi; Look: vivid, clay, watercolour, sketch</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4828,7 +4829,7 @@ function asGenerate(cells, seed) {
     if (Math.abs(c.c.dot(cn) - off + Math.sin(c.c.dot(new THREE6.Vector2(-cn.y, cn.x)) * 22) * 0.012) < 0.016) return 0;
     if (c.c.distanceTo(sq) < 0.04) return 0;
     // fewer blocks than a full town: a headset (and the landing tour) rebuilds every one of them on an era change
-    return v > 0.4 ? Math.min(3, 1 + Math.floor((v - 0.4) * 5.5 + rnd() * 0.5)) : 0;
+    return v > 0.46 ? Math.min(3, 1 + Math.floor((v - 0.46) * 5 + rnd() * 0.45)) : 0;
   });
   const built = cells.filter((c) => h[c.i] >= 2);
   for (let t = 0; t < 1 && built.length; t++) {
@@ -5738,7 +5739,7 @@ var AsLife = class {
 };
 
 // src/main.js
-var VERSION = "0.9.3";
+var VERSION = "0.9.4";
 // - keyboard + mouse navigation -
 // Desktop (no session), Unity Scene view style:
 //   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan
@@ -6136,8 +6137,9 @@ var App = class {
       this._paintSky();
       if (done) S.want = null;
     }
-    const op = inVR ? 1 : v.opacity;
-    this.backdrop.visible = (inAR && v.opacity > 1e-3) || (inVR && S.custom);
+    // a world's own sky is the whole background in VR and on the desktop page; in AR the slider decides
+    const desk = !this.sessionMode, op = inVR || desk ? 1 : v.opacity;
+    this.backdrop.visible = (inAR && v.opacity > 1e-3) || ((inVR || desk) && S.custom);
     this.backdrop.material.opacity = op;
     this.backdrop.position.copy(this.input.head);
     // hands: a window of passthrough while the room shows; solid dark once the background (nearly) hides it,

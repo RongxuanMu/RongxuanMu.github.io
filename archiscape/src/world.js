@@ -295,7 +295,7 @@ function asGenerate(cells, seed) {
     if (Math.abs(c.c.dot(cn) - off + Math.sin(c.c.dot(new THREE6.Vector2(-cn.y, cn.x)) * 22) * 0.012) < 0.016) return 0;
     if (c.c.distanceTo(sq) < 0.04) return 0;
     // fewer blocks than a full town: a headset (and the landing tour) rebuilds every one of them on an era change
-    return v > 0.4 ? Math.min(3, 1 + Math.floor((v - 0.4) * 5.5 + rnd() * 0.5)) : 0;
+    return v > 0.46 ? Math.min(3, 1 + Math.floor((v - 0.46) * 5 + rnd() * 0.45)) : 0;
   });
   const built = cells.filter((c) => h[c.i] >= 2);
   for (let t = 0; t < 1 && built.length; t++) {
