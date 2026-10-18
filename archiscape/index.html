@@ -18,11 +18,12 @@
 <!-- Archiscape - a Townscaper-style town builder for your table: tap to build, hold to remove, and rebuild the
   same town in any of nineteen eras, from Stonehenge, Athens, Rome and Hagia Sophia through the Forbidden City,
   Jiangnan after Wu Guanzhong, Kyoto, the Kremlin and the Thai temples to Gaudi, Wright, Le Corbusier, Meier, Ando, I. M. Pei,
-  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v0.9.4.
+  Gehry and Zaha Hadid, each with its own music. Built on the VibeXR Interaction Framework v0.9.5.
 
-  VibeXR Interaction Framework v0.9.4 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.9.5 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.5   world.background (0..1): a world can start an AR session with its background raised; VST stays on
   0.9.4   a world's sky (setBackdrop) also fills the desktop page's background
   0.9.3   hands turn solid dark (no passthrough window) when the Background is above 90 %, in VR, or with
           Settings > Dark hands; app.setBackdrop([top, horizon, bottom]) gives a world its own sky gradient
@@ -103,7 +104,7 @@ html, body { margin: 0; height: 100%; background: #000000; color: #ffffff; font-
     <h1>Archiscape</h1>
     <p class="sub">One town on your table, every era of architecture &middot; tap to build, hold to remove &middot; Stonehenge to Zaha Hadid</p>
     <p class="by">by <a href="https://rongxuanmu.com/" target="_blank" rel="noopener">Rongxuan Mu</a> &middot; built on the VibeXR interaction framework</p>
-    <p class="upd"><b>Updated 18 Oct 2026, 01:35 UTC</b> &middot; this page tours all nineteen eras by itself in about a minute and a half, each under its own sky (both tours on from the start); leaner towns for a smoother headset; birds, falling leaves and koi; Look: vivid, clay, watercolour, sketch</p>
+    <p class="upd"><b>Updated 18 Oct 2026, 01:37 UTC</b> &middot; this page tours all nineteen eras by itself in about a minute and a half, each under its own sky (both tours on from the start); leaner towns for a smoother headset; birds, falling leaves and koi; Look: vivid, clay, watercolour, sketch</p>
     <div class="row">
       <button id="enter-ar">Enter</button>
     </div>
@@ -4861,6 +4862,9 @@ var Archiscape = {
   title: "Archiscape",
   // keys the world uses itself (VibeXR 0.9+ leaves them to it instead of flying the camera)
   claimKeys: "enz",
+  // in a headset the era's sky starts almost opaque over the room (VST stays on: the slider brings the room back);
+  // above 0.9 the hands turn solid too
+  background: 0.95,
   init(ctx) {
     const { root, THREE: T } = ctx;
     const app2 = this.app = ctx.app;
@@ -5756,7 +5760,7 @@ var AsLife = class {
 };
 
 // src/main.js
-var VERSION = "0.9.4";
+var VERSION = "0.9.5";
 // - keyboard + mouse navigation -
 // Desktop (no session), Unity Scene view style:
 //   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan
@@ -6209,6 +6213,8 @@ var App = class {
       overlay.hide();
       this.log(`session ${type}`);
       await this.worlds.reload();
+      // passthrough stays on; a world may start with its background raised over it (world.background, 0..1)
+      if (mode === "ar" && this.worlds.current?.background) this.setOpacity(this.worlds.current.background, false);
       this._calibrate = 10; // rebuild once the real head pose is known (table height calibration)
     } catch (e) {
       this.error(`Could not start ${type}: ${e.message}`);

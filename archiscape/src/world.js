@@ -310,6 +310,9 @@ var Archiscape = {
   title: "Archiscape",
   // keys the world uses itself (VibeXR 0.9+ leaves them to it instead of flying the camera)
   claimKeys: "enz",
+  // in a headset the era's sky starts almost opaque over the room (VST stays on: the slider brings the room back);
+  // above 0.9 the hands turn solid too
+  background: 0.95,
   init(ctx) {
     const { root, THREE: T } = ctx;
     const app2 = this.app = ctx.app;

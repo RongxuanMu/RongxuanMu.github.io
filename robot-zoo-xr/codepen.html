@@ -1,11 +1,12 @@
 <!-- Robot Zoo XR - open-source humanoid and quadruped robots running their published policies in MuJoCo WASM + ONNX Runtime
   Web: Pollen Microduck (Microduck XR itself), Unitree G1 (whole-body motion tracking and walking), H1, H1-2, Booster T1,
-  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.9.4.
+  AgiBot X1, Berkeley Humanoid Lite and the Unitree Go2 / B2 and AgiBot D1 robot dogs, life-size on your floor or on a tabletop. Built on the VibeXR Interaction Framework v0.9.5.
   Robots, models and policies keep their own licences (see assets/*/SOURCE.txt and the licence files beside them).
 
-  VibeXR Interaction Framework v0.9.4 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.9.5 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.5   world.background (0..1): a world can start an AR session with its background raised; VST stays on
   0.9.4   a world's sky (setBackdrop) also fills the desktop page's background
   0.9.3   hands turn solid dark (no passthrough window) when the Background is above 90 %, in VR, or with
           Settings > Dark hands; app.setBackdrop([top, horizon, bottom]) gives a world its own sky gradient
@@ -5475,7 +5476,7 @@ var RobotZoo = Object.assign(Object.create(Microduck), {
 var RZ_TRACK_CLIPS = ["Dance", "Dance 2", "Tai chi", "Kung fu", "Jumps", "Run", "Walk", "Get up", "Cartwheel", "Jump kick", "Backflip", "Handspring", "Dive roll"];
 
 // src/main.js
-var VERSION = "0.9.4";
+var VERSION = "0.9.5";
 // - keyboard + mouse navigation -
 // Desktop (no session), Unity Scene view style:
 //   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan
@@ -5928,6 +5929,8 @@ var App = class {
       overlay.hide();
       this.log(`session ${type}`);
       await this.worlds.reload();
+      // passthrough stays on; a world may start with its background raised over it (world.background, 0..1)
+      if (mode === "ar" && this.worlds.current?.background) this.setOpacity(this.worlds.current.background, false);
       this._calibrate = 10; // rebuild once the real head pose is known (table height calibration)
     } catch (e) {
       this.error(`Could not start ${type}: ${e.message}`);

@@ -1,11 +1,12 @@
 <!-- Roadster Night - a fan-made 1:60 diorama of the Roadster reveal (15 Oct 2026, McGregor, Texas): 0-60 in
   0.81 s, the curl ramp with its mid-air roll, the thruster hop over five cars, then a finale; take the
   joystick to drive it yourself. Not affiliated with Tesla or SpaceX. Built on the VibeXR Interaction
-  Framework v0.9.4.
+  Framework v0.9.5.
 
-  VibeXR Interaction Framework v0.9.4 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
+  VibeXR Interaction Framework v0.9.5 - single-file build (open in PICO / Quest / Galaxy XR / Vision Pro browser, tap Enter)
 
   Changelog, newest first
+  0.9.5   world.background (0..1): a world can start an AR session with its background raised; VST stays on
   0.9.4   a world's sky (setBackdrop) also fills the desktop page's background
   0.9.3   hands turn solid dark (no passthrough window) when the Background is above 90 %, in VR, or with
           Settings > Dark hands; app.setBackdrop([top, horizon, bottom]) gives a world its own sky gradient
@@ -4287,7 +4288,7 @@ var RoadsterNight = {
 };
 
 // src/main.js
-var VERSION = "0.9.4";
+var VERSION = "0.9.5";
 // - keyboard + mouse navigation -
 // Desktop (no session), Unity Scene view style:
 //   right-drag look · right + WASD / QE fly (Shift faster, wheel sets the speed) · middle-drag pan
@@ -4740,6 +4741,8 @@ var App = class {
       overlay.hide();
       this.log(`session ${type}`);
       await this.worlds.reload();
+      // passthrough stays on; a world may start with its background raised over it (world.background, 0..1)
+      if (mode === "ar" && this.worlds.current?.background) this.setOpacity(this.worlds.current.background, false);
       this._calibrate = 10; // rebuild once the real head pose is known (table height calibration)
     } catch (e) {
       this.error(`Could not start ${type}: ${e.message}`);
