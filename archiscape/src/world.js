@@ -690,6 +690,8 @@ var Archiscape = {
   },
   // Townscaper-like plink, higher the taller it builds; a soft thud for a removal
   _plink(level) {
+    // in the era's own key and instrument when its music plays; this sine only without music
+    if (asMusic?.accent(level)) return;
     const c = this.app.sfx.ensure();
     if (!c || c.state !== "running") return;
     const t = c.currentTime, o = c.createOscillator(), g = c.createGain();

@@ -3928,6 +3928,22 @@ var AsMusic = class {
   play(id) {
     this.want = id;
   }
+  // a block built (level 0, 1, ... storeys up) or taken away (level < 0) as one note of the piece now playing: its
+  // key and scale, its instrument, through its room - so building plays along with the era instead of over it.
+  // false when there is no piece to play into (music off, nothing started yet): the caller sounds its own plink
+  accent(level) {
+    const c = this._graph(), L = this.layers.at(-1);
+    if (!c || !this.on || !L || L.out || !AS_MUSIC[L.id]) return false;
+    const M = L.M, t = c.currentTime + 0.01, del = level < 0, kind = AS_ACCENT[L.id] ?? "pluck";
+    // one scale step higher per storey; a removal is a low, softer note
+    const f = del ? M.f(0, -1) : M.f(2 + Math.min(level, 9), 0), x = M.rnd() * 0.6 - 0.3;
+    if (kind === "bell") M.bell(f, t, { vol: del ? 0.08 : 0.13, dur: 2.2, x, partials: [[1, 1, 1], [2.4, 0.4, 0.45], [3.9, 0.2, 0.25]] });
+    else if (kind === "flute") M.flute(f, t, 0.45, { vol: del ? 0.05 : 0.08, attack: 0.03, breath: 0.4, x });
+    else if (kind === "choir") M.pad([f], t, 0.5, { vol: del ? 0.04 : 0.065, cutoff: 2600, attack: 0.04, release: 0.7, formant: true, detune: 5, x });
+    else if (kind === "pad") M.pad([f, f * 1.5], t, 0.35, { vol: del ? 0.035 : 0.055, cutoff: 1800, attack: 0.03, release: 0.6, x });
+    else M.pluck(f, t, { vol: del ? 0.18 : 0.28, damp: del ? 0.5 : 0.22, decay: 0.995, dur: 1.6, x, body: L.id === "islamic" ? 260 : 0 });
+    return true;
+  }
   // the audio graph, built once the page has had a gesture: layers -> dry + room reverb -> compressor -> out
   _graph() {
     // the framework makes the AudioContext on the first gesture; until then there is nothing to play into
@@ -4335,6 +4351,20 @@ var AS_SCALES = {
   in: [0, 1, 5, 7, 8],
   whole: [0, 2, 4, 6, 8, 10],
   minpent: [0, 3, 5, 7, 10]
+};
+// the voice each era builds with (anything not listed plucks): the bone flute on the plain, the choir under the
+// dome, bronze bells, soft pads for the white and the fluid modern towns
+var AS_ACCENT = {
+  stonehenge: "flute",
+  hagia: "choir",
+  forbidden: "bell",
+  kremlin: "bell",
+  thai: "bell",
+  prussian: "bell",
+  corbusier: "bell",
+  gehry: "bell",
+  meier: "pad",
+  hadid: "pad"
 };
 var AS_MUSIC = {
   // the Neolithic: wind over the plain, a low drone, a slow heartbeat drum and a bone flute far away
@@ -5234,6 +5264,8 @@ var Archiscape = {
   },
   // Townscaper-like plink, higher the taller it builds; a soft thud for a removal
   _plink(level) {
+    // in the era's own key and instrument when its music plays; this sine only without music
+    if (asMusic?.accent(level)) return;
     const c = this.app.sfx.ensure();
     if (!c || c.state !== "running") return;
     const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
