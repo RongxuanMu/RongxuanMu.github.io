@@ -74,17 +74,30 @@ PC_EXHIBITS.push({
       }
       if (!list.length && bi >= 0) list.push([bi, 0, 0, 0]);
       grips.set(e.interactor, { list, target: p.clone() });
+      X.sfx.squish(0.32, 0.9 + Math.random() * 0.25);
     });
     it.on("drag", (e) => grips.get(e.interactor)?.target.copy(X.local(e.point)));
     it.on("release", (e) => {
       const g = grips.get(e.interactor);
       if (g) for (const [i] of g.list) w[i] = 1;
       grips.delete(e.interactor);
+      // let go of a stretched jelly and it springs back: the more it was pulled, the bigger the duang
+      const st = stretch();
+      if (st > 0.08) X.sfx.boing(Math.min(0.38, 0.12 + st * 0.6), 190 - Math.min(80, st * 140));
+      else X.sfx.squish(0.18, 1.2);
     });
     X.action("Drop", () => reset(0.22));
     X.action("Jump", () => {
       for (let i = 0; i < N; i++) v[i * 3 + 1] += 1.6 + (x[i * 3] > 0 ? 0.3 : 0);
+      X.sfx.boing(0.22, 230, 0.45);
     });
+    // how far the block is from its rest size: the spread of its corners against the rest diagonal
+    const corners = [id(0, 0, 0), id(n - 1, n - 1, n - 1), id(n - 1, 0, 0), id(0, n - 1, n - 1)];
+    const stretch = () => {
+      const d = (a, b) => Math.hypot(x[a * 3] - x[b * 3], x[a * 3 + 1] - x[b * 3 + 1], x[a * 3 + 2] - x[b * 3 + 2]);
+      return Math.abs((d(corners[0], corners[1]) + d(corners[2], corners[3])) / (2 * S * Math.sqrt(3)) - 1);
+    };
+    let wasUp = false, vyMin = 0, lastSt = 0;
     X.action("Firm", (on) => comp = on ? 8e-6 : 1.2e-4, { toggle: true });
     X.action("Reset", () => reset());
     const SUB = 16, tmp = new T.Vector3();
@@ -191,6 +204,28 @@ PC_EXHIBITS.push({
         geo.computeBoundingSphere();
         geo.computeBoundingBox();
         for (const f of face) at(f.c0, f.f, f.e.position);
+        // sounds: a duang when it lands (as hard as it fell), squelches while hands knead or stretch it or a
+        // fingertip pokes in
+        let minY = 1, vy = 0, poked = 0;
+        for (let i = 0; i < N; i++) {
+          minY = Math.min(minY, x[i * 3 + 1]);
+          vy += v[i * 3 + 1];
+          for (const tp of tips) if (Math.hypot(x[i * 3] - tp.x, x[i * 3 + 1] - tp.y, x[i * 3 + 2] - tp.z) < 0.024) poked++;
+        }
+        vy /= N;
+        if (minY > 4e-3) wasUp = true, vyMin = Math.min(vyMin, vy);
+        else if (wasUp) {
+          if (vyMin < -0.4) {
+            X.sfx.boing(Math.min(0.4, 0.1 + -vyMin * 0.12), 150 + Math.random() * 30);
+            X.sfx.squish(Math.min(0.3, -vyMin * 0.08), 0.8);
+          }
+          wasUp = false;
+          vyMin = 0;
+        }
+        const st = stretch();
+        if (grips.size && Math.abs(st - lastSt) > 0.012 && X.sfx.ok("knead", 0.13)) X.sfx.squish(Math.min(0.3, 0.1 + Math.abs(st - lastSt) * 4), 0.75 + st);
+        lastSt = st;
+        if (poked && X.sfx.ok("poke", 0.22)) X.sfx.squish(0.16, 1.3);
       }
     };
   }
@@ -260,6 +295,8 @@ PC_EXHIBITS.push({
     X.action("Show L", (on) => arrow.visible = on, { toggle: true });
     X.action("Clear trail", () => trail.clear());
     const MAXT = 0.72, w = new T.Vector3(), Rm = new T.Matrix3(), tau = new T.Vector3(), dq = new T.Quaternion();
+    const hum = X.sfx.voice("hum"), scrape = X.sfx.voice("scrape");
+    let rimT = 0;
     return {
       update(dt) {
         const n = Math.ceil(dt / 5e-4), h = dt / n;
@@ -285,6 +322,10 @@ PC_EXHIBITS.push({
         }
         // drawn spin is capped, so a fast top reads as spinning instead of strobing
         const a = axis(), w3 = Lm.dot(a) / I3;
+        const spinK = Math.min(1, Math.abs(w3) / 170), onRim = Math.acos(Math.min(1, a.y)) > MAXT - 0.01;
+        hum.set(held ? 0 : 0.05 * spinK, 55 + Math.abs(w3) * 0.75);
+        rimT = onRim && !held ? rimT + dt : 0;
+        scrape.set(onRim && !held ? Math.min(0.12, Math.abs(w3) * 1.2e-3) : 0, 900 + Math.abs(w3) * 8);
         phi += Math.max(-24, Math.min(24, w3)) * dt;
         top.quaternion.setFromUnitVectors(PC_YUP, a).multiply(_pcQ.setFromAxisAngle(PC_YUP, phi));
         trail.push(a.clone().multiplyScalar(0.062).add(TIP));
@@ -381,6 +422,7 @@ PC_EXHIBITS.push({
     const gcx = (px) => Math.min(GX - 1, Math.max(0, Math.floor((px + W2) / CS) + 1)), gcy = (py) => Math.min(GY - 1, Math.max(0, Math.floor(py / CS) + 1));
     const reach = r + 8e-4, segBox = segs.map(([x1, y1, x2, y2]) => [Math.min(x1, x2) - reach, Math.min(y1, y2) - reach, Math.max(x1, x2) + reach, Math.max(y1, y2) + reach]);
     const gl = new T.Vector3(), hit = new Uint8Array(NB);
+    let pings = 0;
     // a bead that touched a peg, a wall or another bead this step loses most of its speed: steel beads in a
     // Galton board barely bounce, so each peg is a fair coin flip instead of a ricochet to the sides
     const push = (i, cx, cy, rr) => {
@@ -458,12 +500,16 @@ PC_EXHIBITS.push({
             }
           }
           for (let i = 0; i < NB; i++) {
+            if (hit[i] && Math.abs(v[i * 2]) + Math.abs(v[i * 2 + 1]) > 0.18) pings++;
             const k = hit[i] ? 0.72 : 0.995;
             v[i * 2] = (x[i * 2] - x0[i * 2]) / h * k;
             v[i * 2 + 1] = (x[i * 2 + 1] - x0[i * 2 + 1]) / h * k;
           }
           hit.fill(0);
         }
+        // steel beads on brass pegs: a few pings a frame at most, quieter when many land at once
+        for (let k = 0; k < Math.min(3, pings); k++) X.sfx.tick(Math.min(0.07, 0.025 + 0.15 / (pings + 2)), 3200 + Math.random() * 1800, 0.04);
+        pings = 0;
         const M = new T.Matrix4();
         for (let i = 0; i < NB; i++) balls.setMatrixAt(i, M.makeTranslation(x[i * 2], x[i * 2 + 1], 0));
         balls.instanceMatrix.needsUpdate = true;

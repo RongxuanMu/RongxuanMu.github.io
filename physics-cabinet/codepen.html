@@ -2561,6 +2561,183 @@ var PC_MAT = {
 function pcStd(color, o = {}) {
   return new THREE6.MeshStandardMaterial({ color, roughness: 0.45, ...o });
 }
+// - sounds: small synthesized effects for the exhibits (nothing to download). One kit per exhibit; its
+// continuous voices (rustle, hum, whoosh) stop when the exhibit is put away -
+var PcSfx = class {
+  constructor(app) {
+    this.app = app;
+    this.voices = [];
+    this.last = {};
+  }
+  // the audio context once the page has had a gesture (sounds before that are skipped, not queued)
+  _c(make = false) {
+    const s = this.app.sfx, c = make ? s.ensure() : s.ctx;
+    if (!c || c.state !== "running") return null;
+    if (this.c !== c) {
+      this.c = c;
+      this.out = c.createGain();
+      this.out.gain.value = 0.9;
+      this.out.connect(c.destination);
+    }
+    return c;
+  }
+  // rate limit per key: false if the same sound played less than `gap` seconds ago
+  ok(key, gap) {
+    const t = performance.now() / 1e3;
+    if (t - (this.last[key] ?? -1) < gap) return false;
+    this.last[key] = t;
+    return true;
+  }
+  _env(g, t, peak, dur, attack = 4e-3) {
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(2e-4, peak), t + attack);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+  }
+  _noise(c, t, dur) {
+    const s = c.createBufferSource();
+    s.buffer = this.app.sfx.noise;
+    s.loop = true;
+    s.playbackRate.value = 0.8 + Math.random() * 0.4;
+    s.start(t, Math.random() * 0.05);
+    s.stop(t + dur + 0.05);
+    return s;
+  }
+  // a wet squelch ("gengjiu"): a formant sweeping down through noise, over a quick falling blip
+  squish(gain = 0.3, pitch = 1) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, dur = 0.16 + Math.random() * 0.05;
+    const bp = c.createBiquadFilter(), g = c.createGain();
+    bp.type = "bandpass";
+    bp.Q.value = 5;
+    bp.frequency.setValueAtTime(1500 * pitch, t);
+    bp.frequency.exponentialRampToValueAtTime(350 * pitch, t + dur);
+    this._env(g, t, gain * 1.6, dur, 8e-3);
+    this._noise(c, t, dur).connect(bp).connect(g).connect(this.out);
+    const o = c.createOscillator(), g2 = c.createGain();
+    o.frequency.setValueAtTime(520 * pitch, t);
+    o.frequency.exponentialRampToValueAtTime(150 * pitch, t + 0.09);
+    this._env(g2, t, gain * 0.5, 0.1);
+    o.connect(g2).connect(this.out);
+    o.start(t);
+    o.stop(t + 0.12);
+  }
+  // a springy wobble ("duang"): a low tone that overshoots, then wobbles down as the vibrato dies away
+  boing(gain = 0.3, f = 150, dur = 0.8) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), g2 = c.createGain();
+    const lfo = c.createOscillator(), depth = c.createGain();
+    o.type = "sine";
+    o2.type = "triangle";
+    o.frequency.setValueAtTime(f * 1.35, t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
+    o.frequency.exponentialRampToValueAtTime(f * 0.82, t + dur);
+    o2.frequency.setValueAtTime(f * 2.7, t);
+    o2.frequency.exponentialRampToValueAtTime(f * 1.64, t + dur);
+    lfo.frequency.setValueAtTime(13, t);
+    lfo.frequency.linearRampToValueAtTime(7, t + dur);
+    depth.gain.setValueAtTime(f * 0.18, t);
+    depth.gain.exponentialRampToValueAtTime(f * 0.01, t + dur);
+    lfo.connect(depth);
+    depth.connect(o.frequency);
+    depth.connect(o2.frequency);
+    this._env(g, t, gain, dur, 6e-3);
+    this._env(g2, t, gain * 0.25, dur * 0.6, 6e-3);
+    o.connect(g).connect(this.out);
+    o2.connect(g2).connect(this.out);
+    for (const x of [o, o2, lfo]) x.start(t), x.stop(t + dur + 0.05);
+  }
+  // steel on steel: a few inharmonic partials and a tick of noise
+  clack(gain = 0.2) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, d = 0.9 + Math.random() * 0.2;
+    for (const [f, a, dur] of [[2950, 1, 0.07], [4410, 0.6, 0.05], [6240, 0.35, 0.035]]) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.frequency.value = f * d;
+      this._env(g, t, gain * a, dur, 1e-3);
+      o.connect(g).connect(this.out);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    }
+    const hp = c.createBiquadFilter(), g = c.createGain();
+    hp.type = "highpass";
+    hp.frequency.value = 3000;
+    this._env(g, t, gain * 0.7, 0.012, 1e-3);
+    this._noise(c, t, 0.02).connect(hp).connect(g).connect(this.out);
+  }
+  // a tiny ping (a bead on a peg) or a soft knock, by pitch
+  tick(gain = 0.08, f = 3800, dur = 0.05) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = f * (0.95 + Math.random() * 0.1);
+    this._env(g, t, gain, dur, 1e-3);
+    o.connect(g).connect(this.out);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  // a soft bell-like bloop (pendulum wave notes)
+  note(f, gain = 0.06, dur = 0.6) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime;
+    for (const [m, a] of [[1, 1], [2.01, 0.25]]) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.frequency.value = f * m;
+      this._env(g, t, gain * a, dur * (m > 1 ? 0.5 : 1), 6e-3);
+      o.connect(g).connect(this.out);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    }
+  }
+  // a continuous voice: "rustle" (cloth), "whoosh" (air), "hum" (a spinning top), "scrape"; set(level, freq)
+  // every frame, it glides there
+  voice(kind) {
+    const v = { kind, n: null, set: (level, f) => {
+      const c = this._c();
+      if (!c) return;
+      if (!v.n) {
+        const g = c.createGain();
+        g.gain.value = 0;
+        let src, filt = c.createBiquadFilter();
+        if (kind === "hum") {
+          src = c.createOscillator();
+          src.type = "sawtooth";
+          filt.type = "lowpass";
+          filt.frequency.value = 700;
+          filt.Q.value = 2;
+        } else {
+          src = c.createBufferSource();
+          src.buffer = this.app.sfx.noise;
+          src.loop = true;
+          filt.type = "bandpass";
+          filt.Q.value = kind === "rustle" ? 0.7 : kind === "scrape" ? 3 : 1.2;
+        }
+        src.connect(filt).connect(g).connect(this.out);
+        src.start();
+        v.n = { src, filt, g };
+      }
+      const t = c.currentTime;
+      v.n.g.gain.setTargetAtTime(Math.max(0, level), t, 0.05);
+      if (kind === "hum") v.n.src.frequency.setTargetAtTime(f, t, 0.05), v.n.filt.frequency.setTargetAtTime(f * 3, t, 0.05);
+      else v.n.filt.frequency.setTargetAtTime(f, t, 0.05);
+    } };
+    this.voices.push(v);
+    return v;
+  }
+  stop() {
+    for (const v of this.voices) if (v.n) {
+      try {
+        v.n.g.gain.setTargetAtTime(0, this.c.currentTime, 0.05);
+        v.n.src.stop(this.c.currentTime + 0.3);
+      } catch (_) {
+      }
+    }
+    this.voices = [];
+  }
+};
 // src/water.js
 // The water ball, from Water Ball XR (codepen.io/MuRongxuan/pen/PwpQYap), unchanged in its physics, surface and
 // sound: position-based SPH with double density relaxation (Clavet et al. 2005), surface tension from the kept
@@ -3377,7 +3554,7 @@ PC_EXHIBITS.push({
             th[i] += w[i] * h;
           }
         }
-        if (clack > 0.02) X.tone(2600 + Math.random() * 300, Math.min(0.25, clack * 0.5), 0.05, "triangle");
+        if (clack > 0.02) X.sfx.clack(Math.min(0.3, clack * 0.6));
         clack = 0;
         for (let i = 0; i < NB; i++) {
           const c = new T.Vector3(pos(i), TOP - L * Math.cos(th[i]), 0);
@@ -3472,8 +3649,12 @@ PC_EXHIBITS.push({
       trA.clear();
       trB.clear();
     });
+    const air = X.sfx.voice("whoosh");
     return {
       update(dt) {
+        // the air the arms cut: louder and brighter the faster the outer bob whirls
+        const spd = held ? 0 : Math.abs(sA[1]) + Math.abs(sA[3]) + (twin ? 0.6 * (Math.abs(sB[1]) + Math.abs(sB[3])) : 0);
+        air.set(Math.min(0.22, Math.max(0, spd - 4) * 0.012), 280 + spd * 45);
         const n = Math.ceil(dt / 2e-3), h = dt / n;
         for (let i = 0; i < n; i++) {
           if (!held) rk4(sA, h);
@@ -3545,6 +3726,9 @@ PC_EXHIBITS.push({
     X.action("Slow motion", (v) => slow = v, { toggle: true });
     X.action("Stop", () => A = 0);
     A = 0.35;
+    // each bob sounds a note as it swings through the bottom: shortest highest, a pentatonic scale across fifteen
+    const PENTA = [0, 2, 4, 7, 9], note = (k) => 330 * Math.pow(2, (Math.floor(k / 5) * 12 + PENTA[k % 5]) / 12);
+    const prevTh = new Float32Array(NP);
     const clock = X.text(0.12);
     clock.position.set(0, TOP + 0.03, 0);
     X.root.add(clock);
@@ -3554,6 +3738,8 @@ PC_EXHIBITS.push({
         clock.userData.draw(held ? "let go to start" : `${t0.toFixed(1)} s of ${PERIOD} s`);
         for (let k = 0; k < NP; k++) {
           const th = held ? A : A * Math.cos(om[k] * t0) * Math.exp(-t0 * 2e-3);
+          if (!held && Math.abs(A) > 0.05 && Math.sign(th) !== Math.sign(prevTh[k]) && prevTh[k] !== 0) X.sfx.note(note(NP - 1 - k), 0.035, 0.5);
+          prevTh[k] = th;
           const p = new T.Vector3(xs(k), TOP - L[k] * Math.cos(th), L[k] * Math.sin(th));
           bobs[k].position.copy(p);
           strs[k].set(new T.Vector3(xs(k), TOP, 0), p);
@@ -3567,7 +3753,7 @@ PC_EXHIBITS.push({
   id: "cloth",
   label: "Cloth",
   title: "Cloth",
-  blurb: "XPBD cloth on a rail · grab and pull any point (it stays where you leave a pinned corner) · fingertips push it",
+  blurb: "XPBD cloth on a rail · grab it with one hand or both and pull (a pinned corner stays where you leave it) · fingertips push it",
   build(X) {
     const T = THREE6, NX = 22, NY = 22, SZ = 0.22, TOP = 0.33, D = SZ / (NX - 1);
     const N = NX * NY, x = new Float32Array(N * 3), p0 = new Float32Array(N * 3), v = new Float32Array(N * 3), w = new Float32Array(N);
@@ -3630,34 +3816,40 @@ PC_EXHIBITS.push({
     mesh.name = "cloth";
     mesh.frustumCulled = false;
     X.root.add(mesh);
-    let grabbed = -1, wind = false, ballOn = false;
-    const target = new T.Vector3();
+    // one grip per hand: both hands can hold the cloth at once and stretch it between them
+    const grips = /* @__PURE__ */ new Map();
+    let wind = false, ballOn = false;
+    const rustle = X.sfx.voice("rustle");
     const ball = new T.Mesh(new T.SphereGeometry(0.055, 32, 20), pcStd(13421772, { roughness: 0.6 }));
     ball.position.set(0, 0.08, 0.02);
     ball.visible = false;
     ball.userData.noCollider = true;
     X.root.add(ball);
-    const it = X.add(mesh, { precise: true, highlight: false, box: new T.Box3(new T.Vector3(-0.2, 0, -0.2), new T.Vector3(0.2, 0.42, 0.2)) });
+    const it = X.add(mesh, { precise: true, highlight: false, multi: true, box: new T.Box3(new T.Vector3(-0.2, 0, -0.2), new T.Vector3(0.2, 0.42, 0.2)) });
     it.on("press", (e) => {
-      const p = X.local(e.point);
+      const p = X.local(e.point), taken = new Set([...grips.values()].map((g) => g.i));
       let best = 0.04, bi = -1;
       for (let i = 0; i < N; i++) {
+        if (taken.has(i)) continue;
         const d = Math.hypot(x[i * 3] - p.x, x[i * 3 + 1] - p.y, x[i * 3 + 2] - p.z);
         if (d < best) best = d, bi = i;
       }
-      grabbed = bi;
-      target.copy(p);
+      if (bi < 0) return;
+      grips.set(e.interactor, { i: bi, target: p.clone() });
+      X.sfx.tick(0.12, 700, 0.06);
     });
-    it.on("drag", (e) => target.copy(X.local(e.point)));
-    it.on("release", () => {
-      if (grabbed >= 0 && !pinned[grabbed]) w[grabbed] = 1;
-      grabbed = -1;
+    it.on("drag", (e) => grips.get(e.interactor)?.target.copy(X.local(e.point)));
+    it.on("release", (e) => {
+      const g = grips.get(e.interactor);
+      if (g && !pinned[g.i]) w[g.i] = 1;
+      grips.delete(e.interactor);
     });
     X.action("Wind", (on) => wind = on, { toggle: true });
     X.action("Ball", (on) => ballOn = ball.visible = on, { toggle: true });
     X.action("Drop", () => {
       pinned.fill(0);
-      for (let i = 0; i < N; i++) if (i !== grabbed) w[i] = 1;
+      const held = new Set([...grips.values()].map((g) => g.i));
+      for (let i = 0; i < N; i++) if (!held.has(i)) w[i] = 1;
     });
     X.action("Hang", reset);
     const SUB = 12;
@@ -3680,9 +3872,9 @@ PC_EXHIBITS.push({
             x[k + 1] += v[k + 1] * h;
             x[k + 2] += v[k + 2] * h;
           }
-          if (grabbed >= 0) {
-            w[grabbed] = 0;
-            x.set([target.x, target.y, target.z], grabbed * 3);
+          for (const { i, target } of grips.values()) {
+            w[i] = 0;
+            x.set([target.x, target.y, target.z], i * 3);
           }
           const a2 = 1 / (h * h);
           for (const [a, b, rest, comp] of C) {
@@ -3721,6 +3913,11 @@ PC_EXHIBITS.push({
           }
           for (let i = 0; i < N * 3; i++) v[i] = (x[i] - p0[i]) / h * 0.9995;
         }
+        // fabric rustle with how fast the cloth moves
+        let sp = 0;
+        for (let i = 0; i < N; i += 3) sp += Math.abs(v[i * 3]) + Math.abs(v[i * 3 + 1]) + Math.abs(v[i * 3 + 2]);
+        sp /= N / 3;
+        rustle.set(Math.min(0.28, Math.max(0, sp - 0.08) * 0.35), 1800 + sp * 1500);
         const P = geo.attributes.position;
         for (let i = 0; i < N; i++) P.setXYZ(i, x[i * 3], x[i * 3 + 1], x[i * 3 + 2]);
         P.needsUpdate = true;
@@ -3807,17 +4004,30 @@ PC_EXHIBITS.push({
       }
       if (!list.length && bi >= 0) list.push([bi, 0, 0, 0]);
       grips.set(e.interactor, { list, target: p.clone() });
+      X.sfx.squish(0.32, 0.9 + Math.random() * 0.25);
     });
     it.on("drag", (e) => grips.get(e.interactor)?.target.copy(X.local(e.point)));
     it.on("release", (e) => {
       const g = grips.get(e.interactor);
       if (g) for (const [i] of g.list) w[i] = 1;
       grips.delete(e.interactor);
+      // let go of a stretched jelly and it springs back: the more it was pulled, the bigger the duang
+      const st = stretch();
+      if (st > 0.08) X.sfx.boing(Math.min(0.38, 0.12 + st * 0.6), 190 - Math.min(80, st * 140));
+      else X.sfx.squish(0.18, 1.2);
     });
     X.action("Drop", () => reset(0.22));
     X.action("Jump", () => {
       for (let i = 0; i < N; i++) v[i * 3 + 1] += 1.6 + (x[i * 3] > 0 ? 0.3 : 0);
+      X.sfx.boing(0.22, 230, 0.45);
     });
+    // how far the block is from its rest size: the spread of its corners against the rest diagonal
+    const corners = [id(0, 0, 0), id(n - 1, n - 1, n - 1), id(n - 1, 0, 0), id(0, n - 1, n - 1)];
+    const stretch = () => {
+      const d = (a, b) => Math.hypot(x[a * 3] - x[b * 3], x[a * 3 + 1] - x[b * 3 + 1], x[a * 3 + 2] - x[b * 3 + 2]);
+      return Math.abs((d(corners[0], corners[1]) + d(corners[2], corners[3])) / (2 * S * Math.sqrt(3)) - 1);
+    };
+    let wasUp = false, vyMin = 0, lastSt = 0;
     X.action("Firm", (on) => comp = on ? 8e-6 : 1.2e-4, { toggle: true });
     X.action("Reset", () => reset());
     const SUB = 16, tmp = new T.Vector3();
@@ -3924,6 +4134,28 @@ PC_EXHIBITS.push({
         geo.computeBoundingSphere();
         geo.computeBoundingBox();
         for (const f of face) at(f.c0, f.f, f.e.position);
+        // sounds: a duang when it lands (as hard as it fell), squelches while hands knead or stretch it or a
+        // fingertip pokes in
+        let minY = 1, vy = 0, poked = 0;
+        for (let i = 0; i < N; i++) {
+          minY = Math.min(minY, x[i * 3 + 1]);
+          vy += v[i * 3 + 1];
+          for (const tp of tips) if (Math.hypot(x[i * 3] - tp.x, x[i * 3 + 1] - tp.y, x[i * 3 + 2] - tp.z) < 0.024) poked++;
+        }
+        vy /= N;
+        if (minY > 4e-3) wasUp = true, vyMin = Math.min(vyMin, vy);
+        else if (wasUp) {
+          if (vyMin < -0.4) {
+            X.sfx.boing(Math.min(0.4, 0.1 + -vyMin * 0.12), 150 + Math.random() * 30);
+            X.sfx.squish(Math.min(0.3, -vyMin * 0.08), 0.8);
+          }
+          wasUp = false;
+          vyMin = 0;
+        }
+        const st = stretch();
+        if (grips.size && Math.abs(st - lastSt) > 0.012 && X.sfx.ok("knead", 0.13)) X.sfx.squish(Math.min(0.3, 0.1 + Math.abs(st - lastSt) * 4), 0.75 + st);
+        lastSt = st;
+        if (poked && X.sfx.ok("poke", 0.22)) X.sfx.squish(0.16, 1.3);
       }
     };
   }
@@ -3993,6 +4225,8 @@ PC_EXHIBITS.push({
     X.action("Show L", (on) => arrow.visible = on, { toggle: true });
     X.action("Clear trail", () => trail.clear());
     const MAXT = 0.72, w = new T.Vector3(), Rm = new T.Matrix3(), tau = new T.Vector3(), dq = new T.Quaternion();
+    const hum = X.sfx.voice("hum"), scrape = X.sfx.voice("scrape");
+    let rimT = 0;
     return {
       update(dt) {
         const n = Math.ceil(dt / 5e-4), h = dt / n;
@@ -4018,6 +4252,10 @@ PC_EXHIBITS.push({
         }
         // drawn spin is capped, so a fast top reads as spinning instead of strobing
         const a = axis(), w3 = Lm.dot(a) / I3;
+        const spinK = Math.min(1, Math.abs(w3) / 170), onRim = Math.acos(Math.min(1, a.y)) > MAXT - 0.01;
+        hum.set(held ? 0 : 0.05 * spinK, 55 + Math.abs(w3) * 0.75);
+        rimT = onRim && !held ? rimT + dt : 0;
+        scrape.set(onRim && !held ? Math.min(0.12, Math.abs(w3) * 1.2e-3) : 0, 900 + Math.abs(w3) * 8);
         phi += Math.max(-24, Math.min(24, w3)) * dt;
         top.quaternion.setFromUnitVectors(PC_YUP, a).multiply(_pcQ.setFromAxisAngle(PC_YUP, phi));
         trail.push(a.clone().multiplyScalar(0.062).add(TIP));
@@ -4114,6 +4352,7 @@ PC_EXHIBITS.push({
     const gcx = (px) => Math.min(GX - 1, Math.max(0, Math.floor((px + W2) / CS) + 1)), gcy = (py) => Math.min(GY - 1, Math.max(0, Math.floor(py / CS) + 1));
     const reach = r + 8e-4, segBox = segs.map(([x1, y1, x2, y2]) => [Math.min(x1, x2) - reach, Math.min(y1, y2) - reach, Math.max(x1, x2) + reach, Math.max(y1, y2) + reach]);
     const gl = new T.Vector3(), hit = new Uint8Array(NB);
+    let pings = 0;
     // a bead that touched a peg, a wall or another bead this step loses most of its speed: steel beads in a
     // Galton board barely bounce, so each peg is a fair coin flip instead of a ricochet to the sides
     const push = (i, cx, cy, rr) => {
@@ -4191,12 +4430,16 @@ PC_EXHIBITS.push({
             }
           }
           for (let i = 0; i < NB; i++) {
+            if (hit[i] && Math.abs(v[i * 2]) + Math.abs(v[i * 2 + 1]) > 0.18) pings++;
             const k = hit[i] ? 0.72 : 0.995;
             v[i * 2] = (x[i * 2] - x0[i * 2]) / h * k;
             v[i * 2 + 1] = (x[i * 2 + 1] - x0[i * 2 + 1]) / h * k;
           }
           hit.fill(0);
         }
+        // steel beads on brass pegs: a few pings a frame at most, quieter when many land at once
+        for (let k = 0; k < Math.min(3, pings); k++) X.sfx.tick(Math.min(0.07, 0.025 + 0.15 / (pings + 2)), 3200 + Math.random() * 1800, 0.04);
+        pings = 0;
         const M = new T.Matrix4();
         for (let i = 0; i < NB; i++) balls.setMatrixAt(i, M.makeTranslation(x[i * 2], x[i * 2 + 1], 0));
         balls.instanceMatrix.needsUpdate = true;
@@ -4583,8 +4826,10 @@ var PhysicsCabinet = {
     root.name = `exhibit:${ex.id}`;
     this.stage.add(root);
     const owned = [], actions = [], stage = this.stage;
+    const sfx = new PcSfx(app2);
     const X = {
       app: app2,
+      sfx,
       root,
       stage,
       get stageY() {
@@ -4649,12 +4894,13 @@ var PhysicsCabinet = {
       b.root.position.set(-((n - 1) * (w + gap)) / 2 + k * (w + gap), this.panel.h / 2 - 0.03 - 2 * 0.032 - 0.02 - 0.013, 0);
       this.panel.root.add(b.root);
     });
-    this.cur = { ex, root, owned, actions, inst };
+    this.cur = { ex, root, owned, actions, inst, sfx };
     app2.log(`exhibit → ${ex.title}`);
   },
   _unloadExhibit() {
     const c = this.cur;
     if (!c) return;
+    c.sfx.stop();
     for (const it of c.owned) this.app.im.remove(it);
     const own = new Set(c.owned);
     this.ctx._owned.splice(0, this.ctx._owned.length, ...this.ctx._owned.filter((it) => !own.has(it)));

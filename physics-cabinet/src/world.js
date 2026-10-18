@@ -94,8 +94,10 @@ var PhysicsCabinet = {
     root.name = `exhibit:${ex.id}`;
     this.stage.add(root);
     const owned = [], actions = [], stage = this.stage;
+    const sfx = new PcSfx(app2);
     const X = {
       app: app2,
+      sfx,
       root,
       stage,
       get stageY() {
@@ -160,12 +162,13 @@ var PhysicsCabinet = {
       b.root.position.set(-((n - 1) * (w + gap)) / 2 + k * (w + gap), this.panel.h / 2 - 0.03 - 2 * 0.032 - 0.02 - 0.013, 0);
       this.panel.root.add(b.root);
     });
-    this.cur = { ex, root, owned, actions, inst };
+    this.cur = { ex, root, owned, actions, inst, sfx };
     app2.log(`exhibit → ${ex.title}`);
   },
   _unloadExhibit() {
     const c = this.cur;
     if (!c) return;
+    c.sfx.stop();
     for (const it of c.owned) this.app.im.remove(it);
     const own = new Set(c.owned);
     this.ctx._owned.splice(0, this.ctx._owned.length, ...this.ctx._owned.filter((it) => !own.has(it)));

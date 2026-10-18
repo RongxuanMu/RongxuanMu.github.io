@@ -137,3 +137,180 @@ var PC_MAT = {
 function pcStd(color, o = {}) {
   return new THREE6.MeshStandardMaterial({ color, roughness: 0.45, ...o });
 }
+// - sounds: small synthesized effects for the exhibits (nothing to download). One kit per exhibit; its
+// continuous voices (rustle, hum, whoosh) stop when the exhibit is put away -
+var PcSfx = class {
+  constructor(app) {
+    this.app = app;
+    this.voices = [];
+    this.last = {};
+  }
+  // the audio context once the page has had a gesture (sounds before that are skipped, not queued)
+  _c(make = false) {
+    const s = this.app.sfx, c = make ? s.ensure() : s.ctx;
+    if (!c || c.state !== "running") return null;
+    if (this.c !== c) {
+      this.c = c;
+      this.out = c.createGain();
+      this.out.gain.value = 0.9;
+      this.out.connect(c.destination);
+    }
+    return c;
+  }
+  // rate limit per key: false if the same sound played less than `gap` seconds ago
+  ok(key, gap) {
+    const t = performance.now() / 1e3;
+    if (t - (this.last[key] ?? -1) < gap) return false;
+    this.last[key] = t;
+    return true;
+  }
+  _env(g, t, peak, dur, attack = 4e-3) {
+    g.gain.setValueAtTime(1e-4, t);
+    g.gain.exponentialRampToValueAtTime(Math.max(2e-4, peak), t + attack);
+    g.gain.exponentialRampToValueAtTime(1e-4, t + dur);
+  }
+  _noise(c, t, dur) {
+    const s = c.createBufferSource();
+    s.buffer = this.app.sfx.noise;
+    s.loop = true;
+    s.playbackRate.value = 0.8 + Math.random() * 0.4;
+    s.start(t, Math.random() * 0.05);
+    s.stop(t + dur + 0.05);
+    return s;
+  }
+  // a wet squelch ("gengjiu"): a formant sweeping down through noise, over a quick falling blip
+  squish(gain = 0.3, pitch = 1) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, dur = 0.16 + Math.random() * 0.05;
+    const bp = c.createBiquadFilter(), g = c.createGain();
+    bp.type = "bandpass";
+    bp.Q.value = 5;
+    bp.frequency.setValueAtTime(1500 * pitch, t);
+    bp.frequency.exponentialRampToValueAtTime(350 * pitch, t + dur);
+    this._env(g, t, gain * 1.6, dur, 8e-3);
+    this._noise(c, t, dur).connect(bp).connect(g).connect(this.out);
+    const o = c.createOscillator(), g2 = c.createGain();
+    o.frequency.setValueAtTime(520 * pitch, t);
+    o.frequency.exponentialRampToValueAtTime(150 * pitch, t + 0.09);
+    this._env(g2, t, gain * 0.5, 0.1);
+    o.connect(g2).connect(this.out);
+    o.start(t);
+    o.stop(t + 0.12);
+  }
+  // a springy wobble ("duang"): a low tone that overshoots, then wobbles down as the vibrato dies away
+  boing(gain = 0.3, f = 150, dur = 0.8) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, o = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), g2 = c.createGain();
+    const lfo = c.createOscillator(), depth = c.createGain();
+    o.type = "sine";
+    o2.type = "triangle";
+    o.frequency.setValueAtTime(f * 1.35, t);
+    o.frequency.exponentialRampToValueAtTime(f, t + 0.06);
+    o.frequency.exponentialRampToValueAtTime(f * 0.82, t + dur);
+    o2.frequency.setValueAtTime(f * 2.7, t);
+    o2.frequency.exponentialRampToValueAtTime(f * 1.64, t + dur);
+    lfo.frequency.setValueAtTime(13, t);
+    lfo.frequency.linearRampToValueAtTime(7, t + dur);
+    depth.gain.setValueAtTime(f * 0.18, t);
+    depth.gain.exponentialRampToValueAtTime(f * 0.01, t + dur);
+    lfo.connect(depth);
+    depth.connect(o.frequency);
+    depth.connect(o2.frequency);
+    this._env(g, t, gain, dur, 6e-3);
+    this._env(g2, t, gain * 0.25, dur * 0.6, 6e-3);
+    o.connect(g).connect(this.out);
+    o2.connect(g2).connect(this.out);
+    for (const x of [o, o2, lfo]) x.start(t), x.stop(t + dur + 0.05);
+  }
+  // steel on steel: a few inharmonic partials and a tick of noise
+  clack(gain = 0.2) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, d = 0.9 + Math.random() * 0.2;
+    for (const [f, a, dur] of [[2950, 1, 0.07], [4410, 0.6, 0.05], [6240, 0.35, 0.035]]) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.frequency.value = f * d;
+      this._env(g, t, gain * a, dur, 1e-3);
+      o.connect(g).connect(this.out);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    }
+    const hp = c.createBiquadFilter(), g = c.createGain();
+    hp.type = "highpass";
+    hp.frequency.value = 3000;
+    this._env(g, t, gain * 0.7, 0.012, 1e-3);
+    this._noise(c, t, 0.02).connect(hp).connect(g).connect(this.out);
+  }
+  // a tiny ping (a bead on a peg) or a soft knock, by pitch
+  tick(gain = 0.08, f = 3800, dur = 0.05) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = f * (0.95 + Math.random() * 0.1);
+    this._env(g, t, gain, dur, 1e-3);
+    o.connect(g).connect(this.out);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+  // a soft bell-like bloop (pendulum wave notes)
+  note(f, gain = 0.06, dur = 0.6) {
+    const c = this._c(true);
+    if (!c) return;
+    const t = c.currentTime;
+    for (const [m, a] of [[1, 1], [2.01, 0.25]]) {
+      const o = c.createOscillator(), g = c.createGain();
+      o.frequency.value = f * m;
+      this._env(g, t, gain * a, dur * (m > 1 ? 0.5 : 1), 6e-3);
+      o.connect(g).connect(this.out);
+      o.start(t);
+      o.stop(t + dur + 0.02);
+    }
+  }
+  // a continuous voice: "rustle" (cloth), "whoosh" (air), "hum" (a spinning top), "scrape"; set(level, freq)
+  // every frame, it glides there
+  voice(kind) {
+    const v = { kind, n: null, set: (level, f) => {
+      const c = this._c();
+      if (!c) return;
+      if (!v.n) {
+        const g = c.createGain();
+        g.gain.value = 0;
+        let src, filt = c.createBiquadFilter();
+        if (kind === "hum") {
+          src = c.createOscillator();
+          src.type = "sawtooth";
+          filt.type = "lowpass";
+          filt.frequency.value = 700;
+          filt.Q.value = 2;
+        } else {
+          src = c.createBufferSource();
+          src.buffer = this.app.sfx.noise;
+          src.loop = true;
+          filt.type = "bandpass";
+          filt.Q.value = kind === "rustle" ? 0.7 : kind === "scrape" ? 3 : 1.2;
+        }
+        src.connect(filt).connect(g).connect(this.out);
+        src.start();
+        v.n = { src, filt, g };
+      }
+      const t = c.currentTime;
+      v.n.g.gain.setTargetAtTime(Math.max(0, level), t, 0.05);
+      if (kind === "hum") v.n.src.frequency.setTargetAtTime(f, t, 0.05), v.n.filt.frequency.setTargetAtTime(f * 3, t, 0.05);
+      else v.n.filt.frequency.setTargetAtTime(f, t, 0.05);
+    } };
+    this.voices.push(v);
+    return v;
+  }
+  stop() {
+    for (const v of this.voices) if (v.n) {
+      try {
+        v.n.g.gain.setTargetAtTime(0, this.c.currentTime, 0.05);
+        v.n.src.stop(this.c.currentTime + 0.3);
+      } catch (_) {
+      }
+    }
+    this.voices = [];
+  }
+};

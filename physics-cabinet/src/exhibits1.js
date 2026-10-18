@@ -263,7 +263,7 @@ PC_EXHIBITS.push({
             th[i] += w[i] * h;
           }
         }
-        if (clack > 0.02) X.tone(2600 + Math.random() * 300, Math.min(0.25, clack * 0.5), 0.05, "triangle");
+        if (clack > 0.02) X.sfx.clack(Math.min(0.3, clack * 0.6));
         clack = 0;
         for (let i = 0; i < NB; i++) {
           const c = new T.Vector3(pos(i), TOP - L * Math.cos(th[i]), 0);
@@ -358,8 +358,12 @@ PC_EXHIBITS.push({
       trA.clear();
       trB.clear();
     });
+    const air = X.sfx.voice("whoosh");
     return {
       update(dt) {
+        // the air the arms cut: louder and brighter the faster the outer bob whirls
+        const spd = held ? 0 : Math.abs(sA[1]) + Math.abs(sA[3]) + (twin ? 0.6 * (Math.abs(sB[1]) + Math.abs(sB[3])) : 0);
+        air.set(Math.min(0.22, Math.max(0, spd - 4) * 0.012), 280 + spd * 45);
         const n = Math.ceil(dt / 2e-3), h = dt / n;
         for (let i = 0; i < n; i++) {
           if (!held) rk4(sA, h);
@@ -431,6 +435,9 @@ PC_EXHIBITS.push({
     X.action("Slow motion", (v) => slow = v, { toggle: true });
     X.action("Stop", () => A = 0);
     A = 0.35;
+    // each bob sounds a note as it swings through the bottom: shortest highest, a pentatonic scale across fifteen
+    const PENTA = [0, 2, 4, 7, 9], note = (k) => 330 * Math.pow(2, (Math.floor(k / 5) * 12 + PENTA[k % 5]) / 12);
+    const prevTh = new Float32Array(NP);
     const clock = X.text(0.12);
     clock.position.set(0, TOP + 0.03, 0);
     X.root.add(clock);
@@ -440,6 +447,8 @@ PC_EXHIBITS.push({
         clock.userData.draw(held ? "let go to start" : `${t0.toFixed(1)} s of ${PERIOD} s`);
         for (let k = 0; k < NP; k++) {
           const th = held ? A : A * Math.cos(om[k] * t0) * Math.exp(-t0 * 2e-3);
+          if (!held && Math.abs(A) > 0.05 && Math.sign(th) !== Math.sign(prevTh[k]) && prevTh[k] !== 0) X.sfx.note(note(NP - 1 - k), 0.035, 0.5);
+          prevTh[k] = th;
           const p = new T.Vector3(xs(k), TOP - L[k] * Math.cos(th), L[k] * Math.sin(th));
           bobs[k].position.copy(p);
           strs[k].set(new T.Vector3(xs(k), TOP, 0), p);
@@ -453,7 +462,7 @@ PC_EXHIBITS.push({
   id: "cloth",
   label: "Cloth",
   title: "Cloth",
-  blurb: "XPBD cloth on a rail · grab and pull any point (it stays where you leave a pinned corner) · fingertips push it",
+  blurb: "XPBD cloth on a rail · grab it with one hand or both and pull (a pinned corner stays where you leave it) · fingertips push it",
   build(X) {
     const T = THREE6, NX = 22, NY = 22, SZ = 0.22, TOP = 0.33, D = SZ / (NX - 1);
     const N = NX * NY, x = new Float32Array(N * 3), p0 = new Float32Array(N * 3), v = new Float32Array(N * 3), w = new Float32Array(N);
@@ -516,34 +525,40 @@ PC_EXHIBITS.push({
     mesh.name = "cloth";
     mesh.frustumCulled = false;
     X.root.add(mesh);
-    let grabbed = -1, wind = false, ballOn = false;
-    const target = new T.Vector3();
+    // one grip per hand: both hands can hold the cloth at once and stretch it between them
+    const grips = /* @__PURE__ */ new Map();
+    let wind = false, ballOn = false;
+    const rustle = X.sfx.voice("rustle");
     const ball = new T.Mesh(new T.SphereGeometry(0.055, 32, 20), pcStd(13421772, { roughness: 0.6 }));
     ball.position.set(0, 0.08, 0.02);
     ball.visible = false;
     ball.userData.noCollider = true;
     X.root.add(ball);
-    const it = X.add(mesh, { precise: true, highlight: false, box: new T.Box3(new T.Vector3(-0.2, 0, -0.2), new T.Vector3(0.2, 0.42, 0.2)) });
+    const it = X.add(mesh, { precise: true, highlight: false, multi: true, box: new T.Box3(new T.Vector3(-0.2, 0, -0.2), new T.Vector3(0.2, 0.42, 0.2)) });
     it.on("press", (e) => {
-      const p = X.local(e.point);
+      const p = X.local(e.point), taken = new Set([...grips.values()].map((g) => g.i));
       let best = 0.04, bi = -1;
       for (let i = 0; i < N; i++) {
+        if (taken.has(i)) continue;
         const d = Math.hypot(x[i * 3] - p.x, x[i * 3 + 1] - p.y, x[i * 3 + 2] - p.z);
         if (d < best) best = d, bi = i;
       }
-      grabbed = bi;
-      target.copy(p);
+      if (bi < 0) return;
+      grips.set(e.interactor, { i: bi, target: p.clone() });
+      X.sfx.tick(0.12, 700, 0.06);
     });
-    it.on("drag", (e) => target.copy(X.local(e.point)));
-    it.on("release", () => {
-      if (grabbed >= 0 && !pinned[grabbed]) w[grabbed] = 1;
-      grabbed = -1;
+    it.on("drag", (e) => grips.get(e.interactor)?.target.copy(X.local(e.point)));
+    it.on("release", (e) => {
+      const g = grips.get(e.interactor);
+      if (g && !pinned[g.i]) w[g.i] = 1;
+      grips.delete(e.interactor);
     });
     X.action("Wind", (on) => wind = on, { toggle: true });
     X.action("Ball", (on) => ballOn = ball.visible = on, { toggle: true });
     X.action("Drop", () => {
       pinned.fill(0);
-      for (let i = 0; i < N; i++) if (i !== grabbed) w[i] = 1;
+      const held = new Set([...grips.values()].map((g) => g.i));
+      for (let i = 0; i < N; i++) if (!held.has(i)) w[i] = 1;
     });
     X.action("Hang", reset);
     const SUB = 12;
@@ -566,9 +581,9 @@ PC_EXHIBITS.push({
             x[k + 1] += v[k + 1] * h;
             x[k + 2] += v[k + 2] * h;
           }
-          if (grabbed >= 0) {
-            w[grabbed] = 0;
-            x.set([target.x, target.y, target.z], grabbed * 3);
+          for (const { i, target } of grips.values()) {
+            w[i] = 0;
+            x.set([target.x, target.y, target.z], i * 3);
           }
           const a2 = 1 / (h * h);
           for (const [a, b, rest, comp] of C) {
@@ -607,6 +622,11 @@ PC_EXHIBITS.push({
           }
           for (let i = 0; i < N * 3; i++) v[i] = (x[i] - p0[i]) / h * 0.9995;
         }
+        // fabric rustle with how fast the cloth moves
+        let sp = 0;
+        for (let i = 0; i < N; i += 3) sp += Math.abs(v[i * 3]) + Math.abs(v[i * 3 + 1]) + Math.abs(v[i * 3 + 2]);
+        sp /= N / 3;
+        rustle.set(Math.min(0.28, Math.max(0, sp - 0.08) * 0.35), 1800 + sp * 1500);
         const P = geo.attributes.position;
         for (let i = 0; i < N; i++) P.setXYZ(i, x[i * 3], x[i * 3 + 1], x[i * 3 + 2]);
         P.needsUpdate = true;
