@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rongxuan's Portfolio</title>
     <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="stylesheet" href="styles.css?v=26">
+    <link rel="stylesheet" href="styles.css?v=27">
     <!-- Icons load without blocking first paint; the loader waits for them -->
     <link id="fa-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"></noscript>
@@ -128,7 +128,10 @@
 
     <!-- Top Navigation Bar onload="checkPassword()" -->
     <nav class="top-nav">
-        <ul>
+        <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="top-nav-list">
+            <span></span><span></span><span></span>
+        </button>
+        <ul id="top-nav-list">
             <li><a href="#about">About</a></li>
             <li><a href="#projects">Works</a></li>
             <li><a href="#publications">Publications</a></li>
@@ -136,6 +139,29 @@
             <li><a href="Resources/common/June%202026%20RongxuanMu%20Resume%20EN-CN.pdf" target="_blank" rel="noopener noreferrer">Résumé </a></li>
         </ul>
     </nav>
+    <script>
+        // Mobile: the nav starts folded behind the menu button
+        (function () {
+            var nav = document.querySelector('nav.top-nav');
+            var toggle = nav.querySelector('.nav-toggle');
+            function setOpen(open) {
+                nav.classList.toggle('is-open', open);
+                toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            }
+            toggle.addEventListener('click', function () {
+                setOpen(!nav.classList.contains('is-open'));
+            });
+            nav.querySelectorAll('ul a').forEach(function (a) {
+                a.addEventListener('click', function () { setOpen(false); });
+            });
+            document.addEventListener('click', function (e) {
+                if (!nav.contains(e.target)) setOpen(false);
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') setOpen(false);
+            });
+        })();
+    </script>
 
     <!-- Dark Mode Toggle Button -->
     <div class="dark-mode-toggle-container">

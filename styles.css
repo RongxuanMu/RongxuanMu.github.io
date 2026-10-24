@@ -287,6 +287,70 @@ nav.top-nav ul li a:focus-visible {
     outline-offset: 2px;
 }
 
+/* Menu button, shown only where the nav folds (mobile homepage) */
+nav.top-nav .nav-toggle {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    body.homepage nav.top-nav {
+        top: 16px;
+        left: 16px;
+        min-width: 0;
+        padding: 4px;
+    }
+
+    body.homepage nav.top-nav .nav-toggle {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text-primary);
+        cursor: pointer;
+    }
+
+    body.homepage nav.top-nav .nav-toggle span {
+        display: block;
+        width: 18px;
+        height: 2px;
+        border-radius: 1px;
+        background: currentColor;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+
+    body.homepage nav.top-nav.is-open .nav-toggle span:nth-child(1) {
+        transform: translateY(6px) rotate(45deg);
+    }
+
+    body.homepage nav.top-nav.is-open .nav-toggle span:nth-child(2) {
+        opacity: 0;
+    }
+
+    body.homepage nav.top-nav.is-open .nav-toggle span:nth-child(3) {
+        transform: translateY(-6px) rotate(-45deg);
+    }
+
+    body.homepage nav.top-nav ul {
+        display: none;
+    }
+
+    body.homepage nav.top-nav.is-open {
+        min-width: 148px;
+    }
+
+    body.homepage nav.top-nav.is-open ul {
+        display: flex;
+        margin-top: 4px;
+    }
+}
+
 /* Combined Name, Avatar, and About Section */
 #about {
     text-align: center;
