@@ -287,20 +287,20 @@ nav.top-nav ul li a:focus-visible {
     outline-offset: 2px;
 }
 
-/* Menu button, shown only where the nav folds (mobile homepage) */
+/* Menu button, shown only where the nav folds (mobile) */
 nav.top-nav .nav-toggle {
     display: none;
 }
 
 @media (max-width: 768px) {
-    body.homepage nav.top-nav {
+    nav.top-nav {
         top: 16px;
         left: 16px;
         min-width: 0;
         padding: 4px;
     }
 
-    body.homepage nav.top-nav .nav-toggle {
+    nav.top-nav .nav-toggle {
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -316,7 +316,7 @@ nav.top-nav .nav-toggle {
         cursor: pointer;
     }
 
-    body.homepage nav.top-nav .nav-toggle span {
+    nav.top-nav .nav-toggle span {
         display: block;
         width: 18px;
         height: 2px;
@@ -325,27 +325,27 @@ nav.top-nav .nav-toggle {
         transition: transform 0.2s ease, opacity 0.2s ease;
     }
 
-    body.homepage nav.top-nav.is-open .nav-toggle span:nth-child(1) {
+    nav.top-nav.is-open .nav-toggle span:nth-child(1) {
         transform: translateY(6px) rotate(45deg);
     }
 
-    body.homepage nav.top-nav.is-open .nav-toggle span:nth-child(2) {
+    nav.top-nav.is-open .nav-toggle span:nth-child(2) {
         opacity: 0;
     }
 
-    body.homepage nav.top-nav.is-open .nav-toggle span:nth-child(3) {
+    nav.top-nav.is-open .nav-toggle span:nth-child(3) {
         transform: translateY(-6px) rotate(-45deg);
     }
 
-    body.homepage nav.top-nav ul {
+    nav.top-nav ul {
         display: none;
     }
 
-    body.homepage nav.top-nav.is-open {
+    nav.top-nav.is-open {
         min-width: 148px;
     }
 
-    body.homepage nav.top-nav.is-open ul {
+    nav.top-nav.is-open ul {
         display: flex;
         margin-top: 4px;
     }
@@ -1012,7 +1012,32 @@ footer p {
 
 @media (max-width: 480px) {
     .project-grid {
-        grid-template-columns: 1fr; /* 1 project per line on very small screens */
+        gap: 10px;
+    }
+
+    /* Two narrow columns: stack title over subtitle so wrapped lines never overlap */
+    .project .overlay {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 10px;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .project h3,
+    .project p {
+        position: static;
+    }
+
+    .project h3 {
+        font-size: 0.95rem;
+        line-height: 1.2;
+    }
+
+    .project p {
+        font-size: 0.7rem;
+        line-height: 1.25;
     }
 
     .avatar-grid {
