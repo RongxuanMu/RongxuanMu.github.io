@@ -781,6 +781,7 @@ nav.top-nav .nav-toggle {
     border-radius: var(--glass-radius);
     border: var(--glass-border-width) solid var(--glass-border);
     color: var(--text-secondary);
+    overflow-wrap: anywhere; /* Long DOI links wrap inside the card */
 }
 
 #publications li:last-child {
@@ -840,6 +841,7 @@ nav.top-nav .nav-toggle {
     border: var(--glass-border-width) solid var(--glass-border);
     border-radius: var(--glass-radius);
     color: var(--text-secondary);
+    overflow-wrap: anywhere;
 }
 
 #awards strong {
@@ -995,9 +997,9 @@ footer p {
 /* Media Queries for Responsive Design */
 @media (max-width: 768px) {
     .project-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 14px;
-        max-width: 480px;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        max-width: 640px;
     }
 
     .avatar-grid {
@@ -1012,15 +1014,15 @@ footer p {
 
 @media (max-width: 480px) {
     .project-grid {
-        gap: 10px;
+        gap: 8px;
     }
 
-    /* Two narrow columns: stack title over subtitle so wrapped lines never overlap */
+    /* Three narrow columns: stack title over subtitle so wrapped lines never overlap */
     .project .overlay {
         position: absolute;
-        left: 8px;
-        right: 8px;
-        bottom: 10px;
+        left: 4px;
+        right: 4px;
+        bottom: 6px;
         z-index: 1;
         pointer-events: none;
     }
@@ -1031,13 +1033,13 @@ footer p {
     }
 
     .project h3 {
-        font-size: 0.95rem;
-        line-height: 1.2;
+        font-size: 0.75rem;
+        line-height: 1.15;
     }
 
     .project p {
-        font-size: 0.7rem;
-        line-height: 1.25;
+        font-size: 0.6rem;
+        line-height: 1.2;
     }
 
     .avatar-grid {
